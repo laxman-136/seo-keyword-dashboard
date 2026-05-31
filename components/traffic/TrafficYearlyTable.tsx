@@ -9,7 +9,7 @@ interface TrafficYearlyTableProps {
 
 export default function TrafficYearlyTable({ data }: TrafficYearlyTableProps) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
       <div className="px-6 py-4 border-b border-slate-100">
         <h4 className="text-sm font-bold text-slate-800 tracking-tight">
           Yearly Summary
@@ -20,7 +20,7 @@ export default function TrafficYearlyTable({ data }: TrafficYearlyTableProps) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[650px]">
+        <table className="w-full text-left border-collapse min-w-full table-auto">
           <thead>
             <tr className="bg-slate-50/75 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider select-none">
               <th className="px-6 py-3.5">Year</th>

@@ -90,7 +90,7 @@ export default function SourceDetailView() {
   }
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto p-8 space-y-8 min-h-screen">
+    <div className="w-full max-w-[1600px] mx-auto p-8 space-y-8">
       {/* Header Panel */}
       <Header
         title="Traffic by Source"

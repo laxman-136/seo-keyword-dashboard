@@ -39,7 +39,7 @@ export default function TrafficMoMTable({
   ]
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
       <div className="px-6 py-4 border-b border-slate-100">
         <h4 className="text-sm font-bold text-slate-800 tracking-tight">
           Performance Shift Summary
