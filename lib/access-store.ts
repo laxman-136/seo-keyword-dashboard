@@ -50,6 +50,30 @@ export async function getValidAccessGrantsForRecipient(email: string): Promise<V
   }
 }
 
+export async function getValidAccessGrantById(id: string): Promise<ViewerAccessGrant | null> {
+  if (!supabase) return null
+  try {
+    const now = new Date().toISOString()
+    const { data, error } = await supabase
+      .from('access_grants')
+      .select('*')
+      .eq('id', id)
+      .gt('expires_at', now)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116' || error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
+    return data ? mapGrantRow(data) : null
+  } catch (err) {
+    console.error('Error fetching access grant by id:', err)
+    return null
+  }
+}
+
 export async function getAccessGrantsByOwner(email: string, sheetId?: string): Promise<ViewerAccessGrant[]> {
   if (!supabase) return []
   try {

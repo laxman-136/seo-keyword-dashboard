@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const [shareDuration, setShareDuration] = useState(30)
   const [shareLoading, setShareLoading] = useState(false)
   const [shareMessage, setShareMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [copiedShareId, setCopiedShareId] = useState<string | null>(null)
 
   const isViewer = currentUser?.role === 'viewer'
 
@@ -83,6 +84,18 @@ export default function SettingsPage() {
     }
     loadGrants()
   }, [currentUser, activeConfig, isViewer])
+
+  const handleCopyShareUrl = async (grantId: string) => {
+    if (typeof window === 'undefined') return
+    try {
+      const url = `${window.location.origin}/viewer/${grantId}?from=/traffic`
+      await navigator.clipboard.writeText(url)
+      setCopiedShareId(grantId)
+      window.setTimeout(() => setCopiedShareId(null), 2500)
+    } catch {
+      setCopiedShareId(null)
+    }
+  }
 
   const handleShareGrant = async () => {
     if (!activeConfig || !shareEmail.trim()) return
@@ -418,17 +431,34 @@ export default function SettingsPage() {
                 <div className="grid gap-3">
                   {ownerGrants.map(grant => (
                     <div key={grant.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="space-y-1 text-sm">
-                        <div className="font-semibold text-slate-900">{grant.recipientEmail}</div>
-                        <div className="text-[11px] text-slate-500">Expires: {new Date(grant.expiresAt).toLocaleDateString()}</div>
+                      <div className="space-y-2 text-sm">
+                      <div className="font-semibold text-slate-900">{grant.recipientEmail}</div>
+                      <div className="text-[11px] text-slate-500">Expires: {new Date(grant.expiresAt).toLocaleDateString()}</div>
+                      <div className="text-[11px] text-slate-500">
+                        Share link:
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <code className="truncate max-w-[18rem] rounded-xl bg-slate-100 px-2 py-1 text-[11px] text-slate-700">
+                            {typeof window !== 'undefined'
+                              ? `${window.location.origin}/viewer/${grant.id}?from=/traffic`
+                              : `/viewer/${grant.id}?from=/traffic`}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyShareUrl(grant.id)}
+                            className="rounded-xl bg-slate-900 text-white px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-slate-800"
+                          >
+                            {copiedShareId === grant.id ? 'Copied' : 'Copy Link'}
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleRevokeGrant(grant.id)}
-                        disabled={shareLoading}
-                        className="self-start sm:self-auto rounded-xl bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        Revoke Access
-                      </button>
+                    </div>
+                    <button
+                      onClick={() => handleRevokeGrant(grant.id)}
+                      disabled={shareLoading}
+                      className="self-start sm:self-auto rounded-xl bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Revoke Access
+                    </button>
                     </div>
                   ))}
                 </div>

@@ -3,14 +3,15 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { decodeTokenEdge, getTokenFromCookiesEdge } from '@/lib/auth-edge'
 
-const PUBLIC_PATHS  = ['/login', '/register', '/client-login']
-const PUBLIC_PREFIX = ['/api/auth/', '/_next/', '/favicon']
+const PUBLIC_PATHS  = ['/login', '/register']
+const PUBLIC_PREFIX = ['/api/auth/', '/_next/', '/favicon', '/viewer/']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public paths
   if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next()
+  if (pathname.startsWith('/client-login')) return NextResponse.next()
   if (pathname === '/api/access-grants/login') return NextResponse.next()
   if (PUBLIC_PREFIX.some(p => pathname.startsWith(p))) return NextResponse.next()
 
