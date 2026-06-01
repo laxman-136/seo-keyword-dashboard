@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { decodeTokenEdge, getTokenFromCookiesEdge } from '@/lib/auth-edge'
 
-const PUBLIC_PATHS  = ['/login', '/register']
+const PUBLIC_PATHS  = ['/login', '/register', '/client-login']
 const PUBLIC_PREFIX = ['/api/auth/', '/_next/', '/favicon']
 
 export function middleware(request: NextRequest) {
@@ -11,6 +11,7 @@ export function middleware(request: NextRequest) {
 
   // Allow public paths
   if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next()
+  if (pathname === '/api/access-grants/login') return NextResponse.next()
   if (PUBLIC_PREFIX.some(p => pathname.startsWith(p))) return NextResponse.next()
 
   // Read cookie

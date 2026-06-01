@@ -73,14 +73,23 @@ export function verifyToken(token: string): SessionUser | null {
   }
 }
 
-export function getTokenFromCookies(cookieHeader: string): string | null {
+function getCookieValue(cookieHeader: string, name: string): string | null {
+  if (!cookieHeader) return null
   const cookies = Object.fromEntries(
     cookieHeader.split(';').map(c => {
       const eqIdx = c.indexOf('=')
       return [c.slice(0, eqIdx).trim(), c.slice(eqIdx + 1).trim()]
     })
   )
-  return cookies['auth-token'] || null
+  return cookies[name] || null
+}
+
+export function getTokenFromCookies(cookieHeader: string): string | null {
+  return getCookieValue(cookieHeader, 'auth-token') || getCookieValue(cookieHeader, 'viewer-auth-token')
+}
+
+export function getViewerTokenFromCookies(cookieHeader: string): string | null {
+  return getCookieValue(cookieHeader, 'viewer-auth-token')
 }
 
 export function getCurrentUser(request: Request): SessionUser | null {
@@ -94,6 +103,14 @@ export function makeAuthCookie(token: string): string {
   return `auth-token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
 }
 
+export function makeViewerAuthCookie(token: string): string {
+  return `viewer-auth-token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
+}
+
 export function makeClearCookie(): string {
   return `auth-token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
+}
+
+export function makeClearViewerCookie(): string {
+  return `viewer-auth-token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
 }

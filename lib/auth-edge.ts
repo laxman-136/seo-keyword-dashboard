@@ -8,7 +8,7 @@
 export interface SessionUser {
   email: string
   name: string
-  role: 'superadmin' | 'admin' | 'user'
+  role: 'superadmin' | 'admin' | 'user' | 'viewer'
 }
 
 /**
@@ -42,13 +42,20 @@ export function decodeTokenEdge(token: string): SessionUser | null {
 
 export function getTokenFromCookiesEdge(cookieHeader: string): string | null {
   if (!cookieHeader) return null
+
+  let viewerToken: string | null = null
   for (const part of cookieHeader.split(';')) {
     const eqIdx = part.indexOf('=')
     if (eqIdx < 0) continue
     const name = part.slice(0, eqIdx).trim()
+    const value = part.slice(eqIdx + 1).trim() || null
     if (name === 'auth-token') {
-      return part.slice(eqIdx + 1).trim() || null
+      return value
+    }
+    if (name === 'viewer-auth-token') {
+      viewerToken = value
     }
   }
-  return null
+
+  return viewerToken
 }

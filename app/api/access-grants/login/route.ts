@@ -1,7 +1,7 @@
 // app/api/access-grants/login/route.ts
 import { NextResponse } from 'next/server'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { createToken, makeAuthCookie } from '@/lib/auth'
+import { createToken, makeViewerAuthCookie } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     // Create a viewer session (role: viewer)
     const token = createToken({ email, name: grants[0].recipientEmail || email, role: 'viewer' })
-    const cookie = makeAuthCookie(token)
+    const cookie = makeViewerAuthCookie(token)
 
     return NextResponse.json({ success: true }, { headers: { 'Set-Cookie': cookie } })
   } catch (err) {
