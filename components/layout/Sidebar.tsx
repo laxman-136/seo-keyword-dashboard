@@ -290,40 +290,43 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     { label: 'Site Status', href: '/site-status', icon: Building2 }
   ]
 
-  const renderNavSection = (title: string, items: typeof keywordItems) => (
-    <div className="space-y-2">
-      {!isCollapsed ? (
-        <div className="px-4 py-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase border-b border-slate-800/40 whitespace-nowrap">
-          {title}
+  const renderNavSection = (title: string, items: typeof keywordItems, forceExpanded = false) => {
+    const collapsedForRender = forceExpanded ? false : isCollapsed
+    return (
+      <div className="space-y-2">
+        {!collapsedForRender ? (
+          <div className="px-4 py-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase border-b border-slate-800/40 whitespace-nowrap">
+            {title}
+          </div>
+        ) : (
+          <div className="border-t border-slate-800/40 my-3 mx-2" />
+        )}
+        <div className="space-y-1">
+          {items.map(item => {
+            const isActive = pathname === item.href
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={collapsedForRender ? item.label : undefined}
+                className={cn(
+                  "flex items-center rounded-xl text-sm font-medium transition-all duration-150",
+                  collapsedForRender ? "justify-center p-3" : "gap-3 px-4 py-2.5",
+                  isActive
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    : "hover:bg-slate-800/60 hover:text-slate-200 border border-transparent"
+                )}
+              >
+                <Icon className={cn("w-4.5 h-4.5 shrink-0", isActive ? "text-emerald-400" : "text-slate-400")} />
+                {!collapsedForRender && <span className="truncate whitespace-nowrap">{item.label}</span>}
+              </Link>
+            )
+          })}
         </div>
-      ) : (
-        <div className="border-t border-slate-800/40 my-3 mx-2" />
-      )}
-      <div className="space-y-1">
-        {items.map(item => {
-          const isActive = pathname === item.href
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={isCollapsed ? item.label : undefined}
-              className={cn(
-                "flex items-center rounded-xl text-sm font-medium transition-all duration-150",
-                isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-2.5",
-                isActive
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "hover:bg-slate-800/60 hover:text-slate-200 border border-transparent"
-              )}
-            >
-              <Icon className={cn("w-4.5 h-4.5 shrink-0", isActive ? "text-emerald-400" : "text-slate-400")} />
-              {!isCollapsed && <span className="truncate whitespace-nowrap">{item.label}</span>}
-            </Link>
-          )
-        })}
       </div>
-    </div>
-  )
+    )
+  }
 
   const sidebarWidthClass = isMounted && isCollapsed ? "w-20" : "w-64"
   const desktopSidebarClass = cn("hidden lg:flex", sidebarWidthClass)
@@ -486,9 +489,9 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             </div>
 
             <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden">
-              {renderNavSection('📊 Keyword Rankings', keywordItems)}
-              {renderNavSection('📈 Traffic Analytics', trafficItems)}
-              {renderNavSection('🌐 Site', siteItems)}
+              {renderNavSection('📊 Keyword Rankings', keywordItems, true)}
+              {renderNavSection('📈 Traffic Analytics', trafficItems, true)}
+              {renderNavSection('🌐 Site', siteItems, true)}
 
               <div className="space-y-1">
                 {!isCollapsed && (
@@ -528,7 +531,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 </>
               )}
 
-              <UserMenu collapsed={isMounted && isCollapsed} />
+              <UserMenu collapsed={false} />
 
               <button
                 onClick={handleToggle}
