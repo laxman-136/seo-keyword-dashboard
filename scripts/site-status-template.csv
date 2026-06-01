@@ -1,0 +1,22 @@
+Page,May-2025 Domain Rating,May-2025 Ahref Backlinks,May-2025 Ahref Domains,May-2025 DA,May-2025 PA,Apr-2025 Domain Rating,Apr-2025 Ahref Backlinks,Apr-2025 Ahref Domains,Apr-2025 DA,Apr-2025 PA
+Home Page,42,15340,420,38,32,40,14880,412,37,31
+Oracle Fusion SCM,39,10120,310,36,29,38,9820,305,35,28
+Oracle Fusion HCM,37,9120,290,35,27,36,8900,285,34,26
+Oracle Fusion Technical,33,8020,240,32,24,32,7800,230,31,23
+Oracle Fusion Procurement,,,,,,,,,,
+Oracle Recruiting Cloud training,,,,,,,,,,
+Digital Marketing training,,,,,,,,,,
+OIC Training,,,,,,,,,,
+Oracle WMS training,,,,,,,,,,
+Oracle GTM training,,,,,,,,,,
+OTM training,,,,,,,,,,
+SAP SD training,,,,,,,,,,
+SAP MM training,,,,,,,,,,
+SAP CPI training,,,,,,,,,,
+SAP ABAP training,,,,,,,,,,
+
+# Notes:
+# - Tab name must be exactly: SiteStatus
+# - Use month labels like "May-2025" followed by a space then the metric name in the header.
+# - Numeric cells should be plain numbers (no commas). Empty cells are allowed.
+# - To import: File → Import → Upload CSV in Google Sheets, then rename the sheet tab to "SiteStatus" if needed.

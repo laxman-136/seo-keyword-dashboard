@@ -22,20 +22,24 @@ export function cn(...inputs: (string | undefined | null | boolean | Record<stri
 }
 
 /**
- * Format month label for CEO readability (e.g. "May-26" -> "May 2026")
+ * Format month label for CEO readability (e.g. "May-26" -> "May 2026" or "May-2026" -> "May 2026")
  */
 export function formatMonthLabel(monthKey: string): string {
   if (!monthKey) return ''
   const [mon, yr] = monthKey.split('-')
   if (!mon || !yr) return monthKey
 
-  const fullYears: Record<string, string> = {
-    '25': '2025',
-    '26': '2026',
-    '27': '2027',
-    '28': '2028'
+  // Handle both 2-digit years ("26") and 4-digit years ("2026")
+  let year = yr
+  if (yr.length === 2) {
+    const fullYears: Record<string, string> = {
+      '25': '2025',
+      '26': '2026',
+      '27': '2027',
+      '28': '2028'
+    }
+    year = fullYears[yr] || `20${yr}`
   }
-  const year = fullYears[yr] || `20${yr}`
 
   const monthNames: Record<string, string> = {
     'Jan': 'January', 'Feb': 'February', 'Mar': 'March', 'Apr': 'April',

@@ -281,6 +281,10 @@ export default function Sidebar() {
     { label: 'Compare Periods', href: '/traffic/compare',  icon: BarChart2 }
   ]
 
+  const siteItems = [
+    { label: 'Site Status', href: '/site-status', icon: Building2 }
+  ]
+
   const renderNavSection = (title: string, items: typeof keywordItems) => (
     <div className="space-y-2">
       {!isCollapsed ? (
@@ -342,6 +346,7 @@ export default function Sidebar() {
       <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden">
         {renderNavSection('📊 Keyword Rankings', keywordItems)}
         {renderNavSection('📈 Traffic Analytics', trafficItems)}
+        {renderNavSection('🌐 Site', siteItems)}
 
         {/* Config section */}
         <div className="space-y-1">

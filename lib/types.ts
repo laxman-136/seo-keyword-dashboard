@@ -168,3 +168,44 @@ export interface YearlyData {
   yoyChange: number | null
 }
 
+// ── SITE STATUS TYPES ─────────────────────────────────────────
+
+export interface SiteStatusRow {
+  month: string // "May-2025"
+  date: Date
+  pages: number
+  newDate?: string
+  domainRating?: number
+  backlinks?: number
+  referringDomains?: number
+  da?: number
+  pa?: number
+}
+
+export interface SiteStatusResult {
+  rows: SiteStatusRow[]
+  isMock: boolean
+  lastUpdated: string
+  fallbackReason?: string
+}
+
+// Per-page Site Status when sheet uses grouped headers like "May-2025 Domain Rating"
+export interface SiteStatusPageRow {
+  page: string
+  monthlyData: Record<string, {
+    domainRating?: number
+    backlinks?: number
+    referringDomains?: number
+    da?: number
+    pa?: number
+  }>
+}
+
+export interface SiteStatusPageResult {
+  rows: SiteStatusPageRow[]
+  months: string[]
+  isMock: boolean
+  lastUpdated: string
+  fallbackReason?: string
+}
+
