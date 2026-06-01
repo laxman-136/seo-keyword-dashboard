@@ -146,7 +146,7 @@ export default function FloatingAdminButton() {
     <div
       ref={ref}
       style={pos ? { left: pos.left, top: pos.top } : undefined}
-      className="fixed z-[9999] flex flex-col items-end gap-2 touch-none"
+      className="fixed z-[9999] hidden sm:flex flex-col items-end gap-2 touch-none"
       onPointerDown={onPointerDown}
     >
 

@@ -187,8 +187,53 @@ export default function KeywordsTable({ keywords, groups }: KeywordsTableProps) 
         </div>
       </div>
 
+      {/* Mobile cards view */}
+      <div className="space-y-3 sm:hidden p-4">
+        {paginatedData.length > 0 ? (
+          paginatedData.map((kw) => (
+            <div key={kw.keyword} className="bg-slate-50 rounded-3xl border border-slate-200 p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Keyword</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{kw.keyword}</p>
+                </div>
+                <PageBandBadge band={kw.pageBand} />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400">Course Group</p>
+                  <p className="mt-1 font-medium text-slate-800">{kw.group}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400">Rank</p>
+                  <p className="mt-1 font-medium text-slate-800">
+                    {kw.currentPage > 0 ? `Page ${kw.currentPage} (#${kw.currentPosition})` : 'Not Ranking'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400">Movement</p>
+                  <div className="mt-1">
+                    <MovementBadge movement={kw.movement} label={kw.vsLastMonthLabel} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400">Status</p>
+                  <div className="mt-1">
+                    <StatusBadge status={kw.status} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-500 text-sm font-medium">
+            No keywords match your selected filter criteria.
+          </div>
+        )}
+      </div>
+
       {/* Main Table view */}
-      <div className="overflow-x-auto">
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/75 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider select-none">

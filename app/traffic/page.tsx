@@ -38,7 +38,7 @@ export default function TrafficOverview() {
 
   if (error || !period) {
     return (
-      <div className="p-8 flex-1 flex flex-col items-center justify-center bg-slate-50 min-h-screen">
+      <div className="p-4 sm:p-6 flex-1 flex flex-col items-center justify-center bg-slate-50 min-h-screen">
         <div className="max-w-md w-full glass-panel p-8 rounded-2xl border border-red-100 shadow-xl flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-500 mb-6 shadow-md shadow-red-100">
             <Info className="w-8 h-8" />
@@ -66,7 +66,7 @@ export default function TrafficOverview() {
   const yearlyBreakdown = getYearlyBreakdown(rows)
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto p-8 space-y-8 min-h-screen">
+    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 min-h-screen">
       {/* Header Panel */}
       <Header
         title="Traffic Analytics"

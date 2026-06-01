@@ -46,7 +46,7 @@ export default function MonthComparisonView() {
   }
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto p-8 space-y-8 min-h-screen">
+    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 min-h-screen">
       {/* Header Panel */}
       <Header
         title="Historical Month Comparison"

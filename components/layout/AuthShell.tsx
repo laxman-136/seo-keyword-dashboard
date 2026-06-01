@@ -6,6 +6,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { Menu } from 'lucide-react'
 import Sidebar from '@/components/layout/Sidebar'
 import FloatingAdminButton from '@/components/layout/FloatingAdminButton'
 import { clearActiveConfig, setActiveConfig } from '@/lib/config'
@@ -19,6 +20,11 @@ export default function AuthShell({ children }: Props) {
   const router     = useRouter()
   const isAuthPage = AUTH_PAGES.includes(pathname)
   const [checked, setChecked] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname])
 
   useEffect(() => {
     // Auth pages (login/register) — never need a session check
@@ -72,8 +78,15 @@ export default function AuthShell({ children }: Props) {
   // ── Authenticated dashboard layout: sidebar + content + floating button ────
   return (
     <div className="flex min-h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar mobileOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto relative">
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-40 inline-flex items-center justify-center rounded-2xl border border-slate-700 bg-slate-950/95 p-3 text-slate-200 shadow-lg shadow-black/20 transition hover:bg-slate-900"
+          aria-label="Open sidebar"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         {children}
       </main>
       {/* Sticky floating button — always visible while scrolling */}

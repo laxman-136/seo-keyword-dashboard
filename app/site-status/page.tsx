@@ -60,7 +60,7 @@ export default function SiteStatusPage() {
   }
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto p-8 space-y-6 min-h-screen">
+    <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 min-h-screen">
       <Header
         title="Site Status"
         currentMonth={latestMonth}
