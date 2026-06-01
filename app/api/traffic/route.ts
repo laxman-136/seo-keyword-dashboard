@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { fetchTrafficData } from '@/lib/sheets'
 
+export const dynamic = 'force-dynamic'
 // Set revalidate time for ISR server-side caching (3600 seconds = 1 hour)
 export const revalidate = 3600
 
