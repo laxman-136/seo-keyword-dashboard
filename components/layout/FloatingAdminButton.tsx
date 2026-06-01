@@ -5,19 +5,25 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Users, Clock, LogOut, Crown, Shield, ChevronUp } from 'lucide-react'
+import { Users, Clock, LogOut, Crown, Shield, ChevronUp, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Me {
   email: string
   name: string
-  role: 'superadmin' | 'admin' | 'user'
+  role: 'superadmin' | 'admin' | 'user' | 'viewer'
 }
+
+const STORAGE_KEY = 'floating-admin-button-position'
 
 export default function FloatingAdminButton() {
   const [me, setMe]               = useState<Me | null>(null)
   const [pendingCount, setPending] = useState(0)
   const [open, setOpen]           = useState(false)
+  const [position, setPosition]   = useState<{ x: number; y: number } | null>(null)
+  const [dragging, setDragging]   = useState(false)
+  const dragDelta = useRef({ x: 0, y: 0 })
+  const draggedRef = useRef(false)
   const ref = useRef<HTMLDivElement>(null)
 
   // Fetch current user
@@ -26,6 +32,34 @@ export default function FloatingAdminButton() {
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.user) setMe(d.user) })
   }, [])
+
+  // Load saved floating position
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const stored = window.localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (parsed?.x != null && parsed?.y != null) {
+          setPosition(parsed)
+          return
+        }
+      } catch {
+        // ignore invalid saved data
+      }
+    }
+
+    const defaultX = window.innerWidth - 220
+    const defaultY = window.innerHeight - 100
+    setPosition({ x: defaultX, y: defaultY })
+  }, [])
+
+  // Persist floating position
+  useEffect(() => {
+    if (!position || typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(position))
+  }, [position])
 
   // Poll pending users every 30s (admins only)
   useEffect(() => {
@@ -55,19 +89,72 @@ export default function FloatingAdminButton() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Drag support for the floating badge
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!dragging || !position) return
+      const nextX = event.clientX - dragDelta.current.x
+      const nextY = event.clientY - dragDelta.current.y
+      const maxX = window.innerWidth - 220
+      const maxY = window.innerHeight - 90
+      setPosition({
+        x: Math.min(Math.max(8, nextX), maxX),
+        y: Math.min(Math.max(8, nextY), maxY)
+      })
+      draggedRef.current = true
+    }
+
+    const handlePointerUp = () => {
+      if (dragging) {
+        setDragging(false)
+      }
+    }
+
+    document.addEventListener('pointermove', handlePointerMove)
+    document.addEventListener('pointerup', handlePointerUp)
+
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove)
+      document.removeEventListener('pointerup', handlePointerUp)
+    }
+  }, [dragging, position])
+
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
     window.location.href = '/login'
+  }
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    dragDelta.current = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    }
+    draggedRef.current = false
+    setDragging(true)
+  }
+
+  const handleButtonClick = () => {
+    if (draggedRef.current) {
+      draggedRef.current = false
+      return
+    }
+    setOpen(v => !v)
   }
 
   // Only show for logged-in users
   if (!me) return null
 
   const isAdmin = me.role === 'admin' || me.role === 'superadmin'
-  const RoleIcon = me.role === 'superadmin' ? Crown : me.role === 'admin' ? Shield : Users
+  const RoleIcon = me.role === 'superadmin' ? Crown : me.role === 'admin' ? Shield : me.role === 'viewer' ? Eye : Users
 
   return (
-    <div ref={ref} className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-2">
+    <div
+      ref={ref}
+      style={position ? { position: 'fixed', left: `${position.x}px`, top: `${position.y}px` } : undefined}
+      className="z-[9999] flex flex-col items-end gap-2"
+    >
 
       {/* Popup card */}
       {open && (
@@ -125,9 +212,10 @@ export default function FloatingAdminButton() {
 
       {/* Main FAB button */}
       <button
-        onClick={() => setOpen(v => !v)}
+        onPointerDown={handlePointerDown}
+        onClick={handleButtonClick}
         className={cn(
-          'relative flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-2xl shadow-2xl shadow-black/40 border transition-all duration-200 group',
+          'relative flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-2xl shadow-2xl shadow-black/40 border transition-all duration-200 group select-none',
           open
             ? 'bg-slate-800 border-slate-600 shadow-violet-500/10'
             : 'bg-slate-900 border-slate-700 hover:border-violet-500/40 hover:shadow-violet-500/10'
