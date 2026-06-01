@@ -1,10 +1,11 @@
 // app/api/admin/users/route.ts
 // Admin-only endpoints: list users, approve, reject, delete, export
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import {
   getAllUsers, updateUser, deleteUser, exportUsersAsEnvVar
 } from '@/lib/user-store'
+import { getActiveAccessGrantSummaries } from '@/lib/access-store'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,7 @@ function isSuperAdminAccount(email: string) {
   return email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
 }
 
-function requireAdmin(request: Request) {
+function requireAdmin(request: NextRequest) {
   const user = getCurrentUser(request)
   if (!user) return { error: 'Unauthorized', status: 401, user: null }
   if (user.role !== 'admin' && user.role !== 'superadmin') {
@@ -25,7 +26,7 @@ function requireAdmin(request: Request) {
 }
 
 // GET — list all users
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { error, status } = requireAdmin(request)
   if (error) return NextResponse.json({ error }, { status })
 
@@ -39,11 +40,17 @@ export async function GET(request: Request) {
     approvedBy: u.approvedBy
   }))
 
-  return NextResponse.json({ users })
+  const includeGrants = request.nextUrl.searchParams.get('includeGrants') === 'true'
+  if (!includeGrants) {
+    return NextResponse.json({ users })
+  }
+
+  const grantSummaries = await getActiveAccessGrantSummaries()
+  return NextResponse.json({ users, grantSummaries })
 }
 
 // POST — approve, reject, delete, or change role
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const { error, status, user: adminUser } = requireAdmin(request)
   if (error || !adminUser) return NextResponse.json({ error }, { status })
 

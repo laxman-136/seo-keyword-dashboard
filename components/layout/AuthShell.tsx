@@ -8,8 +8,9 @@ import React, { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import FloatingAdminButton from '@/components/layout/FloatingAdminButton'
+import { clearActiveConfig, setActiveConfig } from '@/lib/config'
 
-const AUTH_PAGES = ['/login', '/register']
+const AUTH_PAGES = ['/login', '/register', '/client-login']
 
 interface Props { children: React.ReactNode }
 
@@ -26,14 +27,29 @@ export default function AuthShell({ children }: Props) {
       return
     }
 
-    // Dashboard pages — verify session
+    // Dashboard pages — verify session and enforce viewer source access
     fetch('/api/auth/me')
-      .then(r => {
+      .then(async r => {
         if (!r.ok) {
           router.replace(`/login?from=${encodeURIComponent(pathname)}`)
-        } else {
-          setChecked(true)
+          return
         }
+
+        const data = await r.json()
+        if (data.user?.role === 'user') {
+          const grants = Array.isArray(data.viewerAccess) ? data.viewerAccess : []
+          if (grants.length > 0) {
+            const grant = grants[0]
+            setActiveConfig({
+              label: grant.label,
+              sheetId: grant.sheetId,
+              apiKey: grant.apiKey,
+              createdAt: grant.createdAt
+            })
+          }
+        }
+
+        setChecked(true)
       })
       .catch(() => router.replace('/login'))
   }, [pathname, isAuthPage, router])

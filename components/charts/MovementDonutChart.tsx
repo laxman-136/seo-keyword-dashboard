@@ -41,7 +41,7 @@ export default function MovementDonutChart({ stats }: MovementDonutChartProps) {
 
       <div className="flex-1 w-full mt-4 flex items-center justify-center relative text-[10px]">
         {/* Total indicator inside the center of the donut hole */}
-        <div className="absolute flex flex-col items-center justify-center pointer-events-none select-none">
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
           <span className="text-3xl font-extrabold text-slate-800">{totalActions}</span>
           <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Keywords</span>
         </div>

@@ -113,6 +113,17 @@ export type TrafficCountry =
   | 'Poland'
   | 'Others'
 
+export interface ViewerAccessGrant {
+  id: string
+  recipientEmail: string
+  ownerEmail: string
+  label: string
+  sheetId: string
+  apiKey: string
+  expiresAt: string
+  createdAt: string
+}
+
 export interface TrafficAggregate {
   totalUsers: number
   newUsers: number

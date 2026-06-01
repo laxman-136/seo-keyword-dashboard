@@ -27,6 +27,14 @@ interface UserRow {
 
 interface Me { email: string; name: string; role: Role }
 
+interface GrantSummaryRow {
+  ownerEmail: string
+  label: string
+  sheetId: string
+  viewerCount: number
+  nextExpiry: string
+}
+
 const STATUS_BADGE: Record<Status, string> = {
   approved: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
   pending:  'bg-amber-500/15  text-amber-400  border-amber-500/25',
@@ -48,6 +56,7 @@ const ROLE_ICON: Record<Role, React.ReactNode> = {
 export default function AdminUsersPage() {
   const [users, setUsers]   = useState<UserRow[]>([])
   const [me, setMe]         = useState<Me | null>(null)
+  const [grantSummaries, setGrantSummaries] = useState<GrantSummaryRow[]>([])
   const [loading, setLoading] = useState(true)
   const [actionMsg, setActionMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [exportData, setExportData] = useState('')
@@ -58,14 +67,32 @@ export default function AdminUsersPage() {
     setLoading(true)
     const [meRes, usersRes] = await Promise.all([
       fetch('/api/auth/me'),
-      fetch('/api/admin/users')
+      fetch('/api/admin/users?includeGrants=true')
     ])
     if (meRes.ok) setMe((await meRes.json()).user)
-    if (usersRes.ok) setUsers((await usersRes.json()).users)
+
+    if (usersRes.ok) {
+      const data = await usersRes.json()
+      setUsers(data.users)
+      if (Array.isArray(data.grantSummaries)) {
+        setGrantSummaries(data.grantSummaries)
+      }
+    }
     setLoading(false)
   }, [])
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
+
+  const formatExpiry = (expiresAt: string) => {
+    const diff = new Date(expiresAt).getTime() - Date.now()
+    if (diff <= 0) return 'Expired'
+    const days = Math.floor(diff / 86400000)
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''}`
+    const hours = Math.floor(diff / 3600000)
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`
+    const minutes = Math.ceil(diff / 60000)
+    return `${minutes} minute${minutes > 1 ? 's' : ''}`
+  }
 
   const action = async (act: string, targetEmail: string, role?: string) => {
     setActionMsg(null)
@@ -188,6 +215,30 @@ export default function AdminUsersPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {grantSummaries.length > 0 && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {grantSummaries.map(summary => (
+              <div key={`${summary.ownerEmail}-${summary.sheetId}`} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-semibold">Source</p>
+                    <p className="mt-2 font-semibold text-slate-900">{summary.label || summary.sheetId}</p>
+                    <p className="text-xs text-slate-500 mt-1">Owner: {summary.ownerEmail}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 px-3 py-2 text-right">
+                    <p className="text-2xl font-bold text-slate-900">{summary.viewerCount}</p>
+                    <p className="text-xs text-slate-500">active viewers</p>
+                  </div>
+                </div>
+                <div className="mt-4 text-sm text-slate-500">
+                  <p className="font-medium text-slate-700">Next expiration</p>
+                  <p className="mt-1 text-slate-500">{formatExpiry(summary.nextExpiry)}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

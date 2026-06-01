@@ -23,15 +23,20 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react'
-import { getActiveConfig } from '@/lib/config'
+import { getActiveConfig, ACTIVE_CONFIG_UPDATED_EVENT, setActiveConfig } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
 // ─── Active Config Badge ─────────────────────────────────────────────────────
 function ActiveConfigBadge() {
   const [activeLabel, setActiveLabel] = React.useState<string | null>(null)
   useEffect(() => {
-    const cfg = getActiveConfig()
-    setActiveLabel(cfg?.label || null)
+    const updateActive = () => {
+      const cfg = getActiveConfig()
+      setActiveLabel(cfg?.label || null)
+    }
+    updateActive()
+    window.addEventListener(ACTIVE_CONFIG_UPDATED_EVENT, updateActive)
+    return () => window.removeEventListener(ACTIVE_CONFIG_UPDATED_EVENT, updateActive)
   }, [])
   if (!activeLabel) return null
   return (
@@ -97,8 +102,20 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
     if (res.ok) { setCurPw(''); setNewPw('') }
   }
 
-  const RoleIcon = user?.role === 'superadmin' ? Crown : user?.role === 'admin' ? Shield : User2
-  const roleBg   = user?.role === 'superadmin' ? 'text-violet-400' : user?.role === 'admin' ? 'text-blue-400' : 'text-slate-400'
+  const RoleIcon = user?.role === 'superadmin'
+    ? Crown
+    : user?.role === 'admin'
+      ? Shield
+      : user?.role === 'viewer'
+        ? Eye
+        : User2
+  const roleBg = user?.role === 'superadmin'
+    ? 'text-violet-400'
+    : user?.role === 'admin'
+      ? 'text-blue-400'
+      : user?.role === 'viewer'
+        ? 'text-emerald-400'
+        : 'text-slate-400'
 
   if (!user) return null
 
@@ -229,11 +246,19 @@ export default function Sidebar() {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [isViewer, setIsViewer] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
     const saved = localStorage.getItem('sidebar-collapsed')
     if (saved === 'true') setIsCollapsed(true)
+    fetch('/api/auth/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.user?.role === 'viewer') {
+          setIsViewer(true)
+        }
+      })
   }, [])
 
   const handleToggle = () => {

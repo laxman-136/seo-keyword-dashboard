@@ -91,15 +91,24 @@ export function getActiveConfig(): SheetConfig | null {
   }
 }
 
+export const ACTIVE_CONFIG_UPDATED_EVENT = 'active-config-updated'
+
+function dispatchActiveConfigUpdate(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(ACTIVE_CONFIG_UPDATED_EVENT))
+}
+
 export function setActiveConfig(config: SheetConfig): void {
   localStorage.setItem(ACTIVE_KEY, JSON.stringify(config))
   // Also set the individual keys used by the hooks
   localStorage.setItem('client-sheet-id', config.sheetId)
   localStorage.setItem('client-api-key', config.apiKey)
+  dispatchActiveConfigUpdate()
 }
 
 export function clearActiveConfig(): void {
   localStorage.removeItem(ACTIVE_KEY)
   localStorage.removeItem('client-sheet-id')
   localStorage.removeItem('client-api-key')
+  dispatchActiveConfigUpdate()
 }

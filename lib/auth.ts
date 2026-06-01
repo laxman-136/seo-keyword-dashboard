@@ -4,7 +4,7 @@ import crypto from 'crypto'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'seo-dashboard-secret-change-in-production'
 
-export type UserRole = 'superadmin' | 'admin' | 'user'
+export type UserRole = 'superadmin' | 'admin' | 'user' | 'viewer'
 export type UserStatus = 'approved' | 'pending' | 'rejected'
 
 export interface User {

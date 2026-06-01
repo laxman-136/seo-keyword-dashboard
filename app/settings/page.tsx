@@ -14,6 +14,7 @@ import {
   getActiveConfig, setActiveConfig, clearActiveConfig,
   SheetConfig
 } from '@/lib/config'
+import { ViewerAccessGrant } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error'
@@ -34,6 +35,15 @@ export default function SettingsPage() {
   const [copiedId, setCopiedId] = useState(false)
   const [editingConfig, setEditingConfig] = useState<SheetConfig | null>(null)
 
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string; role: string; viewerAccess?: ViewerAccessGrant[] } | null>(null)
+  const [ownerGrants, setOwnerGrants] = useState<ViewerAccessGrant[]>([])
+  const [shareEmail, setShareEmail] = useState('')
+  const [shareDuration, setShareDuration] = useState(30)
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareMessage, setShareMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  const isViewer = currentUser?.role === 'viewer'
+
   // Load configs from localStorage
   const loadConfigs = useCallback(() => {
     setSavedConfigs(getSavedConfigs())
@@ -43,6 +53,110 @@ export default function SettingsPage() {
   useEffect(() => {
     loadConfigs()
   }, [loadConfigs])
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me')
+        if (!res.ok) return
+        const data = await res.json()
+        setCurrentUser(data.user ? { ...data.user, viewerAccess: data.viewerAccess } : null)
+      } catch {
+        setCurrentUser(null)
+      }
+    }
+    loadUser()
+  }, [])
+
+  useEffect(() => {
+    const loadGrants = async () => {
+      if (!currentUser || isViewer || !activeConfig) return
+      try {
+        const url = `/api/access-grants?owned=true&sheetId=${encodeURIComponent(activeConfig.sheetId)}`
+        const res = await fetch(url)
+        if (!res.ok) return
+        const data = await res.json()
+        setOwnerGrants(Array.isArray(data.grants) ? data.grants : [])
+      } catch {
+        setOwnerGrants([])
+      }
+    }
+    loadGrants()
+  }, [currentUser, activeConfig, isViewer])
+
+  const handleShareGrant = async () => {
+    if (!activeConfig || !shareEmail.trim()) return
+    setShareLoading(true)
+    setShareMessage(null)
+
+    try {
+      const res = await fetch('/api/access-grants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'grant',
+          recipientEmail: shareEmail.trim().toLowerCase(),
+          sheetId: activeConfig.sheetId,
+          apiKey: activeConfig.apiKey,
+          label: activeConfig.label,
+          durationDays: shareDuration
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setShareMessage({ type: 'err', text: data?.error || 'Unable to share access.' })
+      } else {
+        setShareMessage({ type: 'ok', text: `Viewer access granted to ${shareEmail.trim()}.` })
+        setShareEmail('')
+        setOwnerGrants(prev => data.grant ? [data.grant, ...prev] : prev)
+      }
+    } catch (err: any) {
+      setShareMessage({ type: 'err', text: err?.message || 'Network error sharing access.' })
+    } finally {
+      setShareLoading(false)
+    }
+  }
+
+  const handleRevokeGrant = async (grantId: string) => {
+    setShareLoading(true)
+    setShareMessage(null)
+
+    try {
+      const res = await fetch('/api/access-grants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke', id: grantId })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setShareMessage({ type: 'err', text: data?.error || 'Unable to revoke access.' })
+      } else {
+        setShareMessage({ type: 'ok', text: 'Viewer access revoked.' })
+        setOwnerGrants(prev => prev.filter(g => g.id !== grantId))
+      }
+    } catch (err: any) {
+      setShareMessage({ type: 'err', text: err?.message || 'Network error revoking access.' })
+    } finally {
+      setShareLoading(false)
+    }
+  }
+
+  const formatTimeRemaining = (expiresAt: string) => {
+    const diff = new Date(expiresAt).getTime() - Date.now()
+    if (diff <= 0) return 'Expired'
+    const days = Math.floor(diff / 86400000)
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''}`
+    const hours = Math.floor(diff / 3600000)
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`
+    const minutes = Math.ceil(diff / 60000)
+    return `${minutes} minute${minutes > 1 ? 's' : ''}`
+  }
+
+  const activeViewerCount = ownerGrants.length
+  const nextExpiryAt = ownerGrants.reduce((next, grant) => {
+    if (!next) return grant.expiresAt
+    return new Date(grant.expiresAt).getTime() < new Date(next).getTime() ? grant.expiresAt : next
+  }, '')
 
   // When editing a config, populate the form
   const handleEdit = (config: SheetConfig) => {
@@ -109,9 +223,10 @@ export default function SettingsPage() {
 
     saveConfig(config)
 
-    // Auto-activate on first save or if editing the active one
+    // Auto-activate on first save, or when editing the currently active config
     const active = getActiveConfig()
-    if (!active || active.label === config.label) {
+    const editingActive = editingConfig && active?.label === editingConfig.label
+    if (!active || editingActive || active.label === config.label) {
       setActiveConfig(config)
     }
 
@@ -215,9 +330,115 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        {currentUser && activeConfig && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800">Share Viewer Access</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Grant a client email access to this company’s dashboard data for a limited time.
+                </p>
+              </div>
+              <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+                Active source: {activeConfig.label}
+              </span>
+            </div>
 
-          {/* ---- LEFT: ADD / EDIT FORM ---- */}
+            {isViewer ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+                <div className="font-semibold">Viewer Mode</div>
+                <p className="mt-2 text-slate-500">
+                  You are signed in as a viewer. The shared data source is fixed and cannot be changed from this page.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-[1.5fr_0.8fr_0.7fr]">
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Client Email</label>
+                  <input
+                    value={shareEmail}
+                    onChange={e => setShareEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    className="w-full mt-2 px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 text-sm text-slate-800 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Duration</label>
+                  <select
+                    value={shareDuration}
+                    onChange={e => setShareDuration(Number(e.target.value))}
+                    className="w-full mt-2 px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20"
+                  >
+                    <option value={15}>15 days</option>
+                    <option value={30}>30 days</option>
+                    <option value={90}>90 days</option>
+                  </select>
+                </div>
+                <div className="self-end">
+                  <button
+                    onClick={handleShareGrant}
+                    disabled={!shareEmail.trim() || shareLoading}
+                    className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white py-3 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {shareLoading ? 'Sharing...' : 'Share Access'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {shareMessage && (
+              <div className={cn(
+                'rounded-2xl px-4 py-3 text-sm font-medium',
+                shareMessage.type === 'ok'
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              )}>
+                {shareMessage.text}
+              </div>
+            )}
+
+            {ownerGrants.length > 0 && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">Active viewer access</p>
+                  <p className="mt-3 text-3xl font-bold text-slate-900">{activeViewerCount}</p>
+                  <p className="text-sm text-slate-500 mt-1">viewer{activeViewerCount === 1 ? '' : 's'} granted</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">Next expiration</p>
+                  <p className="mt-3 text-3xl font-bold text-slate-900">{formatTimeRemaining(nextExpiryAt)}</p>
+                  <p className="text-sm text-slate-500 mt-1">from the soonest grant</p>
+                </div>
+              </div>
+            )}
+
+            {ownerGrants.length > 0 && (
+              <div className="space-y-3">
+                <div className="text-sm font-semibold text-slate-700">Current viewer access grants</div>
+                <div className="grid gap-3">
+                  {ownerGrants.map(grant => (
+                    <div key={grant.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="space-y-1 text-sm">
+                        <div className="font-semibold text-slate-900">{grant.recipientEmail}</div>
+                        <div className="text-[11px] text-slate-500">Expires: {new Date(grant.expiresAt).toLocaleDateString()}</div>
+                      </div>
+                      <button
+                        onClick={() => handleRevokeGrant(grant.id)}
+                        disabled={shareLoading}
+                        className="self-start sm:self-auto rounded-xl bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Revoke Access
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+      {!isViewer && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               {/* Form Header */}
@@ -235,7 +456,11 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 {editingConfig && (
-                  <button onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors">
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={isViewer}
+                    className="text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
                     Cancel
                   </button>
                 )}
@@ -253,7 +478,8 @@ export default function SettingsPage() {
                     value={label}
                     onChange={e => setLabel(e.target.value)}
                     placeholder="e.g. IT Training Hub, Acme Corp..."
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all"
+                    disabled={isViewer}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200"
                   />
                 </div>
 
@@ -268,7 +494,8 @@ export default function SettingsPage() {
                     value={sheetUrl}
                     onChange={e => setSheetUrl(e.target.value)}
                     placeholder="https://docs.google.com/spreadsheets/d/..."
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm text-slate-800 placeholder:text-slate-400 transition-all"
+                    disabled={isViewer}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200"
                   />
                   {/* Extracted ID preview */}
                   {sheetUrl.trim() && (
@@ -311,12 +538,14 @@ export default function SettingsPage() {
                       value={apiKey}
                       onChange={e => setApiKey(e.target.value)}
                       placeholder="AIzaSy..."
-                      className="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm font-mono text-slate-800 placeholder:text-slate-400 placeholder:font-sans transition-all"
+                      disabled={isViewer}
+                      className="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm font-mono text-slate-800 placeholder:text-slate-400 placeholder:font-sans transition-all disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200"
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKey(v => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      disabled={isViewer}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -356,7 +585,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3 pt-1">
                   <button
                     onClick={handleTest}
-                    disabled={!isValidSheetId(derivedSheetId) || !isValidApiKey(apiKey) || testStatus === 'testing'}
+                    disabled={isViewer || !isValidSheetId(derivedSheetId) || !isValidApiKey(apiKey) || testStatus === 'testing'}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-violet-400 bg-white hover:bg-violet-50 text-slate-600 hover:text-violet-700 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Zap className="w-4 h-4" />
@@ -365,7 +594,7 @@ export default function SettingsPage() {
 
                   <button
                     onClick={handleSave}
-                    disabled={!formIsValid || saving}
+                    disabled={isViewer || !formIsValid || saving}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-slate-900/10 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
@@ -458,7 +687,8 @@ export default function SettingsPage() {
                           {!isActive && (
                             <button
                               onClick={() => handleActivate(cfg)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-all"
+                              disabled={isViewer}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <ChevronRight className="w-3 h-3" />
                               Activate
@@ -466,13 +696,15 @@ export default function SettingsPage() {
                           )}
                           <button
                             onClick={() => handleEdit(cfg)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-violet-100 hover:text-violet-700 text-slate-600 text-xs font-semibold rounded-lg transition-all"
+                            disabled={isViewer}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-violet-100 hover:text-violet-700 text-slate-600 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDelete(cfg)}
-                            className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-50 hover:bg-red-50 hover:text-red-600 text-slate-400 text-xs rounded-lg transition-all border border-slate-200 hover:border-red-200"
+                            disabled={isViewer}
+                            className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-50 hover:bg-red-50 hover:text-red-600 text-slate-400 text-xs rounded-lg transition-all border border-slate-200 hover:border-red-200 disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -505,6 +737,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      )}
       </div>
     </div>
   )

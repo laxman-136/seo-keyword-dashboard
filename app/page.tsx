@@ -1,7 +1,7 @@
 // app/page.tsx
 'use client';
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useKeywordData } from '@/hooks/useKeywordData'
 import Header from '@/components/layout/Header'
 import KPICard from '@/components/ui/KPICard'
@@ -13,6 +13,7 @@ import KeywordsTable from '@/components/tables/KeywordsTable'
 import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react'
 
 export default function OverviewDashboard() {
+  const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null)
   const {
     keywords,
     stats,
@@ -24,6 +25,16 @@ export default function OverviewDashboard() {
     error,
     refresh
   } = useKeywordData()
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(async res => {
+        if (!res.ok) return setCurrentUser(null)
+        const data = await res.json()
+        setCurrentUser(data.user || null)
+      })
+      .catch(() => setCurrentUser(null))
+  }, [])
 
   if (loading) {
     return <SkeletonLoader />
@@ -69,6 +80,20 @@ export default function OverviewDashboard() {
         onRefresh={refresh}
         isRefreshing={refreshing}
       />
+      {/* Client login access (for emailed viewer links) */}
+      {currentUser?.role !== 'viewer' && (
+        <div className="max-w-[1600px] mx-auto px-8">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-600">Are you a client who received a viewer access link?</p>
+              <p className="text-xs text-slate-400">Use the client login to enter your email and view the shared dashboard.</p>
+            </div>
+            <div>
+              <a href="/client-login" className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition-all">Client Login</a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SECTION A: Summary KPI Cards (top row) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
