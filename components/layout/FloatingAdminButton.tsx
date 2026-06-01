@@ -19,6 +19,9 @@ export default function FloatingAdminButton() {
   const [pendingCount, setPending] = useState(0)
   const [open, setOpen]           = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, origLeft: 0, origTop: 0, moved: false })
+
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
 
   // Fetch current user
   useEffect(() => {
@@ -55,6 +58,79 @@ export default function FloatingAdminButton() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Load saved position (if any) and compute default on first render
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('floatingAdminPos')
+      if (raw) {
+        const p = JSON.parse(raw)
+        setPos({ left: p.left, top: p.top })
+        return
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // compute default (bottom-right)
+    const computeDefault = () => {
+      const width = Math.min(window.innerWidth, 1600)
+      const left = window.innerWidth - 96 - 24
+      const top = window.innerHeight - 64 - 24
+      setPos({ left, top })
+    }
+
+    computeDefault()
+    const onResize = () => computeDefault()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  // Persist position
+  const savePos = (p: { left: number; top: number }) => {
+    try {
+      localStorage.setItem('floatingAdminPos', JSON.stringify(p))
+    } catch (e) { }
+  }
+
+  // Pointer handlers for dragging
+  const onPointerDown = (e: React.PointerEvent) => {
+    const el = ref.current
+    if (!el) return
+    (e.target as Element).setPointerCapture?.(e.pointerId)
+    dragRef.current.dragging = true
+    dragRef.current.moved = false
+    dragRef.current.startX = e.clientX
+    dragRef.current.startY = e.clientY
+    dragRef.current.origLeft = pos?.left ?? 0
+    dragRef.current.origTop = pos?.top ?? 0
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+  }
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!dragRef.current.dragging) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragRef.current.moved = true
+    const newLeft = Math.max(8, dragRef.current.origLeft + dx)
+    const newTop = Math.max(8, dragRef.current.origTop + dy)
+    setPos({ left: newLeft, top: newTop })
+  }
+
+  const onPointerUp = (e: PointerEvent) => {
+    if (!dragRef.current.dragging) return
+    dragRef.current.dragging = false
+    window.removeEventListener('pointermove', onPointerMove)
+    window.removeEventListener('pointerup', onPointerUp)
+    if (!dragRef.current.moved) {
+      // treat as click toggle
+      setOpen(v => !v)
+    } else {
+      // save position
+      if (pos) savePos(pos)
+    }
+  }
+
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
     window.location.href = '/login'
@@ -67,7 +143,12 @@ export default function FloatingAdminButton() {
   const RoleIcon = me.role === 'superadmin' ? Crown : me.role === 'admin' ? Shield : Users
 
   return (
-    <div ref={ref} className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-2">
+    <div
+      ref={ref}
+      style={pos ? { left: pos.left, top: pos.top } : undefined}
+      className="fixed z-[9999] flex flex-col items-end gap-2 touch-none"
+      onPointerDown={onPointerDown}
+    >
 
       {/* Popup card */}
       {open && (
@@ -125,9 +206,9 @@ export default function FloatingAdminButton() {
 
       {/* Main FAB button */}
       <button
-        onClick={() => setOpen(v => !v)}
+        // click handled via pointer up when not dragged
         className={cn(
-          'relative flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-2xl shadow-2xl shadow-black/40 border transition-all duration-200 group',
+          'relative flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-2xl shadow-2xl shadow-black/40 border transition-all duration-200 group select-none',
           open
             ? 'bg-slate-800 border-slate-600 shadow-violet-500/10'
             : 'bg-slate-900 border-slate-700 hover:border-violet-500/40 hover:shadow-violet-500/10'
