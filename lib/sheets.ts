@@ -89,6 +89,7 @@ export async function fetchKeywordData(
   months: string[];
   isMock: boolean;
   lastUpdated: string;
+  fallbackReason?: string;
 }> {
   const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
   const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
@@ -108,7 +109,8 @@ export async function fetchKeywordData(
       rows,
       months,
       isMock: true,
-      lastUpdated: nowString
+      lastUpdated: nowString,
+      fallbackReason: 'No Google Sheets configuration was found. The dashboard is using demo data.'
     }
   }
 
@@ -137,6 +139,7 @@ export async function fetchKeywordData(
       lastUpdated: nowString
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
     console.error('Failed to fetch from Google Sheets API. Falling back to mock data.', error)
     const mockGrid = getMockSheetsResponse()
     const { rows, months } = parseSheetGrid(mockGrid.values)
@@ -144,7 +147,8 @@ export async function fetchKeywordData(
       rows,
       months,
       isMock: true,
-      lastUpdated: nowString
+      lastUpdated: nowString,
+      fallbackReason: `Live Sheets failed: ${message}`
     }
   }
 }
@@ -245,6 +249,7 @@ export async function fetchTrafficData(
   rows: TrafficRow[];
   isMock: boolean;
   lastUpdated: string;
+  fallbackReason?: string;
 }> {
   const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
   const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
@@ -263,7 +268,8 @@ export async function fetchTrafficData(
     return {
       rows,
       isMock: true,
-      lastUpdated: nowString
+      lastUpdated: nowString,
+      fallbackReason: 'No Google Sheets configuration was found. Traffic is using demo data.'
     }
   }
 
@@ -291,13 +297,15 @@ export async function fetchTrafficData(
       lastUpdated: nowString
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
     console.error('Failed to fetch from Google Sheets API (Traffic). Falling back to mock data.', error)
     const mockGrid = getMockTrafficSheetsResponse()
     const rows = parseTrafficSheetGrid(mockGrid.values)
     return {
       rows,
       isMock: true,
-      lastUpdated: nowString
+      lastUpdated: nowString,
+      fallbackReason: `Live Sheets failed: ${message}`
     }
   }
 }

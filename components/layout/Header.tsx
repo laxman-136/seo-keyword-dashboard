@@ -11,6 +11,7 @@ interface HeaderProps {
   previousMonth?: string
   lastUpdated?: string
   isMock?: boolean
+  warningText?: string | null
   onRefresh?: () => void
   isRefreshing?: boolean
 }
@@ -21,6 +22,7 @@ export default function Header({
   previousMonth = '',
   lastUpdated = '',
   isMock = false,
+  warningText,
   onRefresh,
   isRefreshing = false
 }: HeaderProps) {
@@ -67,6 +69,11 @@ export default function Header({
                 <span className="text-xs text-slate-400">Updated: {lastUpdated}</span>
               </>
             )}
+          </div>
+        )}
+        {warningText && (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <span className="font-semibold">Data warning:</span> {warningText}
           </div>
         )}
       </div>

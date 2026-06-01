@@ -36,17 +36,15 @@ export default function AuthShell({ children }: Props) {
         }
 
         const data = await r.json()
-        if (data.user?.role === 'user') {
-          const grants = Array.isArray(data.viewerAccess) ? data.viewerAccess : []
-          if (grants.length > 0) {
-            const grant = grants[0]
-            setActiveConfig({
-              label: grant.label,
-              sheetId: grant.sheetId,
-              apiKey: grant.apiKey,
-              createdAt: grant.createdAt
-            })
-          }
+        const grants = Array.isArray(data.viewerAccess) ? data.viewerAccess : []
+        if (grants.length > 0 && (data.user?.role === 'user' || data.user?.role === 'viewer')) {
+          const grant = grants[0]
+          setActiveConfig({
+            label: grant.label,
+            sheetId: grant.sheetId,
+            apiKey: grant.apiKey,
+            createdAt: grant.createdAt
+          })
         }
 
         setChecked(true)

@@ -11,6 +11,7 @@ interface TrafficDataResult {
   refreshing: boolean
   error: string | null
   isMock: boolean
+  fallbackReason: string | null
   lastUpdated: string
   refresh: () => Promise<void>
 }
@@ -25,6 +26,7 @@ let globalTrafficCache: {
 export function useTrafficData(): TrafficDataResult {
   const [rows, setRows] = useState<TrafficRow[]>(globalTrafficCache?.rows || [])
   const [isMock, setIsMock] = useState(globalTrafficCache?.isMock || false)
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState(globalTrafficCache?.lastUpdated || '')
   const [loading, setLoading] = useState(globalTrafficCache ? false : true)
   const [refreshing, setRefreshing] = useState(false)
@@ -75,6 +77,7 @@ export function useTrafficData(): TrafficDataResult {
 
       setRows(parsedRows)
       setIsMock(payload.isMock)
+      setFallbackReason(payload.fallbackReason ?? null)
       setLastUpdated(payload.lastUpdated)
     } catch (err: any) {
       console.error('Error fetching traffic data hook:', err)
@@ -97,6 +100,7 @@ export function useTrafficData(): TrafficDataResult {
     refreshing,
     error,
     isMock,
+    fallbackReason,
     lastUpdated,
     refresh: () => loadData(true)
   }
@@ -107,7 +111,7 @@ export function useTrafficPeriod(
   current?: string,
   compare?: string
 ) {
-  const { rows, loading, refreshing, error, isMock, lastUpdated, refresh } = useTrafficData()
+  const { rows, loading, refreshing, error, isMock, fallbackReason, lastUpdated, refresh } = useTrafficData()
 
   const period = useMemo(() => {
     if (rows.length === 0) return null
@@ -121,6 +125,7 @@ export function useTrafficPeriod(
     refreshing,
     error,
     isMock,
+    fallbackReason,
     lastUpdated,
     refresh
   }

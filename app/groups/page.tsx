@@ -15,6 +15,7 @@ export default function GroupDetailView() {
     stats,
     groupSummaries,
     isMock,
+    fallbackReason,
     lastUpdated,
     loading,
     refreshing,
@@ -56,6 +57,7 @@ export default function GroupDetailView() {
         previousMonth={stats.previousMonth}
         lastUpdated={lastUpdated}
         isMock={isMock}
+        warningText={fallbackReason}
         onRefresh={refresh}
         isRefreshing={refreshing}
       />

@@ -31,7 +31,7 @@ const SOURCE_ICONS: Record<TrafficSource, React.ComponentType<{ className?: stri
 }
 
 export default function SourceDetailView() {
-  const { rows, loading, refreshing, error, isMock, lastUpdated, refresh } = useTrafficData()
+  const { rows, loading, refreshing, error, isMock, fallbackReason, lastUpdated, refresh } = useTrafficData()
 
   const availableMonths = useMemo(() => getAvailableMonths(rows), [rows])
   const years = useMemo(() => Array.from(new Set(rows.map(r => r.date.getFullYear()))), [rows])
@@ -98,6 +98,7 @@ export default function SourceDetailView() {
         previousMonth={compareMonth}
         lastUpdated={lastUpdated}
         isMock={isMock}
+        warningText={fallbackReason}
         onRefresh={refresh}
         isRefreshing={refreshing}
       />

@@ -19,6 +19,7 @@ export default function OverviewDashboard() {
     stats,
     groupSummaries,
     isMock,
+    fallbackReason,
     lastUpdated,
     loading,
     refreshing,
@@ -77,6 +78,7 @@ export default function OverviewDashboard() {
         previousMonth={stats.previousMonth}
         lastUpdated={lastUpdated}
         isMock={isMock}
+        warningText={fallbackReason}
         onRefresh={refresh}
         isRefreshing={refreshing}
       />

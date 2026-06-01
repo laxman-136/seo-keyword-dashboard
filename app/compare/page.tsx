@@ -14,6 +14,7 @@ export default function MonthComparisonView() {
     months,
     stats,
     isMock,
+    fallbackReason,
     lastUpdated,
     loading,
     refreshing,
@@ -53,6 +54,7 @@ export default function MonthComparisonView() {
         previousMonth={stats.previousMonth}
         lastUpdated={lastUpdated}
         isMock={isMock}
+        warningText={fallbackReason}
         onRefresh={refresh}
         isRefreshing={refreshing}
       />

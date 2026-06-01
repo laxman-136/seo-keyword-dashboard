@@ -27,6 +27,7 @@ export default function TrafficOverview() {
     refreshing,
     error,
     isMock,
+    fallbackReason,
     lastUpdated,
     refresh
   } = useTrafficPeriod('monthly')
@@ -73,6 +74,7 @@ export default function TrafficOverview() {
         previousMonth={previousLabel}
         lastUpdated={lastUpdated}
         isMock={isMock}
+        warningText={fallbackReason}
         onRefresh={refresh}
         isRefreshing={refreshing}
       />

@@ -26,7 +26,7 @@ const COUNTRY_FLAGS: Record<string, string> = {
 }
 
 export default function CountryDetailView() {
-  const { rows, loading, refreshing, error, isMock, lastUpdated, refresh } = useTrafficData()
+  const { rows, loading, refreshing, error, isMock, fallbackReason, lastUpdated, refresh } = useTrafficData()
 
   const availableMonths = useMemo(() => getAvailableMonths(rows), [rows])
   const years = useMemo(() => Array.from(new Set(rows.map(r => r.date.getFullYear()))), [rows])
@@ -93,6 +93,7 @@ export default function CountryDetailView() {
         previousMonth={compareMonth}
         lastUpdated={lastUpdated}
         isMock={isMock}
+        warningText={fallbackReason}
         onRefresh={refresh}
         isRefreshing={refreshing}
       />

@@ -12,6 +12,7 @@ interface KeywordDataResult {
   stats: DashboardStats | null
   groupSummaries: GroupSummary[]
   isMock: boolean
+  fallbackReason: string | null
   lastUpdated: string
   loading: boolean
   refreshing: boolean
@@ -27,6 +28,7 @@ export function useKeywordData(): KeywordDataResult {
   const [rawKeywords, setRawKeywords] = useState<KeywordRow[]>([])
   const [months, setMonths] = useState<string[]>([])
   const [isMock, setIsMock] = useState(false)
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState('')
 
   const loadData = useCallback(async (isManualRefresh = false) => {
@@ -63,6 +65,7 @@ export function useKeywordData(): KeywordDataResult {
       setRawKeywords(payload.rows)
       setMonths(payload.months)
       setIsMock(payload.isMock)
+      setFallbackReason(payload.fallbackReason ?? null)
       setLastUpdated(payload.lastUpdated)
     } catch (err: any) {
       console.error('Error fetching keyword data hook:', err)

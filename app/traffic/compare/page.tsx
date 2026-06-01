@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
 type CompareMode = 'monthly' | 'quarterly' | 'yearly'
 
 export default function PeriodComparisonView() {
-  const { rows, loading, refreshing, error, isMock, lastUpdated, refresh } = useTrafficData()
+  const { rows, loading, refreshing, error, isMock, fallbackReason, lastUpdated, refresh } = useTrafficData()
 
   const [mode, setMode] = useState<CompareMode>('monthly')
   const [periodA, setPeriodA] = useState('')
@@ -164,6 +164,7 @@ export default function PeriodComparisonView() {
         previousMonth={labelB}
         lastUpdated={lastUpdated}
         isMock={isMock}
+        warningText={fallbackReason}
         onRefresh={refresh}
         isRefreshing={refreshing}
       />
