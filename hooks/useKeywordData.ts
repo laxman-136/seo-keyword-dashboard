@@ -90,6 +90,7 @@ export function useKeywordData(): KeywordDataResult {
     stats: processed.stats,
     groupSummaries: processed.groupSummaries,
     isMock,
+    fallbackReason,
     lastUpdated,
     loading,
     refreshing,
