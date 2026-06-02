@@ -128,11 +128,12 @@ export default function KeywordsTable({ keywords, groups }: KeywordsTableProps) 
       <div className="p-3 sm:p-4 lg:p-6 border-b border-slate-100 space-y-3 sm:space-y-4 no-print">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 sm:gap-3 lg:gap-4">
           <h3 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight flex items-center gap-1.5 sm:gap-2">
-            <SlidersHorizontal className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-slate-400 flex-shrink-0\" />
+            <SlidersHorizontal className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-slate-400 flex-shrink-0" />
             Search Keywords
           </h3>
-          <span className="text-[10px] sm:text-xs text-slate-400 font-medium\">
+          <span className="text-[10px] sm:text-xs text-slate-400 font-medium">
             {processedData.length} of {keywords.length}
+          </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

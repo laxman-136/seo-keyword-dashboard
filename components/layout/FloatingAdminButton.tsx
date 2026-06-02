@@ -96,7 +96,6 @@ export default function FloatingAdminButton() {
   const onPointerDown = (e: React.PointerEvent) => {
     const el = ref.current
     if (!el) return
-    e.preventDefault()
     (e.target as Element).setPointerCapture?.(e.pointerId)
     dragRef.current.dragging = true
     dragRef.current.moved = false

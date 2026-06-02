@@ -138,7 +138,7 @@ export default function OverviewDashboard() {
       </div>
 
       {/* SECTION B: Movement Summary Cards (second row) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Improved */}
         <div className="bg-emerald-50/40 border border-emerald-100 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:bg-emerald-50/60 transition-all">
           <div>
