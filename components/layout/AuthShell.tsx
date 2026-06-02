@@ -60,6 +60,7 @@ export default function AuthShell({ children }: Props) {
   }
 
   const onMenuPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault()
     e.currentTarget.setPointerCapture?.(e.pointerId)
     dragRef.current.dragging = true
     dragRef.current.moved = false
@@ -69,13 +70,16 @@ export default function AuthShell({ children }: Props) {
     dragRef.current.origTop = menuButtonPos?.top ?? 0
     window.addEventListener('pointermove', onMenuPointerMove)
     window.addEventListener('pointerup', onMenuPointerUp)
+    window.addEventListener('pointercancel', onMenuPointerUp)
   }
 
   const onMenuPointerMove = (e: PointerEvent) => {
     if (!dragRef.current.dragging) return
     const dx = e.clientX - dragRef.current.startX
     const dy = e.clientY - dragRef.current.startY
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragRef.current.moved = true
+    const moved = Math.abs(dx) > 8 || Math.abs(dy) > 8
+    if (!moved && !dragRef.current.moved) return
+    dragRef.current.moved = true
     const maxLeft = Math.max(8, window.innerWidth - 64)
     const maxTop = Math.max(8, window.innerHeight - 64)
     const newLeft = Math.min(maxLeft, Math.max(8, dragRef.current.origLeft + dx))
@@ -88,6 +92,7 @@ export default function AuthShell({ children }: Props) {
     dragRef.current.dragging = false
     window.removeEventListener('pointermove', onMenuPointerMove)
     window.removeEventListener('pointerup', onMenuPointerUp)
+    window.removeEventListener('pointercancel', onMenuPointerUp)
     if (!dragRef.current.moved) {
       setMobileMenuOpen(true)
     } else if (menuButtonPos) {
@@ -152,8 +157,8 @@ export default function AuthShell({ children }: Props) {
         <button
           type="button"
           onPointerDown={onMenuPointerDown}
-          style={menuButtonPos ?? { right: 24, top: 24 }}
-          className="lg:hidden fixed z-40 inline-flex items-center justify-center rounded-2xl border border-slate-700 bg-slate-950/95 p-3 text-slate-200 shadow-lg shadow-black/20 transition hover:bg-slate-900"
+          style={menuButtonPos ?? { right: 24, top: 24, touchAction: 'none' }}
+          className="lg:hidden fixed z-40 inline-flex items-center justify-center rounded-2xl border border-slate-700 bg-slate-950/95 p-3 text-slate-200 shadow-lg shadow-black/20 transition hover:bg-slate-900 touch-none"
           aria-label="Open sidebar"
         >
           <Menu className="w-5 h-5" />

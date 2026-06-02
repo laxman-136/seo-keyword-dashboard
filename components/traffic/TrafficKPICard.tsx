@@ -31,25 +31,25 @@ export default function TrafficKPICard({
   }
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
+    <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
           {title}
         </h3>
-        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shadow-sm">
-          <Icon className="w-5 h-5" />
+        <div className="w-8 sm:w-9 md:w-10 h-8 sm:h-9 md:h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shadow-sm">
+          <Icon className="w-4 sm:w-4.5 md:w-5 h-4 sm:h-4.5 md:h-5" />
         </div>
       </div>
 
-      <div className="flex items-baseline justify-between mt-4">
-        <span className="text-3xl font-extrabold tracking-tight text-slate-800">
+      <div className="flex items-baseline justify-between mt-2 sm:mt-3 md:mt-4">
+        <span className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </span>
 
         {/* Delta Percentage Badge */}
         {!isText && prevValue !== undefined && prevValue > 0 && (
           <div className={cn(
-            "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shrink-0",
+            "flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold shrink-0",
             isPositive ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
             isNegative ? 'bg-red-50 text-red-700 border border-red-100' : 
             'bg-slate-50 text-slate-500 border border-slate-200'

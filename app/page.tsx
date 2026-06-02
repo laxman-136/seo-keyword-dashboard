@@ -70,7 +70,7 @@ export default function OverviewDashboard() {
   const groupsList = groupSummaries.map(g => g.name)
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 min-h-screen">
+    <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 min-h-screen">
       {/* Header Panel */}
       <Header
         title="SEO Keyword Rankings"
@@ -98,7 +98,7 @@ export default function OverviewDashboard() {
       )}
 
       {/* SECTION A: Summary KPI Cards (top row) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
         <KPICard
           title="🥇 P1 Top (Pos 1-4)"
           value={stats.p1Top}
@@ -138,7 +138,7 @@ export default function OverviewDashboard() {
       </div>
 
       {/* SECTION B: Movement Summary Cards (second row) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
         {/* Improved */}
         <div className="bg-emerald-50/40 border border-emerald-100 p-5 rounded-2xl flex items-center justify-between shadow-sm hover:bg-emerald-50/60 transition-all">
           <div>

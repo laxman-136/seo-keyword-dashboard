@@ -66,7 +66,7 @@ export default function TrafficOverview() {
   const yearlyBreakdown = getYearlyBreakdown(rows)
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 min-h-screen">
+    <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 min-h-screen">
       {/* Header Panel */}
       <Header
         title="Traffic Analytics"
@@ -80,7 +80,7 @@ export default function TrafficOverview() {
       />
 
       {/* ROW 1: KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
         <TrafficKPICard
           title="Total Users"
           value={current.totalUsers}
@@ -108,13 +108,13 @@ export default function TrafficOverview() {
       </div>
 
       {/* ROW 2: TREND CHARTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <TotalUsersTrendChart rows={rows} />
         <SourceTrendChart rows={rows} variant="organic-direct-bar" />
       </div>
 
       {/* ROW 3: TABLES */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <TrafficSourceTable
           currentSources={current.sources}
           previousSources={previous.sources}
@@ -126,19 +126,19 @@ export default function TrafficOverview() {
       </div>
 
       {/* ROW 4: COMPARISON TABLE + PERIOD SUMMARY */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <TrafficMoMTable current={current} previous={previous} />
         <TrafficPeriodSummary data={quarterlyBreakdown} />
       </div>
 
       {/* ROW 5: PIE CHARTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <SourceDonutChart sources={current.sources} />
         <CountryDonutChart countries={current.countries} />
       </div>
 
       {/* ROW 6: OVERVIEW TABLES */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <TrafficQuarterlyTable data={quarterlyBreakdown} />
         <TrafficYearlyTable data={yearlyBreakdown} />
       </div>

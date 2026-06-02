@@ -86,7 +86,7 @@ export default function KPICard({
 
   return (
     <div className={cn(
-      "card kpi-card p-6 rounded-2xl border transition-all duration-200 shadow-sm flex flex-col justify-between",
+      "card kpi-card p-3 sm:p-4 md:p-6 rounded-2xl border transition-all duration-200 shadow-sm flex flex-col justify-between",
       s.bg,
       s.border
     )}>
@@ -96,30 +96,32 @@ export default function KPICard({
       </h3>
 
       {/* Value section */}
-      <div className="flex items-baseline justify-between mt-4">
-        <span className={cn("text-4xl font-extrabold tracking-tight", s.numberText)}>
+      <div className="flex items-baseline justify-between mt-2 sm:mt-3 md:mt-4">
+        <span className={cn("text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight", s.numberText)}>
           {value}
         </span>
 
         {/* Vs Last Month Delta Tag */}
         <div className={cn(
-          "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shrink-0",
+          "flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold shrink-0",
           isPositive ? 'bg-emerald-100/80 text-emerald-800' :
           isNegative ? 'bg-red-100/80 text-red-800' : 'bg-slate-100 text-slate-500'
         )}>
           {isPositive ? (
             <>
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>+{delta} ↑</span>
+              <TrendingUp className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5" />
+              <span className="hidden sm:inline">+{delta} ↑</span>
+              <span className="sm:hidden">+{delta}</span>
             </>
           ) : isNegative ? (
             <>
-              <TrendingDown className="w-3.5 h-3.5" />
-              <span>{delta} ↓</span>
+              <TrendingDown className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5" />
+              <span className="hidden sm:inline">{delta} ↓</span>
+              <span className="sm:hidden">{delta}</span>
             </>
           ) : (
             <>
-              <Minus className="w-3.5 h-3.5" />
+              <Minus className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5" />
               <span>Flat</span>
             </>
           )}
@@ -127,7 +129,7 @@ export default function KPICard({
       </div>
 
       {/* Previous month baseline text */}
-      <div className="text-[10px] text-slate-400 mt-2 font-medium">
+      <div className="text-[8px] sm:text-[10px] text-slate-400 mt-1 sm:mt-2 font-medium hidden sm:block">
         vs last month baseline: <span className="font-semibold text-slate-500">{prevValue}</span>
       </div>
     </div>

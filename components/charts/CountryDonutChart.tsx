@@ -42,6 +42,14 @@ const COUNTRY_FLAGS: Record<string, string> = {
 }
 
 export default function CountryDonutChart({ countries }: CountryDonutChartProps) {
+  const [isMobile, setIsMobile] = React.useState(false)
+  
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
   
   const total = TRAFFIC_COUNTRIES.reduce((sum, c) => sum + (countries[c] || 0), 0)
 
@@ -62,7 +70,7 @@ export default function CountryDonutChart({ countries }: CountryDonutChartProps)
   const renderLegend = (value: string) => {
     const countryData = data.find(d => d.name === value)
     return (
-      <span className="text-[11px] font-medium text-slate-600 pl-1 inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 pl-1 inline-flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
         <span className="text-slate-700 font-semibold">{value}:</span>
         <span className="text-slate-800 font-bold">{countryData?.value.toLocaleString()}</span>
         <span className="text-slate-400">({countryData?.percentLabel})</span>
@@ -71,24 +79,24 @@ export default function CountryDonutChart({ countries }: CountryDonutChartProps)
   }
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-[360px] flex flex-col justify-between relative">
+    <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm h-auto sm:h-[360px] md:h-[400px] flex flex-col justify-between relative">
       <div>
-        <h4 className="text-sm font-bold text-slate-800 tracking-tight">
+        <h4 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">
           Geographic Distribution
         </h4>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-[10px] sm:text-xs text-slate-400 mt-1">
           Analysis of web sessions based on visitor countries
         </p>
       </div>
 
-      <div className="flex-1 w-full mt-4 flex items-center justify-center relative text-[10px]">
-        {/* Center Total label aligned with the shifted pie */}
-        <div className="absolute top-1/2 left-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none select-none">
-          <span className="text-2xl font-black text-slate-800">{total.toLocaleString()}</span>
-          <span className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Total Users</span>
+      <div className={`flex-1 w-full mt-2 sm:mt-4 flex items-center justify-center relative text-[10px] ${isMobile ? 'flex-col' : ''}`}>
+        {/* Center Total label - repositioned for mobile */}
+        <div className={`${isMobile ? 'mb-2' : 'absolute top-1/2 left-[30%] -translate-x-1/2 -translate-y-1/2'} flex flex-col items-center justify-center pointer-events-none select-none`}>
+          <span className="text-lg sm:text-xl md:text-2xl font-black text-slate-800">{total.toLocaleString()}</span>
+          <span className="text-[7px] sm:text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Total Users</span>
         </div>
 
-        <ResponsiveContainer width="100%" height="90%">
+        <ResponsiveContainer width="100%" height={isMobile ? 200 : 250}>
           <PieChart>
             <Tooltip
               contentStyle={{
@@ -103,10 +111,10 @@ export default function CountryDonutChart({ countries }: CountryDonutChartProps)
             />
             <Pie
               data={data}
-              cx="30%"
+              cx={isMobile ? "50%" : "30%"}
               cy="50%"
-              innerRadius={45}
-              outerRadius={65}
+              innerRadius={isMobile ? 35 : 45}
+              outerRadius={isMobile ? 55 : 65}
               paddingAngle={2}
               dataKey="value"
             >
@@ -115,17 +123,19 @@ export default function CountryDonutChart({ countries }: CountryDonutChartProps)
               ))}
             </Pie>
             <Legend
-              layout="vertical"
-              align="right"
-              verticalAlign="middle"
+              layout={isMobile ? "horizontal" : "vertical"}
+              align={isMobile ? "center" : "right"}
+              verticalAlign={isMobile ? "bottom" : "middle"}
               formatter={renderLegend}
-              iconSize={8}
+              iconSize={6}
               iconType="circle"
               wrapperStyle={{
-                fontSize: '11px',
-                paddingLeft: '10px',
-                right: 0,
-                width: 160
+                fontSize: isMobile ? '10px' : '11px',
+                paddingLeft: isMobile ? '0' : '10px',
+                paddingTop: isMobile ? '16px' : '0',
+                width: isMobile ? '100%' : 160,
+                maxHeight: isMobile ? 'auto' : '100%',
+                overflowY: isMobile ? 'visible' : 'auto'
               }}
             />
           </PieChart>

@@ -32,47 +32,50 @@ export default function Header({
   }
 
   return (
-    <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between shadow-sm relative z-10 no-print">
+    <header className="bg-white border-b border-slate-200 px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-5 flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between shadow-sm relative z-10 no-print">
       {/* Title & Timing info */}
       <div className="min-w-0">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">{title}</h1>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">{title}</h1>
           
           {isMock && (
-            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              Demo Mock Data
+            <span className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
+              <AlertTriangle className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-600" />
+              <span className="hidden sm:inline">Demo Mock Data</span>
+              <span className="sm:hidden">Mock</span>
             </span>
           )}
           
           {!isMock && (
-            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-              <CloudSun className="w-3.5 h-3.5 text-emerald-500" />
-              Live Sheets API
+            <span className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+              <CloudSun className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-emerald-500" />
+              <span className="hidden sm:inline">Live Sheets API</span>
+              <span className="sm:hidden">Live</span>
             </span>
           )}
         </div>
 
         {currentMonth && (
-          <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
-            <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+          <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-slate-500 mt-1 flex-wrap">
+            <Calendar className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-slate-400 shrink-0" />
             <span className="font-semibold text-slate-700">{formatMonthLabel(currentMonth)}</span>
             {previousMonth && (
               <>
-                <span className="text-slate-300">|</span>
-                <span>vs Previous: <span className="font-medium text-slate-600">{formatMonthLabel(previousMonth)}</span></span>
+                <span className="text-slate-300 hidden sm:inline">|</span>
+                <span className="hidden sm:inline">vs Previous: <span className="font-medium text-slate-600">{formatMonthLabel(previousMonth)}</span></span>
+                <span className="sm:hidden text-slate-500">vs <span className="font-medium text-slate-600">{formatMonthLabel(previousMonth)}</span></span>
               </>
             )}
             {lastUpdated && (
               <>
-                <span className="text-slate-300">|</span>
-                <span className="text-xs text-slate-400">Updated: {lastUpdated}</span>
+                <span className="text-slate-300 hidden sm:inline">|</span>
+                <span className="text-[10px] sm:text-xs text-slate-400 hidden sm:inline">Updated: {lastUpdated}</span>
               </>
             )}
           </div>
         )}
         {warningText && (
-          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mt-2 sm:mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-amber-900">
             <span className="font-semibold">Data warning:</span> {warningText}
           </div>
         )}

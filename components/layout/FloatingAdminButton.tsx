@@ -96,6 +96,7 @@ export default function FloatingAdminButton() {
   const onPointerDown = (e: React.PointerEvent) => {
     const el = ref.current
     if (!el) return
+    e.preventDefault()
     (e.target as Element).setPointerCapture?.(e.pointerId)
     dragRef.current.dragging = true
     dragRef.current.moved = false
@@ -105,13 +106,16 @@ export default function FloatingAdminButton() {
     dragRef.current.origTop = pos?.top ?? 0
     window.addEventListener('pointermove', onPointerMove)
     window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerUp)
   }
 
   const onPointerMove = (e: PointerEvent) => {
     if (!dragRef.current.dragging) return
     const dx = e.clientX - dragRef.current.startX
     const dy = e.clientY - dragRef.current.startY
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragRef.current.moved = true
+    const moved = Math.abs(dx) > 8 || Math.abs(dy) > 8
+    if (!moved && !dragRef.current.moved) return
+    dragRef.current.moved = true
     const newLeft = Math.max(8, dragRef.current.origLeft + dx)
     const newTop = Math.max(8, dragRef.current.origTop + dy)
     setPos({ left: newLeft, top: newTop })
@@ -122,6 +126,7 @@ export default function FloatingAdminButton() {
     dragRef.current.dragging = false
     window.removeEventListener('pointermove', onPointerMove)
     window.removeEventListener('pointerup', onPointerUp)
+    window.removeEventListener('pointercancel', onPointerUp)
     if (!dragRef.current.moved) {
       // treat as click toggle
       setOpen(v => !v)
@@ -145,7 +150,7 @@ export default function FloatingAdminButton() {
   return (
     <div
       ref={ref}
-      style={pos ? { left: pos.left, top: pos.top } : undefined}
+      style={pos ? { left: pos.left, top: pos.top, touchAction: 'none' } : undefined}
       className="fixed z-[9999] hidden sm:flex flex-col items-end gap-2 touch-none"
       onPointerDown={onPointerDown}
     >
