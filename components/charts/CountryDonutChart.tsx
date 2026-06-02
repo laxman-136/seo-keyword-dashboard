@@ -82,8 +82,8 @@ export default function CountryDonutChart({ countries }: CountryDonutChartProps)
       </div>
 
       <div className="flex-1 w-full mt-4 flex items-center justify-center relative text-[10px]">
-        {/* Center Total label */}
-        <div className="absolute flex flex-col items-center justify-center pointer-events-none select-none">
+        {/* Center Total label aligned with the shifted pie */}
+        <div className="absolute top-1/2 left-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none select-none">
           <span className="text-2xl font-black text-slate-800">{total.toLocaleString()}</span>
           <span className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Total Users</span>
         </div>
@@ -103,10 +103,10 @@ export default function CountryDonutChart({ countries }: CountryDonutChartProps)
             />
             <Pie
               data={data}
-              cx="40%"
+              cx="30%"
               cy="50%"
-              innerRadius={50}
-              outerRadius={75}
+              innerRadius={45}
+              outerRadius={65}
               paddingAngle={2}
               dataKey="value"
             >
@@ -124,7 +124,8 @@ export default function CountryDonutChart({ countries }: CountryDonutChartProps)
               wrapperStyle={{
                 fontSize: '11px',
                 paddingLeft: '10px',
-                right: 0
+                right: 0,
+                width: 160
               }}
             />
           </PieChart>
