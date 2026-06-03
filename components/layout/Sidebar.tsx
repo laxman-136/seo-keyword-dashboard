@@ -275,62 +275,225 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     })
   }
 
-  const keywordItems = [
-    { label: 'Overview',       href: '/',        icon: LayoutDashboard },
-    { label: 'By Group',       href: '/groups',  icon: Layers },
-    { label: 'Compare Months', href: '/compare', icon: BarChart2 }
-  ]
-  const trafficItems = [
-    { label: 'Overview',        href: '/traffic',          icon: BarChart2 },
-    { label: 'By Source',       href: '/traffic/sources',  icon: Layers },
-    { label: 'By Countries',    href: '/traffic/countries',icon: LayoutDashboard },
-    { label: 'Compare Periods', href: '/traffic/compare',  icon: BarChart2 }
-  ]
-  const leadsItems = [
-    { label: 'Overview',          href: '/leads',          icon: LayoutDashboard },
-    { label: 'By Course',         href: '/leads/courses',  icon: Layers },
-    { label: 'Funnel & Conversion',href: '/leads/funnel',   icon: BarChart2 },
-    { label: 'Monthly Trends',     href: '/leads/trends',   icon: BarChart2 }
-  ]
-  const siteItems = [
-    { label: 'Site Status', href: '/site-status', icon: Building2 }
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    keywords: true,
+    traffic: false,
+    leads: false,
+    site: false,
+  })
+
+  const navigationSections = [
+    {
+      id: 'keywords',
+      title: 'Keyword Rankings',
+      icon: Sparkles,
+      items: [
+        { label: 'Overview',       href: '/',        icon: LayoutDashboard },
+        { label: 'By Group',       href: '/groups',  icon: Layers },
+        { label: 'Compare Months', href: '/compare', icon: BarChart2 }
+      ]
+    },
+    {
+      id: 'traffic',
+      title: 'Traffic Analytics',
+      icon: BarChart2,
+      items: [
+        { label: 'Overview',        href: '/traffic',          icon: BarChart2 },
+        { label: 'By Source',       href: '/traffic/sources',  icon: Layers },
+        { label: 'By Countries',    href: '/traffic/countries',icon: LayoutDashboard },
+        { label: 'Compare Periods', href: '/traffic/compare',  icon: BarChart2 }
+      ]
+    },
+    {
+      id: 'leads',
+      title: 'Leads Report',
+      icon: Users,
+      items: [
+        { label: 'Overview',          href: '/leads',          icon: LayoutDashboard },
+        { label: 'By Course',         href: '/leads/courses',  icon: Layers },
+        { label: 'Funnel & Conversion',href: '/leads/funnel',   icon: BarChart2 },
+        { label: 'Monthly Trends',     href: '/leads/trends',   icon: BarChart2 }
+      ]
+    },
+    {
+      id: 'site',
+      title: 'Site Status',
+      icon: Building2,
+      items: [
+        { label: 'Site Status', href: '/site-status', icon: Building2 }
+      ]
+    }
   ]
 
-  const renderNavSection = (title: string, items: typeof keywordItems, forceExpanded = false) => {
+  useEffect(() => {
+    const activeSection = navigationSections.find(sec =>
+      sec.items.some(item => pathname === item.href)
+    )
+    if (activeSection) {
+      setOpenSections(prev => ({
+        ...prev,
+        [activeSection.id]: true
+      }))
+    }
+  }, [pathname])
+
+  const toggleSection = (id: string) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }))
+  }
+
+  const renderSection = (section: typeof navigationSections[0], forceExpanded = false) => {
     const collapsedForRender = forceExpanded ? false : isCollapsed
-    return (
-      <div className="space-y-2">
-        {!collapsedForRender ? (
-          <div className="px-4 py-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase border-b border-slate-800/40 whitespace-nowrap">
-            {title}
+    const isOpen = openSections[section.id]
+    const hasActiveItem = section.items.some(item => pathname === item.href)
+    const SectionIcon = section.icon
+
+    if (collapsedForRender) {
+      return (
+        <div key={section.id} className="relative group flex justify-center py-1">
+          <button
+            className={cn(
+              "p-3 rounded-xl transition-all duration-150 relative",
+              hasActiveItem
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 border border-transparent"
+            )}
+            title={section.title}
+          >
+            <SectionIcon className="w-4.5 h-4.5 shrink-0" />
+            {hasActiveItem && (
+              <span className="absolute right-1.5 top-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/50" />
+            )}
+          </button>
+
+          <div className="absolute left-full top-0 ml-3 hidden group-hover:block w-56 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150">
+            <div className="px-3 py-1.5 text-xs font-bold text-slate-300 border-b border-slate-800/60 mb-2 flex items-center gap-2">
+              <SectionIcon className="w-4 h-4 text-emerald-400" />
+              <span>{section.title}</span>
+            </div>
+            <div className="space-y-1">
+              {section.items.map(item => {
+                const isActive = pathname === item.href
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150",
+                      isActive
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold"
+                        : "hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent"
+                    )}
+                  >
+                    <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-emerald-400" : "text-slate-400")} />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
           </div>
-        ) : (
-          <div className="border-t border-slate-800/40 my-3 mx-2" />
-        )}
-        <div className="space-y-1">
-          {items.map(item => {
-            const isActive = pathname === item.href
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsedForRender ? item.label : undefined}
-                className={cn(
-                  "flex items-center rounded-xl text-sm font-medium transition-all duration-150",
-                  collapsedForRender ? "justify-center p-3" : "gap-3 px-4 py-2.5",
-                  isActive
-                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    : "hover:bg-slate-800/60 hover:text-slate-200 border border-transparent"
-                )}
-              >
-                <Icon className={cn("w-4.5 h-4.5 shrink-0", isActive ? "text-emerald-400" : "text-slate-400")} />
-                {!collapsedForRender && <span className="truncate whitespace-nowrap">{item.label}</span>}
-              </Link>
-            )
-          })}
         </div>
+      )
+    }
+
+    return (
+      <div key={section.id} className="space-y-1">
+        <button
+          onClick={() => toggleSection(section.id)}
+          className={cn(
+            "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-150 select-none group text-left",
+            hasActiveItem
+              ? "text-slate-200 bg-slate-800/30"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+          )}
+        >
+          <div className="flex items-center gap-2.5">
+            <SectionIcon className={cn("w-4 h-4 transition-colors", hasActiveItem ? "text-emerald-400" : "text-slate-400 group-hover:text-slate-300")} />
+            <span className="truncate">{section.title}</span>
+          </div>
+          <ChevronRight className={cn(
+            "w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0",
+            isOpen && "rotate-90 text-slate-400"
+          )} />
+        </button>
+
+        {isOpen && (
+          <div className="pl-3.5 ml-4 border-l border-slate-800 space-y-1 mt-1 transition-all duration-200 animate-in fade-in slide-in-from-top-1 duration-150">
+            {section.items.map(item => {
+              const isActive = pathname === item.href
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 relative group/item",
+                    isActive
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold"
+                      : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 border border-transparent"
+                  )}
+                >
+                  <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-emerald-400" : "text-slate-400 group-hover/item:text-slate-300")} />
+                  <span className="truncate">{item.label}</span>
+                  {isActive && (
+                    <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </div>
+    )
+  }
+
+  const renderSettingsLink = (forceExpanded = false) => {
+    const collapsedForRender = forceExpanded ? false : isCollapsed
+    const isActive = pathname === '/settings'
+
+    if (collapsedForRender) {
+      return (
+        <div className="relative group flex justify-center py-1">
+          <Link
+            href="/settings"
+            className={cn(
+              "p-3 rounded-xl transition-all duration-150 relative",
+              isActive
+                ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
+                : "hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent"
+            )}
+          >
+            <Settings className="w-4.5 h-4.5 shrink-0" />
+            {isActive && (
+              <span className="absolute right-1.5 top-1.5 w-1.5 h-1.5 rounded-full bg-violet-400 shadow-sm shadow-violet-500/50" />
+            )}
+          </Link>
+          <div className="absolute left-full top-0 ml-3 hidden group-hover:block w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150">
+            <div className="px-3 py-1.5 text-xs font-bold text-slate-300 flex items-center gap-2">
+              <Settings className="w-4 h-4 text-violet-400" />
+              <span>Data Sources</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <Link
+        href="/settings"
+        className={cn(
+          "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 text-left",
+          isActive
+            ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
+            : "hover:bg-slate-800/40 text-slate-400 hover:text-slate-200 border border-transparent"
+        )}
+      >
+        <Settings className={cn("w-4 h-4 shrink-0", isActive ? "text-violet-400" : "text-slate-400")} />
+        <span className="truncate">Data Sources</span>
+      </Link>
     )
   }
 
@@ -388,34 +551,12 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           )}
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden">
-          {renderNavSection('📊 Keyword Rankings', keywordItems)}
-          {renderNavSection('📈 Traffic Analytics', trafficItems)}
-          {renderNavSection('🎯 Leads Report', leadsItems)}
-          {renderNavSection('🌐 Site', siteItems)}
-
-          <div className="space-y-1">
-            {!isCollapsed && (
-              <div className="px-4 py-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase border-b border-slate-800/40">
-                ⚙️ Configuration
-              </div>
-            )}
-            {isCollapsed && <div className="border-t border-slate-800/40 my-3 mx-2" />}
-            <Link
-              href="/settings"
-              title={isCollapsed ? 'Data Source Settings' : undefined}
-              className={cn(
-                "flex items-center rounded-xl text-sm font-medium transition-all duration-150",
-                isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-2.5",
-                pathname === '/settings'
-                  ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
-                  : "hover:bg-slate-800/60 hover:text-slate-200 border border-transparent"
-              )}
-            >
-              <Settings className={cn("w-4.5 h-4.5 shrink-0", pathname === '/settings' ? "text-violet-400" : "text-slate-400")} />
-              {!isCollapsed && <span className="truncate">Data Sources</span>}
-            </Link>
-          </div>
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
+          {navigationSections.map(sec => renderSection(sec))}
+          
+          <div className="border-t border-slate-800/40 my-3 mx-1" />
+          
+          {renderSettingsLink()}
         </nav>
 
         <div className={cn("p-4 border-t border-slate-800 text-xs space-y-3", isMounted && isCollapsed && "p-2")}>
@@ -495,34 +636,12 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
               )}
             </div>
 
-            <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden">
-              {renderNavSection('📊 Keyword Rankings', keywordItems, true)}
-              {renderNavSection('📈 Traffic Analytics', trafficItems, true)}
-              {renderNavSection('🎯 Leads Report', leadsItems, true)}
-              {renderNavSection('🌐 Site', siteItems, true)}
-
-              <div className="space-y-1">
-                {!isCollapsed && (
-                  <div className="px-4 py-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase border-b border-slate-800/40">
-                    ⚙️ Configuration
-                  </div>
-                )}
-                {isCollapsed && <div className="border-t border-slate-800/40 my-3 mx-2" />}
-                <Link
-                  href="/settings"
-                  title={isCollapsed ? 'Data Source Settings' : undefined}
-                  className={cn(
-                    "flex items-center rounded-xl text-sm font-medium transition-all duration-150",
-                    isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-2.5",
-                    pathname === '/settings'
-                      ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
-                      : "hover:bg-slate-800/60 hover:text-slate-200 border border-transparent"
-                  )}
-                >
-                  <Settings className={cn("w-4.5 h-4.5 shrink-0", pathname === '/settings' ? "text-violet-400" : "text-slate-400")} />
-                  {!isCollapsed && <span className="truncate">Data Sources</span>}
-                </Link>
-              </div>
+            <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
+              {navigationSections.map(sec => renderSection(sec, true))}
+              
+              <div className="border-t border-slate-800/40 my-3 mx-1" />
+              
+              {renderSettingsLink(true)}
             </nav>
 
             <div className={cn("p-4 border-t border-slate-800 text-xs space-y-3", isMounted && isCollapsed && "p-2")}>
