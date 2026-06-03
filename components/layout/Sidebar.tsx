@@ -344,6 +344,19 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     }))
   }
 
+  const handleSectionClick = (id: string) => {
+    if (isCollapsed) {
+      setIsCollapsed(false)
+      localStorage.setItem('sidebar-collapsed', 'false')
+      setOpenSections(prev => ({
+        ...prev,
+        [id]: true
+      }))
+    } else {
+      toggleSection(id)
+    }
+  }
+
   const renderSection = (section: typeof navigationSections[0], forceExpanded = false) => {
     const collapsedForRender = forceExpanded ? false : isCollapsed
     const isOpen = openSections[section.id]
@@ -354,47 +367,20 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       return (
         <div key={section.id} className="relative group flex justify-center py-1">
           <button
+            onClick={() => handleSectionClick(section.id)}
             className={cn(
               "p-3 rounded-xl transition-all duration-150 relative",
               hasActiveItem
                 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                 : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 border border-transparent"
             )}
-            title={section.title}
+            title={`${section.title} (Click to expand)`}
           >
             <SectionIcon className="w-4.5 h-4.5 shrink-0" />
             {hasActiveItem && (
               <span className="absolute right-1.5 top-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/50" />
             )}
           </button>
-
-          <div className="absolute left-full top-0 ml-3 hidden group-hover:block w-56 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150">
-            <div className="px-3 py-1.5 text-xs font-bold text-slate-300 border-b border-slate-800/60 mb-2 flex items-center gap-2">
-              <SectionIcon className="w-4 h-4 text-emerald-400" />
-              <span>{section.title}</span>
-            </div>
-            <div className="space-y-1">
-              {section.items.map(item => {
-                const isActive = pathname === item.href
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150",
-                      isActive
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold"
-                        : "hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent"
-                    )}
-                  >
-                    <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-emerald-400" : "text-slate-400")} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
         </div>
       )
     }
@@ -402,7 +388,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     return (
       <div key={section.id} className="space-y-1">
         <button
-          onClick={() => toggleSection(section.id)}
+          onClick={() => handleSectionClick(section.id)}
           className={cn(
             "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-150 select-none group text-left",
             hasActiveItem
@@ -465,18 +451,13 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
                 : "hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent"
             )}
+            title="Data Sources Settings"
           >
             <Settings className="w-4.5 h-4.5 shrink-0" />
             {isActive && (
               <span className="absolute right-1.5 top-1.5 w-1.5 h-1.5 rounded-full bg-violet-400 shadow-sm shadow-violet-500/50" />
             )}
           </Link>
-          <div className="absolute left-full top-0 ml-3 hidden group-hover:block w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150">
-            <div className="px-3 py-1.5 text-xs font-bold text-slate-300 flex items-center gap-2">
-              <Settings className="w-4 h-4 text-violet-400" />
-              <span>Data Sources</span>
-            </div>
-          </div>
         </div>
       )
     }
@@ -521,14 +502,24 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       )}
 
       <aside className={cn(
-        "bg-slate-900 border-r border-slate-800 text-slate-400 flex flex-col min-h-screen shrink-0 no-print transition-all duration-300 ease-in-out overflow-x-hidden",
+        "bg-slate-900 border-r border-slate-800 shadow-[5px_0_25px_-5px_rgba(0,0,0,0.4)] text-slate-400 flex flex-col min-h-screen shrink-0 no-print transition-all duration-300 ease-in-out overflow-x-hidden z-20 relative",
         desktopSidebarClass
       )}>
         <div className={cn(
           "relative p-6 border-b border-slate-800 flex items-center justify-between",
           isMounted && isCollapsed && "justify-center p-4"
         )}>
-          <Link href="/" className="flex items-center gap-3 group shrink-0">
+          <Link
+            href={isMounted && isCollapsed ? "#" : "/"}
+            onClick={(e) => {
+              if (isMounted && isCollapsed) {
+                e.preventDefault()
+                handleToggle()
+              }
+            }}
+            className="flex items-center gap-3 group shrink-0 pr-8"
+            title={isMounted && isCollapsed ? "Expand Sidebar" : undefined}
+          >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/10 transition-transform group-hover:scale-105 shrink-0">
               <Sparkles className="w-5 h-5 fill-current text-white" />
             </div>
@@ -539,6 +530,16 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
               </div>
             )}
           </Link>
+
+          {(!isMounted || !isCollapsed) && !mobileOpen && (
+            <button
+              onClick={handleToggle}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-slate-600 text-slate-300 hover:text-emerald-400 shadow-sm transition-all shrink-0 z-30"
+              title="Collapse Sidebar"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
 
           {mobileOpen && onClose && (
             <button
