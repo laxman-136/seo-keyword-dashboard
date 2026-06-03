@@ -150,7 +150,7 @@ export default function FloatingAdminButton() {
     <div
       ref={ref}
       style={pos ? { left: pos.left, top: pos.top, touchAction: 'none' } : undefined}
-      className="fixed z-[9999] hidden sm:flex flex-col items-end gap-2 touch-none"
+      className="fixed z-[9999] flex flex-col items-end gap-2 touch-none"
       onPointerDown={onPointerDown}
     >
 
@@ -212,10 +212,11 @@ export default function FloatingAdminButton() {
       <button
         // click handled via pointer up when not dragged
         className={cn(
-          'relative flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-2xl shadow-2xl shadow-black/40 border transition-all duration-200 group select-none',
+          'relative flex items-center shadow-2xl shadow-black/40 border transition-all duration-200 group select-none',
           open
             ? 'bg-slate-800 border-slate-600 shadow-violet-500/10'
-            : 'bg-slate-900 border-slate-700 hover:border-violet-500/40 hover:shadow-violet-500/10'
+            : 'bg-slate-900 border-slate-700 hover:border-violet-500/40 hover:shadow-violet-500/10',
+          'rounded-full p-2.5 sm:rounded-2xl sm:pl-3 sm:pr-4 sm:py-2.5 gap-0 sm:gap-2.5'
         )}
       >
         {/* Avatar */}
@@ -224,7 +225,7 @@ export default function FloatingAdminButton() {
         </div>
 
         {/* Name + role */}
-        <div className="text-left">
+        <div className="text-left hidden sm:block">
           <p className="text-xs font-bold text-white leading-none truncate max-w-[100px]">{me.name}</p>
           <p className={cn(
             'text-[10px] font-semibold mt-0.5 flex items-center gap-0.5',

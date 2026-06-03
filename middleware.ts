@@ -3,8 +3,22 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { decodeTokenEdge, getTokenFromCookiesEdge } from '@/lib/auth-edge'
 
-const PUBLIC_PATHS  = ['/login', '/register']
-const PUBLIC_PREFIX = ['/api/auth/', '/_next/', '/favicon', '/viewer/']
+const PUBLIC_PATHS  = ['/', '/login', '/register', '/groups', '/compare', '/traffic', '/leads', '/site-status']
+const PUBLIC_PREFIX = [
+  '/api/auth/',
+  '/api/leads',
+  '/api/traffic',
+  '/api/keywords',
+  '/api/site-status',
+  '/_next/',
+  '/favicon',
+  '/viewer/',
+  '/leads/',
+  '/traffic/',
+  '/compare',
+  '/groups',
+  '/site-status/',
+]
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

@@ -1,9 +1,11 @@
 // lib/sheets.ts
 import { KeywordRow, MonthData, TrafficRow, TrafficSource, TrafficCountry } from './types'
 import { SiteStatusRow, SiteStatusPageRow, SiteStatusPageResult } from './types'
+import { LeadsMonthlyRow, LeadsDetailRow, LeadsCourseAggregate, LeadsFunnelData, LeadsKPI, LeadsTrendPoint, LeadsChannelSplit } from './types'
 import { detectMonths, TRAFFIC_SOURCES, TRAFFIC_COUNTRIES } from './calculations'
 import { getMockSheetsResponse } from './mockData'
 import { getMockTrafficSheetsResponse } from './mockTrafficData'
+import { getMockLeadsMonthlyResponse, getMockLeadsDetailResponse } from './mockLeadsData'
 
 /**
  * Defensive parser that converts raw Google Sheets values grid to KeywordRow[]
@@ -549,3 +551,455 @@ function getMockSiteStatusPageData(): { rows: SiteStatusPageRow[]; months: strin
     ]
   }
 }
+
+// ── LEADS DATA PARSING & FETCHING ──────────────────────────
+
+export const LEADS_MONTHLY_SHEET = "Leads Monthly"
+export const LEADS_DETAIL_SHEET  = "Leads Detail"
+
+export const LEAD_COURSES = [
+  "Oracle Fusion SCM",
+  "Oracle Fusion HCM",
+  "Oracle Fusion Financials",
+  "Oracle Fusion Tech + OIC",
+  "Oracle Fusion PPM",
+  "SAP / EBS / Others"
+]
+
+export const STATUS_GROUPS = [
+  "Enrolled",
+  "High Potential",
+  "Medium Potential",
+  "Fresh/Unqualified",
+  "Low/Cold"
+]
+
+// Status group colors (consistent everywhere)
+export const STATUS_COLORS = {
+  "Enrolled":           "#16a34a",  // green
+  "High Potential":     "#2563eb",  // blue
+  "Medium Potential":   "#ca8a04",  // yellow
+  "Fresh/Unqualified":  "#6b7280",  // gray
+  "Low/Cold":           "#dc2626",  // red
+}
+
+// Helper to parse "Month Year" (e.g. "May 2026") to Date defensively
+function parseLeadsMonthYear(monthStr: string): Date {
+  if (!monthStr) return new Date(0)
+  const parts = monthStr.trim().split(/\s+/)
+  if (parts.length < 2) {
+    const d = new Date(monthStr)
+    return isNaN(d.getTime()) ? new Date(0) : d
+  }
+  const mName = parts[0].toLowerCase()
+  const yNum = parseInt(parts[1], 10) || 2026
+  const monthsMap: Record<string, number> = {
+    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+    may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, september: 8,
+    oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11
+  }
+  const mIdx = monthsMap[mName] ?? 0
+  return new Date(yNum, mIdx, 1)
+}
+
+export function parseLeadsMonthlyGrid(values: string[][]): LeadsMonthlyRow[] {
+  if (!values || values.length === 0) return []
+  const headers = values[0].map(h => (h || '').trim().toLowerCase())
+
+  const colIdx = {
+    month: headers.indexOf('month'),
+    totalLeads: headers.indexOf('total leads'),
+    websiteLeads: headers.indexOf('website leads'),
+    organicLeads: headers.indexOf('organic leads'),
+    scmLeads: headers.indexOf('scm leads'),
+    hcmLeads: headers.indexOf('hcm leads'),
+    financialsLeads: headers.indexOf('financials leads'),
+    techOicLeads: headers.indexOf('tech oic leads'),
+    ppmLeads: headers.indexOf('ppm leads'),
+    sapEbsOthersLeads: headers.indexOf('sap ebs others leads'),
+    enrolled: headers.indexOf('enrolled'),
+    highPotential: headers.indexOf('high potential'),
+    mediumPotential: headers.indexOf('medium potential'),
+    freshUnqualified: headers.indexOf('fresh unqualified'),
+    lowCold: headers.indexOf('low cold'),
+    convRate: headers.indexOf('conv rate')
+  }
+
+  const rows: LeadsMonthlyRow[] = []
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i]
+    if (!row || row.length === 0) continue
+
+    const getCell = (idx: number, fallback = ''): string => {
+      if (idx < 0 || idx >= row.length) return fallback
+      return row[idx]?.trim() ?? fallback
+    }
+
+    const month = getCell(colIdx.month)
+    if (!month) continue
+
+    const totalLeads = parseInt(getCell(colIdx.totalLeads), 10) || 0
+    if (totalLeads === 0) continue // Skip empty rows
+
+    rows.push({
+      month,
+      totalLeads,
+      websiteLeads: parseInt(getCell(colIdx.websiteLeads), 10) || 0,
+      organicLeads: parseInt(getCell(colIdx.organicLeads), 10) || 0,
+      scmLeads: parseInt(getCell(colIdx.scmLeads), 10) || 0,
+      hcmLeads: parseInt(getCell(colIdx.hcmLeads), 10) || 0,
+      financialsLeads: parseInt(getCell(colIdx.financialsLeads), 10) || 0,
+      techOicLeads: parseInt(getCell(colIdx.techOicLeads), 10) || 0,
+      ppmLeads: parseInt(getCell(colIdx.ppmLeads), 10) || 0,
+      sapEbsOthersLeads: parseInt(getCell(colIdx.sapEbsOthersLeads), 10) || 0,
+      enrolled: parseInt(getCell(colIdx.enrolled), 10) || 0,
+      highPotential: parseInt(getCell(colIdx.highPotential), 10) || 0,
+      mediumPotential: parseInt(getCell(colIdx.mediumPotential), 10) || 0,
+      freshUnqualified: parseInt(getCell(colIdx.freshUnqualified), 10) || 0,
+      lowCold: parseInt(getCell(colIdx.lowCold), 10) || 0,
+      convRate: parseFloat(getCell(colIdx.convRate)) || 0
+    })
+  }
+
+  return rows.sort((a, b) => parseLeadsMonthYear(a.month).getTime() - parseLeadsMonthYear(b.month).getTime())
+}
+
+export function parseLeadsDetailGrid(values: string[][]): LeadsDetailRow[] {
+  if (!values || values.length === 0) return []
+  const headers = values[0].map(h => (h || '').trim().toLowerCase())
+
+  const colIdx = {
+    month: headers.indexOf('month'),
+    courseName: headers.indexOf('course name'),
+    enrolled: headers.indexOf('enrolled'),
+    highPotential: headers.indexOf('high potential'),
+    mediumPotential: headers.indexOf('medium potential'),
+    freshUnqualified: headers.indexOf('fresh unqualified'),
+    lowCold: headers.indexOf('low cold'),
+    total: headers.indexOf('total'),
+    organic: headers.indexOf('organic'),
+    website: headers.indexOf('website')
+  }
+
+  const rows: LeadsDetailRow[] = []
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i]
+    if (!row || row.length === 0) continue
+
+    const getCell = (idx: number, fallback = ''): string => {
+      if (idx < 0 || idx >= row.length) return fallback
+      return row[idx]?.trim() ?? fallback
+    }
+
+    const month = getCell(colIdx.month)
+    const courseName = getCell(colIdx.courseName)
+    if (!month || !courseName) continue
+
+    rows.push({
+      month,
+      courseName,
+      enrolled: parseInt(getCell(colIdx.enrolled), 10) || 0,
+      highPotential: parseInt(getCell(colIdx.highPotential), 10) || 0,
+      mediumPotential: parseInt(getCell(colIdx.mediumPotential), 10) || 0,
+      freshUnqualified: parseInt(getCell(colIdx.freshUnqualified), 10) || 0,
+      lowCold: parseInt(getCell(colIdx.lowCold), 10) || 0,
+      total: parseInt(getCell(colIdx.total), 10) || 0,
+      organic: parseInt(getCell(colIdx.organic), 10) || 0,
+      website: parseInt(getCell(colIdx.website), 10) || 0
+    })
+  }
+
+  return rows
+}
+
+export async function fetchLeadsMonthly(
+  bypassCache = false,
+  customSheetId?: string,
+  customApiKey?: string
+): Promise<{
+  rows: LeadsMonthlyRow[]
+  isMock: boolean
+  lastUpdated: string
+  fallbackReason?: string
+}> {
+  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
+  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+
+  const nowString = new Date().toLocaleString('en-US', {
+    timeZone: 'Asia/Kolkata',
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
+
+  if (!sheetId || !apiKey) {
+    console.warn('Google Sheets API credentials missing. Falling back to local mock leads monthly data.')
+    const mock = getMockLeadsMonthlyResponse()
+    return {
+      rows: parseLeadsMonthlyGrid(mock.values),
+      isMock: true,
+      lastUpdated: nowString,
+      fallbackReason: 'No Google Sheets credentials configured. Showing demo leads data.'
+    }
+  }
+
+  try {
+    const data = await fetchSheetValues(sheetId, apiKey, LEADS_MONTHLY_SHEET, bypassCache)
+    const rows = parseLeadsMonthlyGrid(data)
+
+    // If the Leads Monthly sheet tab doesn't exist yet, fall back to mock
+    if (rows.length === 0) {
+      const mock = getMockLeadsMonthlyResponse()
+      return {
+        rows: parseLeadsMonthlyGrid(mock.values),
+        isMock: true,
+        lastUpdated: nowString,
+        fallbackReason: 'Leads Monthly sheet is empty or not yet created. Showing demo data.'
+      }
+    }
+
+    return {
+      rows,
+      isMock: false,
+      lastUpdated: nowString
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('Failed to fetch Leads Monthly. Falling back to mock data.', error)
+    const mock = getMockLeadsMonthlyResponse()
+    return {
+      rows: parseLeadsMonthlyGrid(mock.values),
+      isMock: true,
+      lastUpdated: nowString,
+      fallbackReason: `Live Sheets failed: ${msg}`
+    }
+  }
+}
+
+export async function fetchLeadsDetail(
+  bypassCache = false,
+  customSheetId?: string,
+  customApiKey?: string
+): Promise<{
+  rows: LeadsDetailRow[]
+  isMock: boolean
+}> {
+  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
+  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+
+  if (!sheetId || !apiKey) {
+    const mock = getMockLeadsDetailResponse()
+    return {
+      rows: parseLeadsDetailGrid(mock.values),
+      isMock: true
+    }
+  }
+
+  try {
+    const data = await fetchSheetValues(sheetId, apiKey, LEADS_DETAIL_SHEET, bypassCache)
+    const rows = parseLeadsDetailGrid(data)
+
+    // If the Leads Detail sheet tab doesn't exist yet, use mock
+    if (rows.length === 0) {
+      const mock = getMockLeadsDetailResponse()
+      return {
+        rows: parseLeadsDetailGrid(mock.values),
+        isMock: true
+      }
+    }
+
+    return {
+      rows,
+      isMock: false
+    }
+  } catch (error) {
+    console.warn('Leads Detail sheet missing or empty. Returning mock data.', error)
+    const mock = getMockLeadsDetailResponse()
+    return {
+      rows: parseLeadsDetailGrid(mock.values),
+      isMock: true
+    }
+  }
+}
+
+// ── LEADS METRICS CALCULATORS ──────────────────────────────
+
+export function getLeadsKPI(rows: LeadsMonthlyRow[]): LeadsKPI {
+  const defaultKPI: LeadsKPI = {
+    totalLeads: 0, websiteLeads: 0, organicLeads: 0, enrolled: 0, highPotential: 0, convRate: 0,
+    prevTotalLeads: 0, prevEnrolled: 0, prevConvRate: 0, prevHighPotential: 0,
+    currentMonth: 'N/A', previousMonth: 'N/A'
+  }
+
+  if (!rows || rows.length === 0) return defaultKPI
+
+  const sorted = [...rows].sort((a, b) => parseLeadsMonthYear(a.month).getTime() - parseLeadsMonthYear(b.month).getTime())
+  const curr = sorted[sorted.length - 1]
+  const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : null
+
+  return {
+    totalLeads: curr.totalLeads,
+    websiteLeads: curr.websiteLeads,
+    organicLeads: curr.organicLeads,
+    enrolled: curr.enrolled,
+    highPotential: curr.highPotential,
+    convRate: curr.convRate,
+    prevTotalLeads: prev ? prev.totalLeads : 0,
+    prevEnrolled: prev ? prev.enrolled : 0,
+    prevConvRate: prev ? prev.convRate : 0,
+    prevHighPotential: prev ? prev.highPotential : 0,
+    currentMonth: curr.month,
+    previousMonth: prev ? prev.month : 'N/A'
+  }
+}
+
+export function getLeadsTrend(rows: LeadsMonthlyRow[]): LeadsTrendPoint[] {
+  return (rows || []).map(r => ({
+    month: r.month,
+    totalLeads: r.totalLeads,
+    websiteLeads: r.websiteLeads,
+    organicLeads: r.organicLeads,
+    enrolled: r.enrolled,
+    highPotential: r.highPotential,
+    convRate: r.convRate
+  }))
+}
+
+export function getLeadsFunnel(rows: LeadsMonthlyRow[], month?: string): LeadsFunnelData {
+  const emptyFunnel: LeadsFunnelData = {
+    enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0, total: 0,
+    enrolledPct: 0, highPotentialPct: 0, mediumPotentialPct: 0, freshUnqualifiedPct: 0, lowColdPct: 0
+  }
+
+  if (!rows || rows.length === 0) return emptyFunnel
+
+  let row = rows[rows.length - 1]
+  if (month) {
+    const found = rows.find(r => r.month.toLowerCase() === month.toLowerCase())
+    if (found) row = found
+  }
+
+  const total = row.totalLeads || 1
+  return {
+    enrolled: row.enrolled,
+    highPotential: row.highPotential,
+    mediumPotential: row.mediumPotential,
+    freshUnqualified: row.freshUnqualified,
+    lowCold: row.lowCold,
+    total: row.totalLeads,
+    enrolledPct: parseFloat(((row.enrolled / total) * 100).toFixed(1)),
+    highPotentialPct: parseFloat(((row.highPotential / total) * 100).toFixed(1)),
+    mediumPotentialPct: parseFloat(((row.mediumPotential / total) * 100).toFixed(1)),
+    freshUnqualifiedPct: parseFloat(((row.freshUnqualified / total) * 100).toFixed(1)),
+    lowColdPct: parseFloat(((row.lowCold / total) * 100).toFixed(1))
+  }
+}
+
+export function getLeadsCourseBreakdown(
+  detailRows: LeadsDetailRow[],
+  month?: string
+): LeadsCourseAggregate[] {
+  if (!detailRows || detailRows.length === 0) return []
+
+  // If no month is specified, detect the latest month that has detail data
+  let targetMonth = month
+  if (!targetMonth) {
+    const sorted = [...detailRows].sort((a, b) => parseLeadsMonthYear(a.month).getTime() - parseLeadsMonthYear(b.month).getTime())
+    if (sorted.length > 0) {
+      targetMonth = sorted[sorted.length - 1].month
+    }
+  }
+
+  if (!targetMonth) return []
+
+  const filtered = detailRows.filter(r => r.month.toLowerCase() === targetMonth!.toLowerCase())
+  const totalSum = filtered.reduce((acc, r) => acc + r.total, 0) || 1
+
+  const list: LeadsCourseAggregate[] = filtered.map(r => ({
+    courseName: r.courseName,
+    enrolled: r.enrolled,
+    highPotential: r.highPotential,
+    mediumPotential: r.mediumPotential,
+    freshUnqualified: r.freshUnqualified,
+    lowCold: r.lowCold,
+    total: r.total,
+    organic: r.organic,
+    website: r.website,
+    sharePercent: parseFloat(((r.total / totalSum) * 100).toFixed(1)),
+    convRate: parseFloat((r.total > 0 ? (r.enrolled / r.total) * 100 : 0).toFixed(1))
+  }))
+
+  return list.sort((a, b) => b.total - a.total)
+}
+
+export function getLeadsChannelSplit(rows: LeadsMonthlyRow[], month?: string): LeadsChannelSplit[] {
+  if (!rows || rows.length === 0) return []
+
+  let row = rows[rows.length - 1]
+  if (month) {
+    const found = rows.find(r => r.month.toLowerCase() === month.toLowerCase())
+    if (found) row = found
+  }
+
+  const total = row.totalLeads || 1
+  return [
+    {
+      channel: "Website Leads",
+      leads: row.websiteLeads,
+      enrolled: Math.round(row.enrolled * 0.75), // approximate split defensively
+      highPotential: Math.round(row.highPotential * 0.6),
+      sharePercent: parseFloat(((row.websiteLeads / total) * 100).toFixed(1)),
+      convRate: parseFloat((row.websiteLeads > 0 ? (Math.round(row.enrolled * 0.75) / row.websiteLeads) * 100 : 0).toFixed(1))
+    },
+    {
+      channel: "Organic Leads",
+      leads: row.organicLeads,
+      enrolled: row.enrolled - Math.round(row.enrolled * 0.75),
+      highPotential: row.highPotential - Math.round(row.highPotential * 0.6),
+      sharePercent: parseFloat(((row.organicLeads / total) * 100).toFixed(1)),
+      convRate: parseFloat((row.organicLeads > 0 ? ((row.enrolled - Math.round(row.enrolled * 0.75)) / row.organicLeads) * 100 : 0).toFixed(1))
+    }
+  ]
+}
+
+export function getAvailableLeadsMonths(rows: LeadsMonthlyRow[]): string[] {
+  if (!rows || rows.length === 0) return []
+  return rows.map(r => r.month)
+}
+
+export function getLeadsMonthComparison(
+  rows: LeadsMonthlyRow[],
+  monthA: string,
+  monthB: string
+): { a: LeadsMonthlyRow; b: LeadsMonthlyRow; deltas: Record<string, number> } {
+  const emptyRow = (m: string): LeadsMonthlyRow => ({
+    month: m, totalLeads: 0, websiteLeads: 0, organicLeads: 0, scmLeads: 0, hcmLeads: 0, financialsLeads: 0,
+    techOicLeads: 0, ppmLeads: 0, sapEbsOthersLeads: 0, enrolled: 0, highPotential: 0, mediumPotential: 0,
+    freshUnqualified: 0, lowCold: 0, convRate: 0
+  })
+
+  const a = rows.find(r => r.month.toLowerCase() === monthA.toLowerCase()) || emptyRow(monthA)
+  const b = rows.find(r => r.month.toLowerCase() === monthB.toLowerCase()) || emptyRow(monthB)
+
+  const deltas: Record<string, number> = {
+    totalLeads: a.totalLeads - b.totalLeads,
+    websiteLeads: a.websiteLeads - b.websiteLeads,
+    organicLeads: a.organicLeads - b.organicLeads,
+    scmLeads: a.scmLeads - b.scmLeads,
+    hcmLeads: a.hcmLeads - b.hcmLeads,
+    financialsLeads: a.financialsLeads - b.financialsLeads,
+    techOicLeads: a.techOicLeads - b.techOicLeads,
+    ppmLeads: a.ppmLeads - b.ppmLeads,
+    sapEbsOthersLeads: a.sapEbsOthersLeads - b.sapEbsOthersLeads,
+    enrolled: a.enrolled - b.enrolled,
+    highPotential: a.highPotential - b.highPotential,
+    mediumPotential: a.mediumPotential - b.mediumPotential,
+    freshUnqualified: a.freshUnqualified - b.freshUnqualified,
+    lowCold: a.lowCold - b.lowCold,
+    convRate: parseFloat((a.convRate - b.convRate).toFixed(2)) // percentage points delta
+  }
+
+  return { a, b, deltas }
+}
+

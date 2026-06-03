@@ -209,3 +209,100 @@ export interface SiteStatusPageResult {
   fallbackReason?: string
 }
 
+// ── LEADS TYPES ────────────────────────────────────────────
+
+export interface LeadsMonthlyRow {
+  month: string                    // "May 2026"
+  totalLeads: number
+  websiteLeads: number
+  organicLeads: number
+  scmLeads: number
+  hcmLeads: number
+  financialsLeads: number
+  techOicLeads: number
+  ppmLeads: number
+  sapEbsOthersLeads: number
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  convRate: number                 // percentage e.g. 5.6
+}
+
+export interface LeadsDetailRow {
+  month: string
+  courseName: string
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  total: number
+  organic: number
+  website: number
+}
+
+export interface LeadsCourseAggregate {
+  courseName: string
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  total: number
+  organic: number
+  website: number
+  sharePercent: number
+  convRate: number
+}
+
+export interface LeadsFunnelData {
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  total: number
+  enrolledPct: number
+  highPotentialPct: number
+  mediumPotentialPct: number
+  freshUnqualifiedPct: number
+  lowColdPct: number
+}
+
+export interface LeadsKPI {
+  totalLeads: number
+  websiteLeads: number
+  organicLeads: number
+  enrolled: number
+  highPotential: number
+  convRate: number
+  prevTotalLeads: number
+  prevEnrolled: number
+  prevConvRate: number
+  prevHighPotential: number
+  currentMonth: string
+  previousMonth: string
+}
+
+export interface LeadsTrendPoint {
+  month: string
+  totalLeads: number
+  websiteLeads: number
+  organicLeads: number
+  enrolled: number
+  highPotential: number
+  convRate: number
+}
+
+export interface LeadsChannelSplit {
+  channel: string
+  leads: number
+  enrolled: number
+  highPotential: number
+  sharePercent: number
+  convRate: number
+}
+
+

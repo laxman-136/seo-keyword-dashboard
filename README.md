@@ -134,7 +134,21 @@ In Google Sheets: **Share → Anyone with the link → Viewer**
 3. Create an **API Key** under Credentials
 4. Restrict it to "Google Sheets API" only
 
+#### Tab 3: `Leads Monthly` (Required)
+Defines the high-level monthly metrics.
+Row 1 headers:
+`Month | Total Leads | Website Leads | Organic Leads | SCM Leads | HCM Leads | Financials Leads | Tech OIC Leads | PPM Leads | SAP EBS Others Leads | Enrolled | High Potential | Medium Potential | Fresh Unqualified | Low Cold | Conv Rate`
+
+#### Tab 4: `Leads Detail` (Optional, for Course and Channel split aggregates)
+Defines the leads classification metrics split per course per month.
+Row 1 headers:
+`Month | Course Name | Enrolled | High Potential | Medium Potential | Fresh Unqualified | Low Cold | Total | Organic | Website`
+
+> [!IMPORTANT]
+> The `Leads Detail` sheet must contain ONLY aggregated counts per course and month. To preserve privacy and protect personal data, **do NOT include raw lead records, customer names, phone numbers, or email addresses**.
+
 ---
+
 
 ## 🔑 Multi-Company Setup
 

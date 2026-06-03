@@ -286,6 +286,12 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     { label: 'By Countries',    href: '/traffic/countries',icon: LayoutDashboard },
     { label: 'Compare Periods', href: '/traffic/compare',  icon: BarChart2 }
   ]
+  const leadsItems = [
+    { label: 'Overview',          href: '/leads',          icon: LayoutDashboard },
+    { label: 'By Course',         href: '/leads/courses',  icon: Layers },
+    { label: 'Funnel & Conversion',href: '/leads/funnel',   icon: BarChart2 },
+    { label: 'Monthly Trends',     href: '/leads/trends',   icon: BarChart2 }
+  ]
   const siteItems = [
     { label: 'Site Status', href: '/site-status', icon: Building2 }
   ]
@@ -385,6 +391,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden">
           {renderNavSection('📊 Keyword Rankings', keywordItems)}
           {renderNavSection('📈 Traffic Analytics', trafficItems)}
+          {renderNavSection('🎯 Leads Report', leadsItems)}
           {renderNavSection('🌐 Site', siteItems)}
 
           <div className="space-y-1">
@@ -491,6 +498,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden">
               {renderNavSection('📊 Keyword Rankings', keywordItems, true)}
               {renderNavSection('📈 Traffic Analytics', trafficItems, true)}
+              {renderNavSection('🎯 Leads Report', leadsItems, true)}
               {renderNavSection('🌐 Site', siteItems, true)}
 
               <div className="space-y-1">
