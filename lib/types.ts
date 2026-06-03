@@ -305,4 +305,221 @@ export interface LeadsChannelSplit {
   convRate: number
 }
 
+// ── REVENUE TYPES ────────────────────────────────────────────
+
+export interface RevenueMonthlyRow {
+  month: string                      // "February 2026"
+  totalConversions: number
+  totalRevenue: number               // in ₹
+  avgRevenuePerStudent: number
+  // Lead source conversions
+  organicConversions: number
+  websiteConversions: number
+  referralConversions: number
+  googleAdsConversions: number
+  metaAdsConversions: number
+  directConversions: number
+  // Lead source revenue
+  organicRevenue: number
+  websiteRevenue: number
+  referralRevenue: number
+  googleAdsRevenue: number
+  metaAdsRevenue: number
+  directRevenue: number
+  // Ad spend
+  totalAdSpend: number
+  metaAdSpend: number
+  googleAdSpend: number
+  paidRevenue: number
+  overallROAS: number
+}
+
+export interface RevenueCourseRow {
+  month: string
+  courseName: string
+  conversions: number
+  revenue: number
+  avgFee: number
+  revenueSharePct: number
+  metaSpend: number
+  googleSpend: number
+  totalAdSpend: number
+  googleAdsRevenue: number
+  metaAdsRevenue: number
+  paidRevenue: number
+  roas: number
+  organicRevenue: number
+  websiteRevenue: number
+  totalDemoAttended: number
+  demoGoogle: number
+  demoMeta: number
+  batchNo: string
+  faculty: string
+}
+
+export interface RevenueKPI {
+  totalRevenue: number
+  totalConversions: number
+  avgFee: number
+  totalAdSpend: number
+  overallROAS: number
+  organicRevenue: number
+  paidRevenue: number
+  prevTotalRevenue: number
+  prevTotalConversions: number
+  prevAvgFee: number
+  prevTotalAdSpend: number
+  prevOverallROAS: number
+  currentMonth: string
+  previousMonth: string
+}
+
+export interface RevenueSourceBreakdown {
+  source: string
+  conversions: number
+  revenue: number
+  revenueSharePct: number
+  avgFee: number
+  convSharePct: number
+}
+
+export interface RevenueCourseAggregate {
+  courseName: string
+  conversions: number
+  revenue: number
+  avgFee: number
+  revenueSharePct: number
+  totalAdSpend: number
+  paidRevenue: number
+  roas: number
+  organicRevenue: number
+  websiteRevenue: number
+  totalDemoAttended: number
+  faculty: string
+  batchNo: string
+}
+
+export interface AdSpendBreakdown {
+  course: string
+  metaSpend: number
+  googleSpend: number
+  totalAdSpend: number
+  metaRevenue: number
+  googleRevenue: number
+  paidRevenue: number
+  roas: number
+  metaROAS: number
+  googleROAS: number
+  demoGoogle: number
+  demoMeta: number
+}
+
+export interface RevenueTrendPoint {
+  month: string
+  totalRevenue: number
+  organicRevenue: number
+  paidRevenue: number
+  totalConversions: number
+  avgFee: number
+  totalAdSpend: number
+  overallROAS: number
+}
+
+export interface RevenueQuarterlyRow {
+  year: number
+  quarter: string
+  totalRevenue: number
+  conversions: number
+  avgFee: number
+  totalAdSpend: number
+  paidRevenue: number
+  overallROAS: number
+  organicRevenue: number
+}
+
+export interface RevenueYearlyRow {
+  year: number
+  totalRevenue: number
+  conversions: number
+  avgFee: number
+  totalAdSpend: number
+  paidRevenue: number
+  overallROAS: number
+  organicRevenue: number
+}
+
+export interface RevenueQuarterlyDetailRow extends RevenueQuarterlyRow {
+  organicConversions: number
+  websiteConversions: number
+  referralConversions: number
+  googleAdsConversions: number
+  metaAdsConversions: number
+  directConversions: number
+  websiteRevenue: number
+  referralRevenue: number
+  googleAdsRevenue: number
+  metaAdsRevenue: number
+  directRevenue: number
+  googleAdSpend: number
+  metaAdSpend: number
+}
+
+export interface RevenueYearlyDetailRow extends RevenueYearlyRow {
+  organicConversions: number
+  websiteConversions: number
+  referralConversions: number
+  googleAdsConversions: number
+  metaAdsConversions: number
+  directConversions: number
+  websiteRevenue: number
+  referralRevenue: number
+  googleAdsRevenue: number
+  metaAdsRevenue: number
+  directRevenue: number
+  googleAdSpend: number
+  metaAdSpend: number
+}
+
+export interface LeadsQuarterlyDetailRow {
+  year: number
+  quarter: string
+  totalLeads: number
+  websiteLeads: number
+  organicLeads: number
+  scmLeads: number
+  hcmLeads: number
+  financialsLeads: number
+  techOicLeads: number
+  ppmLeads: number
+  sapEbsOthersLeads: number
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  convRate: number
+}
+
+export interface LeadsYearlyDetailRow {
+  year: number
+  totalLeads: number
+  websiteLeads: number
+  organicLeads: number
+  scmLeads: number
+  hcmLeads: number
+  financialsLeads: number
+  techOicLeads: number
+  ppmLeads: number
+  sapEbsOthersLeads: number
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  convRate: number
+}
+
+
+
+
 

@@ -280,6 +280,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     traffic: false,
     leads: false,
     site: false,
+    revenue: false,
   })
 
   const navigationSections = [
@@ -312,7 +313,20 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         { label: 'Overview',          href: '/leads',          icon: LayoutDashboard },
         { label: 'By Course',         href: '/leads/courses',  icon: Layers },
         { label: 'Funnel & Conversion',href: '/leads/funnel',   icon: BarChart2 },
-        { label: 'Monthly Trends',     href: '/leads/trends',   icon: BarChart2 }
+        { label: 'Monthly Trends',     href: '/leads/trends',   icon: BarChart2 },
+        { label: 'Compare & Reports', href: '/leads/compare',  icon: BarChart2 }
+      ]
+    },
+    {
+      id: 'revenue',
+      title: 'Revenue & Conversion',
+      icon: Crown,
+      items: [
+        { label: 'Overview',          href: '/revenue',          icon: LayoutDashboard },
+        { label: 'By Course',         href: '/revenue/courses',  icon: Layers },
+        { label: 'Ad Spend & ROAS',   href: '/revenue/ads',      icon: BarChart2 },
+        { label: 'By Lead Source',    href: '/revenue/sources',  icon: Layers },
+        { label: 'Compare & Reports', href: '/revenue/compare',  icon: BarChart2 }
       ]
     },
     {

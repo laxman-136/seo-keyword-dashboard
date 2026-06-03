@@ -1,7 +1,7 @@
-// components/leads/LeadsMonthComparison.tsx
+// components/leads/LeadsQuarterComparisonTable.tsx
 import React from 'react'
-import { LeadsMonthlyRow } from '@/lib/types'
-import { getLeadsMonthComparison } from '@/lib/sheets'
+import { LeadsQuarterlyDetailRow } from '@/lib/types'
+import { getLeadsQuarterComparison } from '@/lib/sheets'
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -18,14 +18,14 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface LeadsMonthComparisonProps {
-  rows: LeadsMonthlyRow[]
-  monthA: string
-  monthB: string
+interface LeadsQuarterComparisonTableProps {
+  rows: LeadsQuarterlyDetailRow[]
+  quarterA: string
+  quarterB: string
 }
 
-export default function LeadsMonthComparison({ rows, monthA, monthB }: LeadsMonthComparisonProps) {
-  const { a, b, deltas } = getLeadsMonthComparison(rows, monthA, monthB)
+export default function LeadsQuarterComparisonTable({ rows, quarterA, quarterB }: LeadsQuarterComparisonTableProps) {
+  const { a, b, deltas } = getLeadsQuarterComparison(rows, quarterA, quarterB)
 
   const formatVal = (v: number, isPercent = false) => isPercent ? `${v.toFixed(1)}%` : v.toLocaleString()
   
@@ -88,7 +88,7 @@ export default function LeadsMonthComparison({ rows, monthA, monthB }: LeadsMont
     { label: 'Enrolled', valA: a.enrolled, valB: b.enrolled, delta: deltas.enrolled, icon: <Award className="w-4 h-4" />, colorClass: 'bg-emerald-500 text-emerald-700', textColor: 'text-emerald-700', badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-100' },
     { label: 'High Potential', valA: a.highPotential, valB: b.highPotential, delta: deltas.highPotential, icon: <Flame className="w-4 h-4" />, colorClass: 'bg-blue-500 text-blue-700', textColor: 'text-blue-700', badgeColor: 'bg-blue-50 text-blue-800 border-blue-100' },
     { label: 'Medium Potential', valA: a.mediumPotential, valB: b.mediumPotential, delta: deltas.mediumPotential, icon: <Zap className="w-4 h-4" />, colorClass: 'bg-amber-500 text-amber-700', textColor: 'text-amber-700', badgeColor: 'bg-amber-50 text-amber-800 border-amber-100' },
-    { label: 'Fresh/Unqualified', valA: a.freshUnqualified, valB: b.freshUnqualified, delta: deltas.freshUnqualified, icon: <Snowflake className="w-4 h-4" />, colorClass: 'bg-slate-400 text-slate-650', textColor: 'text-slate-600', badgeColor: 'bg-slate-50 text-slate-500 border-slate-100' },
+    { label: 'Fresh/Unqualified', valA: a.freshUnqualified, valB: b.freshUnqualified, delta: deltas.freshUnqualified, icon: <Snowflake className="w-4 h-4" />, colorClass: 'bg-slate-400 text-slate-600', textColor: 'text-slate-600', badgeColor: 'bg-slate-50 text-slate-500 border-slate-100' },
     { label: 'Low/Cold', valA: a.lowCold, valB: b.lowCold, delta: deltas.lowCold, icon: <Trash2 className="w-4 h-4" />, colorClass: 'bg-red-500 text-red-700', textColor: 'text-red-700', badgeColor: 'bg-red-50 text-red-800 border-red-100' },
   ]
 
@@ -119,23 +119,23 @@ export default function LeadsMonthComparison({ rows, monthA, monthB }: LeadsMont
       <div className="bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-800">
         <div>
           <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-            📅 Monthly Performance Comparison
+            📅 Quarterly Performance Comparison
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            Analyzing leads shift from <span className="font-semibold text-slate-200">{monthB}</span> to <span className="font-semibold text-slate-200">{monthA}</span>
+            Analyzing leads shift from <span className="font-semibold text-slate-200">{quarterB}</span> to <span className="font-semibold text-slate-200">{quarterA}</span>
           </p>
         </div>
         
         <div className="flex items-center gap-3 bg-slate-850 p-1.5 rounded-xl border border-slate-700/60">
           <div className="px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700/50 flex items-center gap-2 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-violet-500" />
-            <span className="text-xs font-semibold text-slate-300">{monthA}:</span>
+            <span className="text-xs font-semibold text-slate-300">{quarterA}:</span>
             <span className="text-xs font-bold text-white font-mono">{a.totalLeads.toLocaleString()} leads</span>
           </div>
           <span className="text-xs font-bold text-slate-500 font-mono px-1">VS</span>
           <div className="px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700/50 flex items-center gap-2 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-slate-400" />
-            <span className="text-xs font-semibold text-slate-400">{monthB}:</span>
+            <span className="text-xs font-semibold text-slate-400">{quarterB}:</span>
             <span className="text-xs font-bold text-slate-200 font-mono">{b.totalLeads.toLocaleString()} leads</span>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function LeadsMonthComparison({ rows, monthA, monthB }: LeadsMont
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-extrabold text-slate-750 flex items-center gap-2">
+              <span className="text-sm font-extrabold text-slate-700 flex items-center gap-2">
                 <Target className="w-4 h-4 text-violet-650" />
                 Conversion Rate
               </span>
@@ -215,11 +215,11 @@ export default function LeadsMonthComparison({ rows, monthA, monthB }: LeadsMont
 
             <div className="flex items-center gap-6 my-4">
               <div className="text-center flex-1 py-3 bg-violet-50/60 rounded-xl border border-violet-100/50">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-violet-400">{monthA}</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-violet-400">{quarterA}</p>
                 <p className="text-3xl font-black text-violet-750 mt-1 font-mono">{formatVal(a.convRate, true)}</p>
               </div>
               <div className="text-center flex-1 py-3 bg-slate-50/70 rounded-xl border border-slate-100/80">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{monthB}</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-405">{quarterB}</p>
                 <p className="text-2xl font-extrabold text-slate-500 mt-1.5 font-mono">{formatVal(b.convRate, true)}</p>
               </div>
             </div>
@@ -233,7 +233,7 @@ export default function LeadsMonthComparison({ rows, monthA, monthB }: LeadsMont
         </div>
 
         {/* Right 2 Columns: Funnel Quality */}
-        <div className="bg-white rounded-2xl border border-slate-200/85 p-6 shadow-sm hover:shadow-md transition-shadow lg:col-span-2 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow lg:col-span-2 space-y-4">
           <div>
             <h4 className="text-sm font-extrabold text-slate-800">🎯 Funnel Stages Comparison</h4>
             <p className="text-xs text-slate-400 mt-0.5">Comparing status distributions & conversion metrics</p>
@@ -274,13 +274,13 @@ export default function LeadsMonthComparison({ rows, monthA, monthB }: LeadsMont
                       <div className="w-full h-1 bg-slate-50 rounded-full overflow-hidden">
                         <div className={cn("h-full rounded-full", f.colorClass)} style={{ width: `${barPctA}%` }} />
                       </div>
-                      <span className="text-[9px] text-slate-400 font-semibold">{monthA} Share</span>
+                      <span className="text-[9px] text-slate-400 font-semibold">{quarterA} Share</span>
                     </div>
                     <div>
                       <div className="w-full h-1 bg-slate-50 rounded-full overflow-hidden">
                         <div className="h-full bg-slate-300 rounded-full" style={{ width: `${barPctB}%` }} />
                       </div>
-                      <span className="text-[9px] text-slate-400 font-semibold">{monthB} Share</span>
+                      <span className="text-[9px] text-slate-400 font-semibold">{quarterB} Share</span>
                     </div>
                   </div>
                 </div>
@@ -301,11 +301,11 @@ export default function LeadsMonthComparison({ rows, monthA, monthB }: LeadsMont
           <div className="flex items-center gap-4 text-[11px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 shrink-0">
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-1.5 bg-violet-500 rounded-full" />
-              <span>{monthA} (Current)</span>
+              <span>{quarterA} (Current)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 bg-slate-200 rounded" />
-              <span>{monthB} (Compare)</span>
+              <span>{quarterB} (Compare)</span>
             </div>
           </div>
         </div>

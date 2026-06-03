@@ -147,6 +147,16 @@ Row 1 headers:
 > [!IMPORTANT]
 > The `Leads Detail` sheet must contain ONLY aggregated counts per course and month. To preserve privacy and protect personal data, **do NOT include raw lead records, customer names, phone numbers, or email addresses**.
 
+#### Tab 5: `Revenue Monthly` (Required)
+Defines monthly financial aggregates, channel conversion metrics, and advertising investments.
+Row 1 headers:
+`Month | Total Conversions | Total Revenue | Avg Revenue Per Student | Organic Conversions | Organic Revenue | Website Conversions | Website Revenue | Referral Conversions | Referral Revenue | Google Ads Conversions | Google Ads Revenue | Meta Ads Conversions | Meta Ads Revenue | Direct Conversions | Direct Revenue | Total Ad Spend | Meta Ad Spend | Google Ad Spend | Paid Revenue | Overall ROAS`
+
+#### Tab 6: `Revenue Courses` (Optional, for detailed course breakdowns and demos)
+Defines financial results, batch, faculty, campaign details, and demo performance metrics.
+Row 1 headers:
+`Month | Course Name | Conversions | Revenue | Avg Fee | Revenue Share % | Meta Spend | Google Spend | Total Ad Spend | Google Ads Revenue | Meta Ads Revenue | Paid Revenue | ROAS | Organic Revenue | Website Revenue | Total Demo Attended | Demo Google | Demo Meta | Batch No | Faculty`
+
 ---
 
 
