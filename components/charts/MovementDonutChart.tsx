@@ -88,10 +88,6 @@ export default function MovementDonutChart({ stats }: MovementDonutChartProps) {
                 outerRadius={70}
                 paddingAngle={3}
                 dataKey="value"
-                activeIndex={activeIndex !== null ? activeIndex : undefined}
-                activeShape={(props: any) => (
-                  <Sector {...props} outerRadius={props.outerRadius + 6} />
-                )}
                 onMouseEnter={(_, index) => setActiveIndex(index)}
                 onMouseLeave={() => setActiveIndex(null)}
                 className="cursor-pointer outline-none focus:outline-none"
@@ -102,9 +98,12 @@ export default function MovementDonutChart({ stats }: MovementDonutChartProps) {
                     <Cell 
                       key={`cell-${index}`} 
                       fill={entry.color}
+                      stroke={isHovered ? entry.color : '#fff'}
+                      strokeWidth={isHovered ? 2.5 : 1}
                       opacity={activeIndex === null || isHovered ? 1 : 0.4}
                       style={{
-                        transition: 'opacity 0.25s ease-in-out',
+                        transition: 'all 0.2s ease-in-out',
+                        outline: 'none'
                       }}
                     />
                   )
