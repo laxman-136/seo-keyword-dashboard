@@ -6,7 +6,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Sector
 } from 'recharts'
 import { DashboardStats } from '@/lib/types'
 
@@ -88,7 +89,9 @@ export default function MovementDonutChart({ stats }: MovementDonutChartProps) {
                 paddingAngle={3}
                 dataKey="value"
                 activeIndex={activeIndex !== null ? activeIndex : undefined}
-                activeShape={{ outerRadius: 76 }}
+                activeShape={(props: any) => (
+                  <Sector {...props} outerRadius={props.outerRadius + 6} />
+                )}
                 onMouseEnter={(_, index) => setActiveIndex(index)}
                 onMouseLeave={() => setActiveIndex(null)}
                 className="cursor-pointer outline-none focus:outline-none"
