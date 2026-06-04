@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       if (adminUser.role !== 'superadmin') {
         return NextResponse.json({ error: 'Only the super admin can change roles.' }, { status: 403 })
       }
-      if (!['admin', 'user'].includes(role)) {
+      if (!['admin', 'ceo', 'user'].includes(role)) {
         return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
       }
       await updateUser(targetNorm, { role })

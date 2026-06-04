@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 interface Me {
   email: string
   name: string
-  role: 'superadmin' | 'admin' | 'user'
+  role: 'superadmin' | 'admin' | 'ceo' | 'user'
 }
 
 export default function FloatingAdminButton() {
@@ -143,8 +143,8 @@ export default function FloatingAdminButton() {
   // Only show for logged-in users
   if (!me) return null
 
-  const isAdmin = me.role === 'admin' || me.role === 'superadmin'
-  const RoleIcon = me.role === 'superadmin' ? Crown : me.role === 'admin' ? Shield : Users
+  const isAdmin = me.role === 'admin' || me.role === 'superadmin' || me.role === 'ceo'
+  const RoleIcon = me.role === 'superadmin' ? Crown : me.role === 'admin' ? Shield : me.role === 'ceo' ? Crown : Users
 
   return (
     <div
@@ -166,7 +166,7 @@ export default function FloatingAdminButton() {
               <p className="text-sm font-bold text-white truncate">{me.name}</p>
               <div className={cn(
                 'flex items-center gap-1 text-[11px] font-semibold mt-0.5',
-                me.role === 'superadmin' ? 'text-violet-400' : me.role === 'admin' ? 'text-blue-400' : 'text-slate-400'
+                me.role === 'superadmin' ? 'text-violet-400' : me.role === 'admin' ? 'text-blue-400' : me.role === 'ceo' ? 'text-amber-400' : 'text-slate-400'
               )}>
                 <RoleIcon className="w-3 h-3" />
                 {me.role}
@@ -229,7 +229,7 @@ export default function FloatingAdminButton() {
           <p className="text-xs font-bold text-white leading-none truncate max-w-[100px]">{me.name}</p>
           <p className={cn(
             'text-[10px] font-semibold mt-0.5 flex items-center gap-0.5',
-            me.role === 'superadmin' ? 'text-violet-400' : me.role === 'admin' ? 'text-blue-400' : 'text-slate-400'
+            me.role === 'superadmin' ? 'text-violet-400' : me.role === 'admin' ? 'text-blue-400' : me.role === 'ceo' ? 'text-amber-400' : 'text-slate-400'
           )}>
             <RoleIcon className="w-2.5 h-2.5" />
             {me.role}

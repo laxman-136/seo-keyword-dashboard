@@ -10,6 +10,7 @@ import { Menu } from 'lucide-react'
 import Sidebar from '@/components/layout/Sidebar'
 import FloatingAdminButton from '@/components/layout/FloatingAdminButton'
 import { clearActiveConfig, setActiveConfig } from '@/lib/config'
+import { isSectionAllowed } from '@/lib/auth'
 
 const AUTH_PAGES = ['/login', '/register', '/client-login']
 
@@ -116,8 +117,11 @@ export default function AuthShell({ children }: Props) {
         }
 
         const data = await r.json()
+        const user = data.user
         const grants = Array.isArray(data.viewerAccess) ? data.viewerAccess : []
-        if (grants.length > 0 && (data.user?.role === 'user' || data.user?.role === 'viewer')) {
+        const activeLabel = grants[0]?.label || null
+
+        if (grants.length > 0 && (user?.role === 'user' || user?.role === 'viewer')) {
           const grant = grants[0]
           setActiveConfig({
             label: grant.label,
@@ -125,6 +129,51 @@ export default function AuthShell({ children }: Props) {
             apiKey: grant.apiKey,
             createdAt: grant.createdAt
           })
+        }
+
+        // Section access validation
+        const role = user?.role || null
+        let pathSection = ''
+
+        if (pathname === '/' || pathname.startsWith('/groups') || pathname.startsWith('/compare')) {
+          pathSection = 'keywords'
+        } else if (pathname.startsWith('/traffic')) {
+          pathSection = 'traffic'
+        } else if (pathname.startsWith('/leads')) {
+          pathSection = 'leads'
+        } else if (pathname.startsWith('/revenue')) {
+          pathSection = 'revenue'
+        } else if (pathname.startsWith('/site-status')) {
+          pathSection = 'site'
+        } else if (pathname.startsWith('/settings')) {
+          const allowedSettings = role === 'superadmin' || role === 'admin' || role === 'ceo'
+          if (!allowedSettings) {
+            router.replace('/')
+            return
+          }
+        }
+
+        if (pathSection) {
+          const isAllowed = isSectionAllowed(pathSection, role, activeLabel)
+          if (!isAllowed) {
+            const sections = ['keywords', 'traffic', 'leads', 'revenue', 'site']
+            const allowedSections = sections.filter(sec => isSectionAllowed(sec, role, activeLabel))
+            
+            if (allowedSections.length > 0) {
+              const firstAllowed = allowedSections[0]
+              const sectionRedirects: Record<string, string> = {
+                keywords: '/',
+                traffic: '/traffic',
+                leads: '/leads',
+                revenue: '/revenue',
+                site: '/site-status'
+              }
+              router.replace(sectionRedirects[firstAllowed])
+            } else {
+              router.replace('/login')
+            }
+            return
+          }
         }
 
         setChecked(true)

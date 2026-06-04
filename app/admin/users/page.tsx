@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 // Must match SUPER_ADMIN_EMAIL in the API route
 const SUPER_ADMIN_EMAIL = 'laxmansubramanyam@gmail.com'
 
-type Role   = 'superadmin' | 'admin' | 'user'
+type Role   = 'superadmin' | 'admin' | 'ceo' | 'user'
 type Status = 'approved' | 'pending' | 'rejected'
 
 interface UserRow {
@@ -44,12 +44,14 @@ const STATUS_BADGE: Record<Status, string> = {
 const ROLE_BADGE: Record<Role, string> = {
   superadmin: 'bg-violet-500/15 text-violet-400 border-violet-500/25',
   admin:      'bg-blue-500/15   text-blue-400   border-blue-500/25',
+  ceo:        'bg-amber-500/15  text-amber-400  border-amber-500/25',
   user:       'bg-slate-500/15  text-slate-400  border-slate-500/25'
 }
 
 const ROLE_ICON: Record<Role, React.ReactNode> = {
   superadmin: <Crown className="w-3 h-3" />,
   admin:      <Shield className="w-3 h-3" />,
+  ceo:        <Crown className="w-3 h-3 text-amber-500" />,
   user:       <span className="w-3 h-3 inline-flex items-center justify-center text-[10px]">U</span>
 }
 
@@ -335,6 +337,7 @@ export default function AdminUsersPage() {
                               className="text-[11px] border border-slate-200 rounded-lg px-2 py-1 text-slate-600 bg-white outline-none"
                             >
                               <option value="user">user</option>
+                              <option value="ceo">ceo</option>
                               <option value="admin">admin</option>
                             </select>
                           )}

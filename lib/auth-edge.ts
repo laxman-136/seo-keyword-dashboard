@@ -8,7 +8,7 @@
 export interface SessionUser {
   email: string
   name: string
-  role: 'superadmin' | 'admin' | 'user' | 'viewer'
+  role: 'superadmin' | 'admin' | 'ceo' | 'user' | 'viewer'
 }
 
 /**

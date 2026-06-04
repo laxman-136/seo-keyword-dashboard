@@ -42,8 +42,10 @@ export default function SettingsPage() {
   const [shareLoading, setShareLoading] = useState(false)
   const [shareMessage, setShareMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [copiedShareId, setCopiedShareId] = useState<string | null>(null)
+  const [shareSections, setShareSections] = useState<string[]>(['keywords', 'traffic', 'leads', 'revenue', 'site'])
 
   const isViewer = currentUser?.role === 'viewer'
+  const canShare = currentUser?.role === 'superadmin' || currentUser?.role === 'admin' || currentUser?.role === 'ceo'
 
   // Load configs from localStorage
   const loadConfigs = useCallback(() => {
@@ -112,7 +114,8 @@ export default function SettingsPage() {
           sheetId: activeConfig.sheetId,
           apiKey: activeConfig.apiKey,
           label: activeConfig.label,
-          durationDays: shareDuration
+          durationDays: shareDuration,
+          allowedSections: shareSections
         })
       })
       const data = await res.json()
@@ -163,6 +166,17 @@ export default function SettingsPage() {
     if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`
     const minutes = Math.ceil(diff / 60000)
     return `${minutes} minute${minutes > 1 ? 's' : ''}`
+  }
+
+  const parseGrantLabel = (lbl: string) => {
+    if (lbl && lbl.includes('| allowed:')) {
+      const [name, allowedStr] = lbl.split('| allowed:')
+      return {
+        name: name.trim(),
+        allowed: allowedStr.trim().split(',')
+      }
+    }
+    return { name: lbl || '', allowed: ['keywords', 'traffic', 'leads', 'revenue', 'site'] }
   }
 
   const activeViewerCount = ownerGrants.length
@@ -343,7 +357,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {currentUser && activeConfig && (
+        {currentUser && canShare && activeConfig && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
@@ -365,36 +379,69 @@ export default function SettingsPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 lg:grid-cols-[1.5fr_0.8fr_0.7fr]">
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Client Email</label>
-                  <input
-                    value={shareEmail}
-                    onChange={e => setShareEmail(e.target.value)}
-                    placeholder="client@example.com"
-                    className="w-full mt-2 px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 text-sm text-slate-800 outline-none"
-                  />
+              <div className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-[1.5fr_0.8fr_0.7fr]">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Client Email</label>
+                    <input
+                      value={shareEmail}
+                      onChange={e => setShareEmail(e.target.value)}
+                      placeholder="client@example.com"
+                      className="w-full mt-2 px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 text-sm text-slate-800 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Duration</label>
+                    <select
+                      value={shareDuration}
+                      onChange={e => setShareDuration(Number(e.target.value))}
+                      className="w-full mt-2 px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20"
+                    >
+                      <option value={15}>15 days</option>
+                      <option value={30}>30 days</option>
+                      <option value={90}>90 days</option>
+                    </select>
+                  </div>
+                  <div className="self-end">
+                    <button
+                      onClick={handleShareGrant}
+                      disabled={!shareEmail.trim() || shareLoading || shareSections.length === 0}
+                      className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white py-3 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {shareLoading ? 'Sharing...' : 'Share Access'}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Duration</label>
-                  <select
-                    value={shareDuration}
-                    onChange={e => setShareDuration(Number(e.target.value))}
-                    className="w-full mt-2 px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20"
-                  >
-                    <option value={15}>15 days</option>
-                    <option value={30}>30 days</option>
-                    <option value={90}>90 days</option>
-                  </select>
-                </div>
-                <div className="self-end">
-                  <button
-                    onClick={handleShareGrant}
-                    disabled={!shareEmail.trim() || shareLoading}
-                    className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white py-3 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {shareLoading ? 'Sharing...' : 'Share Access'}
-                  </button>
+
+                {/* Section selection checkboxes */}
+                <div className="border-t border-slate-100 pt-4">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Dashboard Sections to Share</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
+                    {[
+                      { id: 'keywords', label: 'Keyword Rankings' },
+                      { id: 'traffic', label: 'Traffic Analytics' },
+                      { id: 'leads', label: 'Leads Report' },
+                      { id: 'revenue', label: 'Revenue & Conversion' },
+                      { id: 'site', label: 'Site Status' }
+                    ].map(sec => {
+                      const isChecked = shareSections.includes(sec.id)
+                      return (
+                        <label key={sec.id} className="flex items-center gap-2 px-3 py-2 border rounded-xl cursor-pointer hover:bg-slate-50 select-none text-xs font-semibold text-slate-700 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              setShareSections(prev => 
+                                isChecked ? prev.filter(x => x !== sec.id) : [...prev, sec.id]
+                              )
+                            }}
+                            className="rounded text-violet-600 focus:ring-violet-400"
+                          />
+                          {sec.label}
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -429,38 +476,55 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <div className="text-sm font-semibold text-slate-700">Current viewer access grants</div>
                 <div className="grid gap-3">
-                  {ownerGrants.map(grant => (
-                    <div key={grant.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="space-y-2 text-sm">
-                      <div className="font-semibold text-slate-900">{grant.recipientEmail}</div>
-                      <div className="text-[11px] text-slate-500">Expires: {new Date(grant.expiresAt).toLocaleDateString()}</div>
-                      <div className="text-[11px] text-slate-500">
-                        Share link:
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <code className="truncate max-w-[18rem] rounded-xl bg-slate-100 px-2 py-1 text-[11px] text-slate-700">
-                            {typeof window !== 'undefined'
-                              ? `${window.location.origin}/viewer/${grant.id}?from=/traffic`
-                              : `/viewer/${grant.id}?from=/traffic`}
-                          </code>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyShareUrl(grant.id)}
-                            className="rounded-xl bg-slate-900 text-white px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-slate-800"
-                          >
-                            {copiedShareId === grant.id ? 'Copied' : 'Copy Link'}
-                          </button>
+                  {ownerGrants.map(grant => {
+                    const { name: displayName, allowed } = parseGrantLabel(grant.label)
+                    return (
+                      <div key={grant.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between animate-in fade-in duration-200">
+                        <div className="space-y-2 text-sm flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-slate-900">{grant.recipientEmail}</span>
+                            <span className="text-slate-300">|</span>
+                            <span className="text-xs text-slate-500 font-medium">Source: {displayName}</span>
+                          </div>
+                          
+                          {/* Allowed sections tags */}
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {allowed.map(sec => (
+                              <span key={sec} className="px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider">
+                                {sec === 'site' ? 'site status' : sec === 'keywords' ? 'keywords' : sec === 'traffic' ? 'traffic' : sec === 'leads' ? 'leads' : 'revenue'}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="text-[11px] text-slate-500">Expires: {new Date(grant.expiresAt).toLocaleDateString()} ({formatTimeRemaining(grant.expiresAt)})</div>
+                          <div className="text-[11px] text-slate-500">
+                            Share link:
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <code className="truncate max-w-[18rem] rounded-xl bg-slate-100 px-2 py-1 text-[11px] text-slate-700">
+                                {typeof window !== 'undefined'
+                                  ? `${window.location.origin}/viewer/${grant.id}?from=/traffic`
+                                  : `/viewer/${grant.id}?from=/traffic`}
+                              </code>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyShareUrl(grant.id)}
+                                className="rounded-xl bg-slate-900 text-white px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-slate-800"
+                              >
+                                {copiedShareId === grant.id ? 'Copied' : 'Copy Link'}
+                              </button>
+                            </div>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => handleRevokeGrant(grant.id)}
+                          disabled={shareLoading}
+                          className="self-start sm:self-auto rounded-xl bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Revoke Access
+                        </button>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => handleRevokeGrant(grant.id)}
-                      disabled={shareLoading}
-                      className="self-start sm:self-auto rounded-xl bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Revoke Access
-                    </button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}

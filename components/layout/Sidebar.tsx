@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { getActiveConfig, ACTIVE_CONFIG_UPDATED_EVENT, setActiveConfig } from '@/lib/config'
 import { cn } from '@/lib/utils'
+import { isSectionAllowed } from '@/lib/auth'
 
 // ─── Active Config Badge ─────────────────────────────────────────────────────
 function ActiveConfigBadge() {
@@ -252,7 +253,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
-  const [isViewer, setIsViewer] = useState(false)
+  const [user, setUser] = useState<{ email: string; name: string; role: string } | null>(null)
+  const [activeConfig, setActiveConfigState] = useState<any>(null)
 
   useEffect(() => {
     setIsMounted(true)
@@ -261,10 +263,19 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     fetch('/api/auth/me')
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        if (d?.user?.role === 'viewer') {
-          setIsViewer(true)
+        if (d?.user) {
+          setUser(d.user)
         }
       })
+  }, [])
+
+  useEffect(() => {
+    const updateConfig = () => {
+      setActiveConfigState(getActiveConfig())
+    }
+    updateConfig()
+    window.addEventListener(ACTIVE_CONFIG_UPDATED_EVENT, updateConfig)
+    return () => window.removeEventListener(ACTIVE_CONFIG_UPDATED_EVENT, updateConfig)
   }, [])
 
   const handleToggle = () => {
@@ -338,6 +349,12 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       ]
     }
   ]
+
+  const allowedSections = navigationSections.filter(sec => 
+    isSectionAllowed(sec.id, user?.role || null, activeConfig?.label || null)
+  )
+
+  const showSettings = user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'ceo'
 
   useEffect(() => {
     const activeSection = navigationSections.find(sec =>
@@ -567,11 +584,14 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
-          {navigationSections.map(sec => renderSection(sec))}
+          {allowedSections.map(sec => renderSection(sec))}
           
-          <div className="border-t border-slate-800/40 my-3 mx-1" />
-          
-          {renderSettingsLink()}
+          {showSettings && (
+            <>
+              <div className="border-t border-slate-800/40 my-3 mx-1" />
+              {renderSettingsLink()}
+            </>
+          )}
         </nav>
 
         <div className={cn("p-4 border-t border-slate-800 text-xs space-y-3", isMounted && isCollapsed && "p-2")}>
@@ -652,11 +672,14 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             </div>
 
             <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
-              {navigationSections.map(sec => renderSection(sec, true))}
+              {allowedSections.map(sec => renderSection(sec, true))}
               
-              <div className="border-t border-slate-800/40 my-3 mx-1" />
-              
-              {renderSettingsLink(true)}
+              {showSettings && (
+                <>
+                  <div className="border-t border-slate-800/40 my-3 mx-1" />
+                  {renderSettingsLink(true)}
+                </>
+              )}
             </nav>
 
             <div className={cn("p-4 border-t border-slate-800 text-xs space-y-3", isMounted && isCollapsed && "p-2")}>

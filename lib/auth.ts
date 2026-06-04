@@ -4,7 +4,7 @@ import crypto from 'crypto'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'seo-dashboard-secret-change-in-production'
 
-export type UserRole = 'superadmin' | 'admin' | 'user' | 'viewer'
+export type UserRole = 'superadmin' | 'admin' | 'ceo' | 'user' | 'viewer'
 export type UserStatus = 'approved' | 'pending' | 'rejected'
 
 export interface User {
@@ -114,3 +114,36 @@ export function makeClearCookie(): string {
 export function makeClearViewerCookie(): string {
   return `viewer-auth-token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
 }
+
+export function isSectionAllowed(
+  sectionId: string,
+  userRole: string | null,
+  activeConfigLabel: string | null
+): boolean {
+  if (!userRole) return false
+
+  // Superadmin, admin, and CEO have full access to all sections
+  if (userRole === 'superadmin' || userRole === 'admin' || userRole === 'ceo') {
+    return true
+  }
+
+  // Standard user role: can ONLY access Keywords, Traffic, and Site Status
+  if (userRole === 'user') {
+    return ['keywords', 'traffic', 'site'].includes(sectionId)
+  }
+
+  // Viewer role (shared link): check the allowed list encoded in the active config label
+  if (userRole === 'viewer') {
+    if (activeConfigLabel && activeConfigLabel.includes('| allowed:')) {
+      const parts = activeConfigLabel.split('| allowed:')
+      const allowedStr = parts[1] || ''
+      const allowedSections = allowedStr.split(',').map(s => s.trim())
+      return allowedSections.includes(sectionId)
+    }
+    // Fallback: if no custom allowed sections are encoded (legacy grants), default to all allowed
+    return true
+  }
+
+  return false
+}
+

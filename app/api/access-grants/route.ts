@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     const apiKey = String(body.apiKey || '').trim()
     const label = String(body.label || '').trim()
     const durationDays = Number(body.durationDays || 0)
+    const allowedSections = Array.isArray(body.allowedSections) ? body.allowedSections : []
 
     if (!isValidEmail(recipientEmail)) {
       return NextResponse.json({ error: 'A valid recipient email is required.' }, { status: 400 })
@@ -76,11 +77,16 @@ export async function POST(request: Request) {
     }
 
     const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString()
+    
+    const encodedLabel = allowedSections.length > 0
+      ? `${label} | allowed:${allowedSections.join(',')}`
+      : label
+
     try {
       const grant = await createAccessGrant({
         recipientEmail,
         ownerEmail: user.email,
-        label,
+        label: encodedLabel,
         sheetId,
         apiKey,
         expiresAt
