@@ -19,7 +19,7 @@ const supabase = supabaseUrl && supabaseKey
   : null
 
 // ─── Pre-seeded Admin Accounts ──────────────────────────────────────────────
-const DEFAULT_PASSWORD = 'Admin@123'
+const DEFAULT_PASSWORD = 'Admin@2024!'
 
 function buildSeedUsers(): User[] {
   return [

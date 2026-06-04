@@ -108,8 +108,9 @@ export async function fetchKeywordData(
   lastUpdated: string;
   fallbackReason?: string;
 }> {
-  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
-  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+  const isForcedMock = customSheetId === 'mock'
+  const sheetId = isForcedMock ? undefined : (customSheetId || process.env.GOOGLE_SHEET_ID)
+  const apiKey = isForcedMock ? undefined : (customApiKey || process.env.GOOGLE_SHEETS_API_KEY)
 
   const nowString = new Date().toLocaleString('en-US', {
     timeZone: 'Asia/Kolkata', // Local Time context
@@ -156,12 +157,28 @@ export async function fetchKeywordData(
   }
 }
 
+interface CacheEntry {
+  values: string[][]
+  timestamp: number
+}
+const sheetsCache = new Map<string, CacheEntry>()
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache
+
 async function fetchSheetValues(
   sheetId: string,
   apiKey: string,
   sheetName: string,
   bypassCache: boolean
 ): Promise<string[][]> {
+  const cacheKey = `${sheetId}::${sheetName}`
+
+  if (!bypassCache) {
+    const cached = sheetsCache.get(cacheKey)
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      return cached.values
+    }
+  }
+
   const cacheBuster = bypassCache ? `&t=${Date.now()}` : ''
   const fetchOptions: RequestInit = bypassCache
     ? { cache: 'no-store' }
@@ -174,7 +191,12 @@ async function fetchSheetValues(
       throw new Error(`Google Sheets API responded with status ${res.status} for sheet ${name}`)
     }
     const data = await res.json()
-    return data.values ?? []
+    const values = data.values ?? []
+
+    // Save to cache
+    sheetsCache.set(cacheKey, { values, timestamp: Date.now() })
+
+    return values
   }
 
   try {
@@ -302,8 +324,9 @@ export async function fetchTrafficData(
   lastUpdated: string;
   fallbackReason?: string;
 }> {
-  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
-  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+  const isForcedMock = customSheetId === 'mock'
+  const sheetId = isForcedMock ? undefined : (customSheetId || process.env.GOOGLE_SHEET_ID)
+  const apiKey = isForcedMock ? undefined : (customApiKey || process.env.GOOGLE_SHEETS_API_KEY)
   
   const nowString = new Date().toLocaleString('en-US', {
     timeZone: 'Asia/Kolkata',
@@ -490,8 +513,9 @@ export async function fetchSiteStatusData(
   lastUpdated: string;
   fallbackReason?: string;
 }> {
-  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
-  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+  const isForcedMock = customSheetId === 'mock'
+  const sheetId = isForcedMock ? undefined : (customSheetId || process.env.GOOGLE_SHEET_ID)
+  const apiKey = isForcedMock ? undefined : (customApiKey || process.env.GOOGLE_SHEETS_API_KEY)
 
   const nowString = new Date().toLocaleString('en-US', {
     timeZone: 'Asia/Kolkata',
@@ -738,8 +762,9 @@ export async function fetchLeadsMonthly(
   lastUpdated: string
   fallbackReason?: string
 }> {
-  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
-  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+  const isForcedMock = customSheetId === 'mock'
+  const sheetId = isForcedMock ? undefined : (customSheetId || process.env.GOOGLE_SHEET_ID)
+  const apiKey = isForcedMock ? undefined : (customApiKey || process.env.GOOGLE_SHEETS_API_KEY)
 
   const nowString = new Date().toLocaleString('en-US', {
     timeZone: 'Asia/Kolkata',
@@ -799,8 +824,9 @@ export async function fetchLeadsDetail(
   rows: LeadsDetailRow[]
   isMock: boolean
 }> {
-  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
-  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+  const isForcedMock = customSheetId === 'mock'
+  const sheetId = isForcedMock ? undefined : (customSheetId || process.env.GOOGLE_SHEET_ID)
+  const apiKey = isForcedMock ? undefined : (customApiKey || process.env.GOOGLE_SHEETS_API_KEY)
 
   if (!sheetId || !apiKey) {
     const mock = getMockLeadsDetailResponse()
@@ -1233,8 +1259,9 @@ export async function fetchRevenueMonthly(
   lastUpdated: string
   fallbackReason?: string
 }> {
-  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
-  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+  const isForcedMock = customSheetId === 'mock'
+  const sheetId = isForcedMock ? undefined : (customSheetId || process.env.GOOGLE_SHEET_ID)
+  const apiKey = isForcedMock ? undefined : (customApiKey || process.env.GOOGLE_SHEETS_API_KEY)
 
   const nowString = new Date().toLocaleString('en-US', {
     timeZone: 'Asia/Kolkata',
@@ -1293,8 +1320,9 @@ export async function fetchRevenueCourses(
   rows: RevenueCourseRow[]
   isMock: boolean
 }> {
-  const sheetId = customSheetId || process.env.GOOGLE_SHEET_ID
-  const apiKey = customApiKey || process.env.GOOGLE_SHEETS_API_KEY
+  const isForcedMock = customSheetId === 'mock'
+  const sheetId = isForcedMock ? undefined : (customSheetId || process.env.GOOGLE_SHEET_ID)
+  const apiKey = isForcedMock ? undefined : (customApiKey || process.env.GOOGLE_SHEETS_API_KEY)
 
   if (!sheetId || !apiKey) {
     const mock = getMockRevenueCoursesResponse()

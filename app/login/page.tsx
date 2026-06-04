@@ -29,22 +29,35 @@ function LoginForm() {
     setLoading(true)
     setError('')
 
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim().toLowerCase(), password })
-    })
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password })
+      })
 
-    const data = await res.json()
-    setLoading(false)
+      let data: any = {}
+      const contentType = res.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json()
+      } else {
+        const text = await res.text()
+        data = { error: text.slice(0, 100) || `Server returned status ${res.status}` }
+      }
 
-    if (!res.ok) {
-      setError(data.error || 'Login failed.')
-      return
+      setLoading(false)
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed.')
+        return
+      }
+
+      // Hard redirect so the new auth cookie is sent with the next request
+      window.location.href = from
+    } catch (err: any) {
+      setLoading(false)
+      setError(err.message || 'A network error occurred. Please try again.')
     }
-
-    // Hard redirect so the new auth cookie is sent with the next request
-    window.location.href = from
   }
 
   return (

@@ -20,21 +20,28 @@ interface KeywordDataResult {
   refresh: () => Promise<void>
 }
 
+// Global cached state to avoid double-fetching across page switches
+let globalKeywordCache: {
+  rawKeywords: KeywordRow[]
+  months: string[]
+  isMock: boolean
+  lastUpdated: string
+} | null = null
+
 export function useKeywordData(): KeywordDataResult {
-  const [loading, setLoading] = useState(true)
+  const [rawKeywords, setRawKeywords] = useState<KeywordRow[]>(globalKeywordCache?.rawKeywords || [])
+  const [months, setMonths] = useState<string[]>(globalKeywordCache?.months || [])
+  const [isMock, setIsMock] = useState(globalKeywordCache?.isMock || false)
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState(globalKeywordCache?.lastUpdated || '')
+  const [loading, setLoading] = useState(globalKeywordCache ? false : true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  const [rawKeywords, setRawKeywords] = useState<KeywordRow[]>([])
-  const [months, setMonths] = useState<string[]>([])
-  const [isMock, setIsMock] = useState(false)
-  const [fallbackReason, setFallbackReason] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState('')
 
   const loadData = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) {
       setRefreshing(true)
-    } else {
+    } else if (rawKeywords.length === 0) {
       setLoading(true)
     }
     setError(null)
@@ -43,14 +50,15 @@ export function useKeywordData(): KeywordDataResult {
       let url = isManualRefresh ? '/api/keywords?refresh=true' : '/api/keywords'
       
       if (typeof window !== 'undefined') {
-        const clientSheetId = localStorage.getItem('client-sheet-id')
+        const clientSeoSheetId = localStorage.getItem('client-seo-sheet-id')
         const clientApiKey = localStorage.getItem('client-api-key')
+        const hasActiveConfig = localStorage.getItem('active-sheet-config') !== null
         
-        if (clientSheetId) {
-          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientSheetId)}`
-        }
-        if (clientApiKey) {
-          url += (url.includes('?') ? '&' : '?') + `apiKey=${encodeURIComponent(clientApiKey)}`
+        if (hasActiveConfig) {
+          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientSeoSheetId || 'mock')}`
+          if (clientApiKey) {
+            url += `&apiKey=${encodeURIComponent(clientApiKey)}`
+          }
         }
       }
 
@@ -62,6 +70,13 @@ export function useKeywordData(): KeywordDataResult {
 
       const payload = await res.json()
       
+      globalKeywordCache = {
+        rawKeywords: payload.rows || [],
+        months: payload.months || [],
+        isMock: payload.isMock,
+        lastUpdated: payload.lastUpdated || ''
+      }
+
       setRawKeywords(payload.rows)
       setMonths(payload.months)
       setIsMock(payload.isMock)
@@ -74,11 +89,29 @@ export function useKeywordData(): KeywordDataResult {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [rawKeywords.length])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (rawKeywords.length === 0) {
+      loadData()
+    }
+  }, [loadData, rawKeywords.length])
+
+  useEffect(() => {
+    const handleConfigChange = () => {
+      globalKeywordCache = null
+      setRawKeywords([])
+      setMonths([])
+      setLoading(true)
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('active-config-updated', handleConfigChange)
+      return () => {
+        window.removeEventListener('active-config-updated', handleConfigChange)
+      }
+    }
+  }, [])
 
   // Process the raw data based on current detected months
   const processed = useMemoData(rawKeywords, months)

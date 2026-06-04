@@ -47,14 +47,15 @@ export function useLeadsData(): LeadsDataResult {
       let url = isManualRefresh ? '/api/leads?refresh=true' : '/api/leads'
 
       if (typeof window !== 'undefined') {
-        const clientSheetId = localStorage.getItem('client-sheet-id')
+        const clientLeadsSheetId = localStorage.getItem('client-leads-sheet-id')
         const clientApiKey = localStorage.getItem('client-api-key')
+        const hasActiveConfig = localStorage.getItem('active-sheet-config') !== null
 
-        if (clientSheetId) {
-          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientSheetId)}`
-        }
-        if (clientApiKey) {
-          url += (url.includes('?') ? '&' : '?') + `apiKey=${encodeURIComponent(clientApiKey)}`
+        if (hasActiveConfig) {
+          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientLeadsSheetId || 'mock')}`
+          if (clientApiKey) {
+            url += `&apiKey=${encodeURIComponent(clientApiKey)}`
+          }
         }
       }
 
@@ -91,6 +92,22 @@ export function useLeadsData(): LeadsDataResult {
       loadData()
     }
   }, [loadData, monthly.length])
+
+  useEffect(() => {
+    const handleConfigChange = () => {
+      globalLeadsCache = null
+      setMonthly([])
+      setDetail([])
+      setLoading(true)
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('active-config-updated', handleConfigChange)
+      return () => {
+        window.removeEventListener('active-config-updated', handleConfigChange)
+      }
+    }
+  }, [])
 
   return {
     monthly,

@@ -29,7 +29,10 @@ CREATE TABLE IF NOT EXISTS access_grants (
   recipient_email VARCHAR(255) NOT NULL,
   owner_email VARCHAR(255) NOT NULL,
   label VARCHAR(255) NOT NULL,
-  sheet_id VARCHAR(255) NOT NULL,
+  sheet_id VARCHAR(255), -- Nullable for legacy compatibility
+  seo_sheet_id VARCHAR(255),
+  leads_sheet_id VARCHAR(255),
+  revenue_sheet_id VARCHAR(255),
   api_key VARCHAR(255) NOT NULL,
   expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -50,11 +53,19 @@ WHERE NOT EXISTS (
 -- Insert existing users from the dashboard (idempotent)
 INSERT INTO users (email, name, password_hash, role, status, created_at, approved_at, approved_by)
 VALUES 
-  ('laxmansubramanyam@gmail.com', 'Laxman Subramanyam', '2e04b3037469276d59b44983e48c2edc:5bdcbdf0bd6b71db79b66151f26eceb7e5ac5f272a688c1399f4f13f5d678c38b6ad3a7a471a8a27471dc4e1928ef8d3d8ac62431cf458af9f736ba5b33c919e', 'superadmin', 'approved', '2026-05-31 11:51:57.848', '2026-05-31 11:51:57.848', 'system'),
-  ('veerasubramanyam.aki@techleadsit.com', 'Veerasubramanyam AKI', '40ecfc584ee42e36b9ace579f07b7ac4:dad23394cefde3113b10606312be22965218a782cef330a1b61fd4da6025fe68b9eb2a12030ad31f2222fc378065ee920e1883ad2a4ef573a30674b321d9500f', 'admin', 'approved', '2026-05-31 11:51:57.855', '2026-05-31 11:51:57.855', 'system'),
+  ('laxmansubramanyam@gmail.com', 'Laxman Subramanyam', '4c08ba31b5f95c3472e6fc16d1600b21:7e9aa3bc9b5569b2e174d25b8cf069a9963b976449ddfbcf32bf5a8b065a1858704e4e1bae83a0599ef40c3fa421684d815f884305e9add74739c2cff0bbc5f3', 'superadmin', 'approved', '2026-05-31 11:51:57.848', '2026-05-31 11:51:57.848', 'system'),
+  ('veerasubramanyam.aki@techleadsit.com', 'Veerasubramanyam AKI', '4c08ba31b5f95c3472e6fc16d1600b21:7e9aa3bc9b5569b2e174d25b8cf069a9963b976449ddfbcf32bf5a8b065a1858704e4e1bae83a0599ef40c3fa421684d815f884305e9add74739c2cff0bbc5f3', 'admin', 'approved', '2026-05-31 11:51:57.855', '2026-05-31 11:51:57.855', 'system'),
   ('akilakshman89@gmail.com', 'Lakshman', 'cabdd78981bbae62cfd811ecb2b9a6c9:a2c491fe8a9ed7256217d733f017bb649cfd03cd4066749c190f5eb03e3390cd9eac3d09c4781332153a4adef5ab64b39db2195f5dee5080c90afc99bc84136c', 'user', 'approved', '2026-05-31 12:00:40.849', '2026-05-31 12:01:42.901', 'veerasubramanyam.aki@techleadsit.com')
 ON CONFLICT (email) DO NOTHING;
 
 -- Optional: Set RLS (Row Level Security) - uncomment if you want to use Supabase auth
 -- ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 -- CREATE POLICY "Users can read own data" ON users FOR SELECT USING (true);
+
+-- ── MIGRATIONS FOR EXISTING TABLES ───────────────────────────────────────────
+-- If you are updating an existing database, run these commands to add the new columns
+-- and modify constraints without dropping the table.
+ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS seo_sheet_id VARCHAR(255);
+ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS leads_sheet_id VARCHAR(255);
+ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS revenue_sheet_id VARCHAR(255);
+ALTER TABLE access_grants ALTER COLUMN sheet_id DROP NOT NULL;

@@ -3,9 +3,12 @@
 
 export interface SheetConfig {
   label: string        // Human-readable company/client name
-  sheetId: string      // Google Sheets spreadsheet ID
-  apiKey: string       // Google Sheets API key
+  seoSheetId?: string  // SEO, Traffic & Site Status spreadsheet ID
+  leadsSheetId?: string // Leads spreadsheet ID
+  revenueSheetId?: string // Revenue & Conversion spreadsheet ID
+  apiKey?: string       // Google Sheets API key
   createdAt: string    // ISO timestamp
+  sheetId?: string     // Keep for legacy compatibility
 }
 
 const CONFIGS_KEY = 'sheet-configs'
@@ -21,8 +24,8 @@ const ACTIVE_KEY = 'active-sheet-config'
 export function extractSheetId(input: string): string {
   const trimmed = input.trim()
   
-  // Match spreadsheet ID from Google Sheets URLs
-  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/)
+  // Match spreadsheet ID from Google Sheets URLs (handles /d/ID with or without user indices like /u/0/)
+  const match = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/)
   if (match) return match[1]
   
   // Assume it's already a raw ID (alphanumeric + underscore/dash)
@@ -51,7 +54,13 @@ export function getSavedConfigs(): SheetConfig[] {
   if (typeof window === 'undefined') return []
   try {
     const raw = localStorage.getItem(CONFIGS_KEY)
-    return raw ? JSON.parse(raw) : []
+    const list = raw ? JSON.parse(raw) : []
+    return list.map((c: any) => ({
+      ...c,
+      seoSheetId: c.seoSheetId || c.sheetId || '',
+      leadsSheetId: c.leadsSheetId || '',
+      revenueSheetId: c.revenueSheetId || ''
+    }))
   } catch {
     return []
   }
@@ -85,7 +94,14 @@ export function getActiveConfig(): SheetConfig | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = localStorage.getItem(ACTIVE_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (!raw) return null
+    const c = JSON.parse(raw)
+    return {
+      ...c,
+      seoSheetId: c.seoSheetId || c.sheetId || '',
+      leadsSheetId: c.leadsSheetId || '',
+      revenueSheetId: c.revenueSheetId || ''
+    }
   } catch {
     return null
   }
@@ -101,14 +117,18 @@ function dispatchActiveConfigUpdate(): void {
 export function setActiveConfig(config: SheetConfig): void {
   localStorage.setItem(ACTIVE_KEY, JSON.stringify(config))
   // Also set the individual keys used by the hooks
-  localStorage.setItem('client-sheet-id', config.sheetId)
-  localStorage.setItem('client-api-key', config.apiKey)
+  localStorage.setItem('client-seo-sheet-id', config.seoSheetId || config.sheetId || '')
+  localStorage.setItem('client-leads-sheet-id', config.leadsSheetId || '')
+  localStorage.setItem('client-revenue-sheet-id', config.revenueSheetId || '')
+  localStorage.setItem('client-api-key', config.apiKey || '')
   dispatchActiveConfigUpdate()
 }
 
 export function clearActiveConfig(): void {
   localStorage.removeItem(ACTIVE_KEY)
-  localStorage.removeItem('client-sheet-id')
+  localStorage.removeItem('client-seo-sheet-id')
+  localStorage.removeItem('client-leads-sheet-id')
+  localStorage.removeItem('client-revenue-sheet-id')
   localStorage.removeItem('client-api-key')
   dispatchActiveConfigUpdate()
 }

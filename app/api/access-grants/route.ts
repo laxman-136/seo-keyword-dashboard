@@ -60,7 +60,9 @@ export async function POST(request: Request) {
 
   if (action === 'grant') {
     const recipientEmail = String(body.recipientEmail || '').trim().toLowerCase()
-    const sheetId = String(body.sheetId || '').trim()
+    const seoSheetId = String(body.seoSheetId || '').trim()
+    const leadsSheetId = String(body.leadsSheetId || '').trim()
+    const revenueSheetId = String(body.revenueSheetId || '').trim()
     const apiKey = String(body.apiKey || '').trim()
     const label = String(body.label || '').trim()
     const durationDays = Number(body.durationDays || 0)
@@ -69,8 +71,8 @@ export async function POST(request: Request) {
     if (!isValidEmail(recipientEmail)) {
       return NextResponse.json({ error: 'A valid recipient email is required.' }, { status: 400 })
     }
-    if (!sheetId || !apiKey || !label) {
-      return NextResponse.json({ error: 'Active sheet configuration is required.' }, { status: 400 })
+    if ((!seoSheetId && !leadsSheetId && !revenueSheetId) || !apiKey || !label) {
+      return NextResponse.json({ error: 'At least one active sheet configuration and an API key are required.' }, { status: 400 })
     }
     if (![15, 30, 90].includes(durationDays)) {
       return NextResponse.json({ error: 'Duration must be 15, 30, or 90 days.' }, { status: 400 })
@@ -87,7 +89,10 @@ export async function POST(request: Request) {
         recipientEmail,
         ownerEmail: user.email,
         label: encodedLabel,
-        sheetId,
+        seoSheetId: seoSheetId || undefined,
+        leadsSheetId: leadsSheetId || undefined,
+        revenueSheetId: revenueSheetId || undefined,
+        sheetId: seoSheetId || '', // keep for legacy compatibility
         apiKey,
         expiresAt
       })

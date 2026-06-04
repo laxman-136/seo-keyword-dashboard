@@ -47,14 +47,15 @@ export function useRevenueData(): RevenueDataResult {
       let url = isManualRefresh ? '/api/revenue?refresh=true' : '/api/revenue'
 
       if (typeof window !== 'undefined') {
-        const clientSheetId = localStorage.getItem('client-sheet-id')
+        const clientRevenueSheetId = localStorage.getItem('client-revenue-sheet-id')
         const clientApiKey = localStorage.getItem('client-api-key')
+        const hasActiveConfig = localStorage.getItem('active-sheet-config') !== null
 
-        if (clientSheetId) {
-          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientSheetId)}`
-        }
-        if (clientApiKey) {
-          url += (url.includes('?') ? '&' : '?') + `apiKey=${encodeURIComponent(clientApiKey)}`
+        if (hasActiveConfig) {
+          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientRevenueSheetId || 'mock')}`
+          if (clientApiKey) {
+            url += `&apiKey=${encodeURIComponent(clientApiKey)}`
+          }
         }
       }
 
@@ -91,6 +92,22 @@ export function useRevenueData(): RevenueDataResult {
       loadData()
     }
   }, [loadData, monthly.length])
+
+  useEffect(() => {
+    const handleConfigChange = () => {
+      globalRevenueCache = null
+      setMonthly([])
+      setCourses([])
+      setLoading(true)
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('active-config-updated', handleConfigChange)
+      return () => {
+        window.removeEventListener('active-config-updated', handleConfigChange)
+      }
+    }
+  }, [])
 
   return {
     monthly,

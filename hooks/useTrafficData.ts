@@ -44,14 +44,15 @@ export function useTrafficData(): TrafficDataResult {
       let url = isManualRefresh ? '/api/traffic?refresh=true' : '/api/traffic'
 
       if (typeof window !== 'undefined') {
-        const clientSheetId = localStorage.getItem('client-sheet-id')
+        const clientSeoSheetId = localStorage.getItem('client-seo-sheet-id')
         const clientApiKey = localStorage.getItem('client-api-key')
+        const hasActiveConfig = localStorage.getItem('active-sheet-config') !== null
 
-        if (clientSheetId) {
-          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientSheetId)}`
-        }
-        if (clientApiKey) {
-          url += (url.includes('?') ? '&' : '?') + `apiKey=${encodeURIComponent(clientApiKey)}`
+        if (hasActiveConfig) {
+          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientSeoSheetId || 'mock')}`
+          if (clientApiKey) {
+            url += `&apiKey=${encodeURIComponent(clientApiKey)}`
+          }
         }
       }
 
@@ -93,6 +94,21 @@ export function useTrafficData(): TrafficDataResult {
       loadData()
     }
   }, [loadData, rows.length])
+
+  useEffect(() => {
+    const handleConfigChange = () => {
+      globalTrafficCache = null
+      setRows([])
+      setLoading(true)
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('active-config-updated', handleConfigChange)
+      return () => {
+        window.removeEventListener('active-config-updated', handleConfigChange)
+      }
+    }
+  }, [])
 
   return {
     rows,

@@ -22,7 +22,9 @@ type TestStatus = 'idle' | 'testing' | 'success' | 'error'
 export default function SettingsPage() {
   // Form state
   const [label, setLabel] = useState('')
-  const [sheetUrl, setSheetUrl] = useState('')
+  const [seoUrl, setSeoUrl] = useState('')
+  const [leadsUrl, setLeadsUrl] = useState('')
+  const [revenueUrl, setRevenueUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
 
@@ -75,7 +77,8 @@ export default function SettingsPage() {
     const loadGrants = async () => {
       if (!currentUser || isViewer || !activeConfig) return
       try {
-        const url = `/api/access-grants?owned=true&sheetId=${encodeURIComponent(activeConfig.sheetId)}`
+        const activeSheetId = activeConfig.seoSheetId || activeConfig.sheetId || ''
+        const url = `/api/access-grants?owned=true&sheetId=${encodeURIComponent(activeSheetId)}`
         const res = await fetch(url)
         if (!res.ok) return
         const data = await res.json()
@@ -111,7 +114,9 @@ export default function SettingsPage() {
         body: JSON.stringify({
           action: 'grant',
           recipientEmail: shareEmail.trim().toLowerCase(),
-          sheetId: activeConfig.sheetId,
+          seoSheetId: shareSections.some(s => ['keywords', 'traffic', 'site'].includes(s)) ? activeConfig.seoSheetId : undefined,
+          leadsSheetId: shareSections.includes('leads') ? activeConfig.leadsSheetId : undefined,
+          revenueSheetId: shareSections.includes('revenue') ? activeConfig.revenueSheetId : undefined,
           apiKey: activeConfig.apiKey,
           label: activeConfig.label,
           durationDays: shareDuration,
@@ -189,8 +194,10 @@ export default function SettingsPage() {
   const handleEdit = (config: SheetConfig) => {
     setEditingConfig(config)
     setLabel(config.label)
-    setSheetUrl(config.sheetId)
-    setApiKey(config.apiKey)
+    setSeoUrl(config.seoSheetId || config.sheetId || '')
+    setLeadsUrl(config.leadsSheetId || '')
+    setRevenueUrl(config.revenueSheetId || '')
+    setApiKey(config.apiKey || '')
     setTestStatus('idle')
     setTestMessage('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -199,36 +206,57 @@ export default function SettingsPage() {
   const handleCancelEdit = () => {
     setEditingConfig(null)
     setLabel('')
-    setSheetUrl('')
+    setSeoUrl('')
+    setLeadsUrl('')
+    setRevenueUrl('')
     setApiKey('')
     setTestStatus('idle')
     setTestMessage('')
   }
 
-  const derivedSheetId = extractSheetId(sheetUrl)
+  const derivedSeoId = extractSheetId(seoUrl)
+  const derivedLeadsId = extractSheetId(leadsUrl)
+  const derivedRevenueId = extractSheetId(revenueUrl)
+  
   const formIsValid = label.trim().length > 0
-    && isValidSheetId(derivedSheetId)
-    && isValidApiKey(apiKey)
+    && (seoUrl.trim() === '' || isValidSheetId(derivedSeoId))
+    && (leadsUrl.trim() === '' || isValidSheetId(derivedLeadsId))
+    && (revenueUrl.trim() === '' || isValidSheetId(derivedRevenueId))
+    && (seoUrl.trim() !== '' || leadsUrl.trim() !== '' || revenueUrl.trim() !== '')
+    && (!apiKey || isValidApiKey(apiKey))
 
   // Test connection to Google Sheets
   const handleTest = async () => {
-    if (!isValidSheetId(derivedSheetId) || !isValidApiKey(apiKey)) return
+    let testUrl = ''
+    let groupName = ''
+    
+    if (seoUrl.trim() && isValidSheetId(derivedSeoId)) {
+      testUrl = `/api/keywords?sheetId=${encodeURIComponent(derivedSeoId)}&apiKey=${encodeURIComponent(apiKey.trim())}`
+      groupName = 'SEO/Traffic'
+    } else if (leadsUrl.trim() && isValidSheetId(derivedLeadsId)) {
+      testUrl = `/api/leads?sheetId=${encodeURIComponent(derivedLeadsId)}&apiKey=${encodeURIComponent(apiKey.trim())}`
+      groupName = 'Leads'
+    } else if (revenueUrl.trim() && isValidSheetId(derivedRevenueId)) {
+      testUrl = `/api/revenue?sheetId=${encodeURIComponent(derivedRevenueId)}&apiKey=${encodeURIComponent(apiKey.trim())}`
+      groupName = 'Revenue'
+    }
+
+    if (!testUrl || !isValidApiKey(apiKey)) return
     setTestStatus('testing')
     setTestMessage('')
 
     try {
-      const url = `/api/keywords?sheetId=${encodeURIComponent(derivedSheetId)}&apiKey=${encodeURIComponent(apiKey.trim())}`
-      const res = await fetch(url)
+      const res = await fetch(testUrl)
       const data = await res.json()
 
       if (!res.ok) throw new Error(data?.error || 'API error')
 
       if (data.isMock) {
         setTestStatus('error')
-        setTestMessage('Connection failed — falling back to demo data. Check your Sheet ID and API Key.')
+        setTestMessage(`Connection failed for ${groupName} Sheet — falling back to demo data. Check your Sheet ID and API Key.`)
       } else {
         setTestStatus('success')
-        setTestMessage(`✓ Connected! Found ${data.rows?.length ?? 0} keyword rows and ${data.months?.length ?? 0} months of data.`)
+        setTestMessage(`✓ Connected successfully to ${groupName} Sheet!`)
       }
     } catch (err: unknown) {
       setTestStatus('error')
@@ -243,9 +271,12 @@ export default function SettingsPage() {
 
     const config: SheetConfig = {
       label: label.trim(),
-      sheetId: derivedSheetId,
+      seoSheetId: seoUrl.trim() ? derivedSeoId : undefined,
+      leadsSheetId: leadsUrl.trim() ? derivedLeadsId : undefined,
+      revenueSheetId: revenueUrl.trim() ? derivedRevenueId : undefined,
       apiKey: apiKey.trim(),
-      createdAt: editingConfig?.createdAt || new Date().toISOString()
+      createdAt: editingConfig?.createdAt || new Date().toISOString(),
+      sheetId: seoUrl.trim() ? derivedSeoId : ''
     }
 
     saveConfig(config)
@@ -261,7 +292,9 @@ export default function SettingsPage() {
     setSaving(false)
     setEditingConfig(null)
     setLabel('')
-    setSheetUrl('')
+    setSeoUrl('')
+    setLeadsUrl('')
+    setRevenueUrl('')
     setApiKey('')
     setTestStatus('idle')
     setTestMessage('')
@@ -284,8 +317,8 @@ export default function SettingsPage() {
   }
 
   const handleCopyId = () => {
-    if (!derivedSheetId) return
-    navigator.clipboard.writeText(derivedSheetId)
+    if (!derivedSeoId) return
+    navigator.clipboard.writeText(derivedSeoId)
     setCopiedId(true)
     setTimeout(() => setCopiedId(false), 2000)
   }
@@ -342,7 +375,7 @@ export default function SettingsPage() {
                   <p className="text-xs font-semibold text-emerald-100 uppercase tracking-widest">Currently Active</p>
                   <h3 className="text-xl font-bold mt-0.5">{activeConfig.label}</h3>
                   <p className="text-sm text-emerald-100 mt-1 font-mono">
-                    Sheet ID: {activeConfig.sheetId.slice(0, 16)}...
+                    Sheet ID: {(activeConfig.sheetId || activeConfig.seoSheetId || '').slice(0, 16)}...
                   </p>
                 </div>
               </div>
@@ -576,48 +609,86 @@ export default function SettingsPage() {
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200"
                   />
                 </div>
+                {/* Google Sheets URLs */}
+                <div className="space-y-4 border-t border-slate-100 pt-4">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Google Sheets Group URLs
+                  </h3>
 
-                {/* Google Sheet URL */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                    <Link2 className="w-3.5 h-3.5 text-slate-400" />
-                    Google Sheet URL or Sheet ID
-                  </label>
-                  <input
-                    type="url"
-                    value={sheetUrl}
-                    onChange={e => setSheetUrl(e.target.value)}
-                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                    disabled={isViewer}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200"
-                  />
-                  {/* Extracted ID preview */}
-                  {sheetUrl.trim() && (
-                    <div className={cn(
-                      "flex items-center gap-2 mt-2 px-3 py-2 rounded-lg text-xs font-mono border",
-                      isValidSheetId(derivedSheetId)
-                        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                        : "bg-red-50 border-red-200 text-red-600"
-                    )}>
-                      {isValidSheetId(derivedSheetId)
-                        ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
-                      <span className="flex-1 truncate">
-                        {isValidSheetId(derivedSheetId)
-                          ? `Extracted ID: ${derivedSheetId}`
-                          : 'Could not extract a valid Sheet ID'}
-                      </span>
-                      {isValidSheetId(derivedSheetId) && (
-                        <button onClick={handleCopyId} className="shrink-0 hover:opacity-70 transition-opacity">
-                          {copiedId ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                    <ExternalLink className="w-3 h-3" />
-                    Paste the full Google Sheets URL or just the Spreadsheet ID
-                  </p>
+                  {/* SEO, Traffic, Site Status Sheet */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-slate-400" />
+                      1. SEO & Traffic Sheet (Keywords, Traffic, Site Status)
+                    </label>
+                    <input
+                      type="text"
+                      value={seoUrl}
+                      onChange={e => setSeoUrl(e.target.value)}
+                      placeholder="Spreadsheet URL or ID (optional - uses demo data if empty)"
+                      disabled={isViewer}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                    {seoUrl.trim() && (
+                      <div className={cn(
+                        "flex items-center gap-2 mt-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono border",
+                        isValidSheetId(derivedSeoId) ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-red-50 border-red-100 text-red-600"
+                      )}>
+                        {isValidSheetId(derivedSeoId) ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                        <span className="truncate">SEO Sheet ID: {derivedSeoId || 'Invalid'}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Leads Sheet */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-slate-400" />
+                      2. Leads Report Sheet
+                    </label>
+                    <input
+                      type="text"
+                      value={leadsUrl}
+                      onChange={e => setLeadsUrl(e.target.value)}
+                      placeholder="Spreadsheet URL or ID (optional - uses demo data if empty)"
+                      disabled={isViewer}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                    {leadsUrl.trim() && (
+                      <div className={cn(
+                        "flex items-center gap-2 mt-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono border",
+                        isValidSheetId(derivedLeadsId) ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-red-50 border-red-100 text-red-600"
+                      )}>
+                        {isValidSheetId(derivedLeadsId) ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                        <span className="truncate">Leads Sheet ID: {derivedLeadsId || 'Invalid'}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Revenue Sheet */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-slate-400" />
+                      3. Revenue & Conversion Sheet
+                    </label>
+                    <input
+                      type="text"
+                      value={revenueUrl}
+                      onChange={e => setRevenueUrl(e.target.value)}
+                      placeholder="Spreadsheet URL or ID (optional - uses demo data if empty)"
+                      disabled={isViewer}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-sm text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                    {revenueUrl.trim() && (
+                      <div className={cn(
+                        "flex items-center gap-2 mt-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono border",
+                        isValidSheetId(derivedRevenueId) ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-red-50 border-red-100 text-red-600"
+                      )}>
+                        {isValidSheetId(derivedRevenueId) ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                        <span className="truncate">Revenue Sheet ID: {derivedRevenueId || 'Invalid'}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* API Key */}
@@ -679,7 +750,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3 pt-1">
                   <button
                     onClick={handleTest}
-                    disabled={isViewer || !isValidSheetId(derivedSheetId) || !isValidApiKey(apiKey) || testStatus === 'testing'}
+                    disabled={isViewer || !(isValidSheetId(derivedSeoId) || isValidSheetId(derivedLeadsId) || isValidSheetId(derivedRevenueId)) || !isValidApiKey(apiKey) || testStatus === 'testing'}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-violet-400 bg-white hover:bg-violet-50 text-slate-600 hover:text-violet-700 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Zap className="w-4 h-4" />
@@ -773,9 +844,12 @@ export default function SettingsPage() {
                           </div>
                         </div>
 
-                        <p className="text-[11px] text-slate-400 font-mono truncate mb-3 pl-10">
-                          {cfg.sheetId.slice(0, 20)}...
-                        </p>
+                        <div className="text-[10px] text-slate-400 space-y-0.5 mb-3 pl-10 font-mono">
+                          {(cfg.seoSheetId || cfg.sheetId) && <div className="truncate">SEO: {(cfg.seoSheetId || cfg.sheetId || '').slice(0, 12)}...</div>}
+                          {cfg.leadsSheetId && <div className="truncate">Leads: {cfg.leadsSheetId.slice(0, 12)}...</div>}
+                          {cfg.revenueSheetId && <div className="truncate">Rev: {cfg.revenueSheetId.slice(0, 12)}...</div>}
+                          {!cfg.seoSheetId && !cfg.sheetId && !cfg.leadsSheetId && !cfg.revenueSheetId && <div>All Demo Data</div>}
+                        </div>
 
                         <div className="flex items-center gap-2">
                           {!isActive && (

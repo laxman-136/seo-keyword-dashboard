@@ -24,7 +24,10 @@ function mapGrantRow(row: any): ViewerAccessGrant {
     recipientEmail: row.recipient_email,
     ownerEmail: row.owner_email,
     label: row.label,
-    sheetId: row.sheet_id,
+    sheetId: row.seo_sheet_id || row.sheet_id || '',
+    seoSheetId: row.seo_sheet_id || row.sheet_id || undefined,
+    leadsSheetId: row.leads_sheet_id || undefined,
+    revenueSheetId: row.revenue_sheet_id || undefined,
     apiKey: row.api_key,
     expiresAt: row.expires_at,
     createdAt: row.created_at
@@ -79,7 +82,7 @@ export async function getAccessGrantsByOwner(email: string, sheetId?: string): P
   try {
     let query = supabase.from('access_grants').select('*').eq('owner_email', email.toLowerCase())
     if (sheetId) {
-      query = query.eq('sheet_id', sheetId)
+      query = query.or(`seo_sheet_id.eq.${sheetId},sheet_id.eq.${sheetId}`)
     }
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throw error
@@ -116,14 +119,15 @@ export async function getActiveAccessGrantSummaries(): Promise<Array<{
     }>()
 
     ;(data || []).forEach((row: any) => {
-      const key = `${row.owner_email}::${row.sheet_id}`
+      const activeSheetId = row.seo_sheet_id || row.sheet_id || ''
+      const key = `${row.owner_email}::${activeSheetId}`
       const existing = groups.get(key)
       const expiry = row.expires_at
       if (!existing) {
         groups.set(key, {
           ownerEmail: row.owner_email,
           label: row.label,
-          sheetId: row.sheet_id,
+          sheetId: activeSheetId,
           viewerCount: 1,
           nextExpiry: expiry
         })
@@ -146,7 +150,10 @@ export async function createAccessGrant(grant: {
   recipientEmail: string
   ownerEmail: string
   label: string
-  sheetId: string
+  seoSheetId?: string
+  leadsSheetId?: string
+  revenueSheetId?: string
+  sheetId?: string
   apiKey: string
   expiresAt: string
 }): Promise<ViewerAccessGrant> {
@@ -159,11 +166,14 @@ export async function createAccessGrant(grant: {
       recipient_email: grant.recipientEmail.toLowerCase(),
       owner_email: grant.ownerEmail.toLowerCase(),
       label: grant.label,
-      sheet_id: grant.sheetId,
+      sheet_id: grant.sheetId || grant.seoSheetId || '',
+      seo_sheet_id: grant.seoSheetId || null,
+      leads_sheet_id: grant.leadsSheetId || null,
+      revenue_sheet_id: grant.revenueSheetId || null,
       api_key: grant.apiKey,
       expires_at: grant.expiresAt,
       created_at: new Date().toISOString()
-    }).single()
+    }).select().single()
 
     if (error) {
       console.error('Supabase insert error (access_grants):', error)

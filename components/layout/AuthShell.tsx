@@ -125,9 +125,12 @@ export default function AuthShell({ children }: Props) {
           const grant = grants[0]
           setActiveConfig({
             label: grant.label,
-            sheetId: grant.sheetId,
+            seoSheetId: grant.seoSheetId,
+            leadsSheetId: grant.leadsSheetId,
+            revenueSheetId: grant.revenueSheetId,
             apiKey: grant.apiKey,
-            createdAt: grant.createdAt
+            createdAt: grant.createdAt,
+            sheetId: grant.seoSheetId || grant.sheetId || ''
           })
         }
 

@@ -20,7 +20,7 @@ const PUBLIC_PREFIX = [
   '/site-status/',
 ]
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public paths

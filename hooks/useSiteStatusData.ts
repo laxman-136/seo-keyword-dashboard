@@ -36,10 +36,16 @@ export function useSiteStatusData(): SiteStatusDataResult {
       let url = isManualRefresh ? '/api/site-status?refresh=true' : '/api/site-status'
 
       if (typeof window !== 'undefined') {
-        const clientSheetId = localStorage.getItem('client-sheet-id')
+        const clientSeoSheetId = localStorage.getItem('client-seo-sheet-id')
         const clientApiKey = localStorage.getItem('client-api-key')
-        if (clientSheetId) url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientSheetId)}`
-        if (clientApiKey) url += (url.includes('?') ? '&' : '?') + `apiKey=${encodeURIComponent(clientApiKey)}`
+        const hasActiveConfig = localStorage.getItem('active-sheet-config') !== null
+
+        if (hasActiveConfig) {
+          url += (url.includes('?') ? '&' : '?') + `sheetId=${encodeURIComponent(clientSeoSheetId || 'mock')}`
+          if (clientApiKey) {
+            url += `&apiKey=${encodeURIComponent(clientApiKey)}`
+          }
+        }
       }
 
       const res = await fetch(url)
@@ -65,6 +71,22 @@ export function useSiteStatusData(): SiteStatusDataResult {
   }, [rows.length])
 
   useEffect(() => { if (rows.length === 0) loadData() }, [loadData, rows.length])
+
+  useEffect(() => {
+    const handleConfigChange = () => {
+      globalSiteStatusCache = null
+      setRows([])
+      setMonths([])
+      setLoading(true)
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('active-config-updated', handleConfigChange)
+      return () => {
+        window.removeEventListener('active-config-updated', handleConfigChange)
+      }
+    }
+  }, [])
 
   return {
     rows,

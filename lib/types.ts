@@ -118,7 +118,10 @@ export interface ViewerAccessGrant {
   recipientEmail: string
   ownerEmail: string
   label: string
-  sheetId: string
+  sheetId?: string // Deprecated, kept for legacy compatibility
+  seoSheetId?: string
+  leadsSheetId?: string
+  revenueSheetId?: string
   apiKey: string
   expiresAt: string
   createdAt: string
