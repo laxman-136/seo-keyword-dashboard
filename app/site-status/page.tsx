@@ -406,8 +406,8 @@ export default function SiteStatusPage() {
                   {/* Period Cards Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                     {metricsOrder.map(metric => {
-                      const prevVal = prevData?.[metric]
-                      const currVal = currData?.[metric]
+                      const prevVal = prevData?.[metric as any]
+                      const currVal = currData?.[metric as any]
                       const change = calculateChange(currVal, prevVal)
 
                       return (
@@ -461,8 +461,8 @@ export default function SiteStatusPage() {
                               <tr key={histRow.label} className="hover:bg-slate-50/40 transition-colors">
                                 <td className="px-5 py-3 font-bold text-slate-700">{histRow.label}</td>
                                 {metricsOrder.map(metric => {
-                                  const val = histRow.val?.[metric]
-                                  const prevMetricVal = prevHist?.[metric]
+                                  const val = histRow.val?.[metric as any]
+                                  const prevMetricVal = prevHist?.[metric as any]
                                   const delta = calculateChange(val, prevMetricVal)
                                   
                                   return (
