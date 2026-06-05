@@ -32,6 +32,8 @@ export default function SettingsPage() {
   const [gaPrivateKey, setGaPrivateKey] = useState('')
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle')
   const [syncMessage, setSyncMessage] = useState('')
+  const [syncMonthlyStatus, setSyncMonthlyStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle')
+  const [syncMonthlyMessage, setSyncMonthlyMessage] = useState('')
 
   // UI state
   const [savedConfigs, setSavedConfigs] = useState<SheetConfig[]>([])
@@ -347,6 +349,35 @@ export default function SettingsPage() {
     } catch (err: any) {
       setSyncStatus('error')
       setSyncMessage(err.message || 'Error syncing GA4 traffic data.')
+    }
+  }
+
+  const handleSyncGa4Monthly = async () => {
+    if (!activeConfig || !gaPropertyId.trim() || !gaClientEmail.trim() || !gaPrivateKey.trim()) return
+    setSyncMonthlyStatus('syncing')
+    setSyncMonthlyMessage('')
+
+    try {
+      const res = await fetch('/api/traffic/sync-ga4-monthly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seoSheetId: activeConfig.seoSheetId || activeConfig.sheetId,
+          apiKey: activeConfig.apiKey,
+          gaPropertyId: gaPropertyId.trim(),
+          gaClientEmail: gaClientEmail.trim(),
+          gaPrivateKey: gaPrivateKey.trim()
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Sync failed')
+
+      setSyncMonthlyStatus('success')
+      setSyncMonthlyMessage(data.message || 'GA4 Monthly Sync completed successfully!')
+    } catch (err: any) {
+      setSyncMonthlyStatus('error')
+      setSyncMonthlyMessage(err.message || 'Error syncing GA4 monthly traffic data.')
     }
   }
 
@@ -828,19 +859,34 @@ export default function SettingsPage() {
                   </div>
 
                   {activeConfig && gaPropertyId.trim() && gaClientEmail.trim() && gaPrivateKey.trim() && (
-                    <div className="pt-1">
-                      <button
-                        type="button"
-                        onClick={handleSyncGa4}
-                        disabled={syncStatus === 'syncing'}
-                        className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-violet-600 hover:bg-violet-750 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-600/10"
-                      >
-                        {syncStatus === 'syncing' ? (
-                          <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Syncing GA4...</>
-                        ) : (
-                          <><RefreshCw className="w-3.5 h-3.5" /> Sync Yesterday's GA4 Traffic Now</>
-                        )}
-                      </button>
+                    <div className="pt-1 space-y-3">
+                      <div className="grid grid-cols-1 gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSyncGa4}
+                          disabled={syncStatus === 'syncing' || syncMonthlyStatus === 'syncing'}
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-violet-600 hover:bg-violet-750 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-violet-600/10 disabled:opacity-50"
+                        >
+                          {syncStatus === 'syncing' ? (
+                            <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Syncing GA4 Daily...</>
+                          ) : (
+                            <><RefreshCw className="w-3.5 h-3.5" /> Sync Yesterday's GA4 Traffic Now</>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleSyncGa4Monthly}
+                          disabled={syncStatus === 'syncing' || syncMonthlyStatus === 'syncing'}
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-indigo-600/10 disabled:opacity-50"
+                        >
+                          {syncMonthlyStatus === 'syncing' ? (
+                            <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Syncing GA4 Monthly...</>
+                          ) : (
+                            <><RefreshCw className="w-3.5 h-3.5" /> Sync Monthly GA4 Traffic Now</>
+                          )}
+                        </button>
+                      </div>
 
                       {syncStatus !== 'idle' && (
                         <div className={cn(
@@ -850,6 +896,17 @@ export default function SettingsPage() {
                         )}>
                           {syncStatus === 'success' ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
                           <span>{syncMessage}</span>
+                        </div>
+                      )}
+
+                      {syncMonthlyStatus !== 'idle' && (
+                        <div className={cn(
+                          "flex items-start gap-2.5 mt-2.5 px-3 py-2 rounded-lg border text-xs font-medium",
+                          syncMonthlyStatus === 'success' && "bg-emerald-50 border-emerald-100 text-emerald-700",
+                          syncMonthlyStatus === 'error' && "bg-red-50 border-red-100 text-red-600"
+                        )}>
+                          {syncMonthlyStatus === 'success' ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                          <span>{syncMonthlyMessage}</span>
                         </div>
                       )}
                     </div>

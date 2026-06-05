@@ -61,7 +61,7 @@ export default function OverviewDashboard() {
     refresh
   } = activeData
 
-  // Auto-sync GA4 in the background once per day
+  // Auto-sync GA4 in the background once per day (both daily and monthly)
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -82,24 +82,33 @@ export default function OverviewDashboard() {
     localStorage.setItem('last-ga4-sync-attempt', todayStr)
     console.log('Auto-triggering GA4 traffic sync in background...')
 
-    fetch('/api/traffic/sync-ga4', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        seoSheetId: clientSeoSheetId,
-        apiKey,
-        gaPropertyId,
-        gaClientEmail,
-        gaPrivateKey
-      })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          console.log('Auto GA4 traffic sync succeeded!')
+    const payload = {
+      seoSheetId: clientSeoSheetId,
+      apiKey,
+      gaPropertyId,
+      gaClientEmail,
+      gaPrivateKey
+    }
+
+    // Call both Daily and Monthly syncs
+    Promise.all([
+      fetch('/api/traffic/sync-ga4', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(res => res.json()),
+      fetch('/api/traffic/sync-ga4-monthly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(res => res.json())
+    ])
+      .then(([dailyRes, monthlyRes]) => {
+        if (dailyRes.success || monthlyRes.success) {
+          console.log('Auto GA4 sync succeeded!')
           window.dispatchEvent(new Event('active-config-updated'))
         } else {
-          console.warn('Auto GA4 traffic sync failed:', data.error)
+          console.warn('Auto GA4 sync failed:', dailyRes.error || monthlyRes.error)
         }
       })
       .catch(err => console.error('Auto GA4 traffic sync error:', err))

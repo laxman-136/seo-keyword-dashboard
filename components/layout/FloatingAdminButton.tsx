@@ -18,6 +18,8 @@ export default function FloatingAdminButton() {
   const [me, setMe]               = useState<Me | null>(null)
   const [pendingCount, setPending] = useState(0)
   const [open, setOpen]           = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isSnapping, setIsSnapping] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const dragRef = useRef({ dragging: false, startX: 0, startY: 0, origLeft: 0, origTop: 0, moved: false })
 
@@ -58,51 +60,46 @@ export default function FloatingAdminButton() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // Load saved position (if any) and compute default on first render
+  // Set default position on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('floatingAdminPos')
-      if (raw) {
-        const p = JSON.parse(raw)
-        setPos({ left: p.left, top: p.top })
-        return
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    // compute default (bottom-right)
-    const computeDefault = () => {
-      const width = Math.min(window.innerWidth, 1600)
-      const left = window.innerWidth - 96 - 24
-      const top = window.innerHeight - 64 - 24
-      setPos({ left, top })
-    }
-
-    computeDefault()
-    const onResize = () => computeDefault()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    setPos(null)
   }, [])
 
-  // Persist position
-  const savePos = (p: { left: number; top: number }) => {
-    try {
-      localStorage.setItem('floatingAdminPos', JSON.stringify(p))
-    } catch (e) { }
+  // Snap to home helper (snaps to right side)
+  const snapToHome = () => {
+    setIsSnapping(true)
+    const targetLeft = window.innerWidth - 48
+    setPos({ left: targetLeft, top: 300 })
+    setTimeout(() => {
+      setPos(null)
+      setIsSnapping(false)
+    }, 300)
   }
+
+  // Snap back when popup closes or drag ends
+  useEffect(() => {
+    if (!open && !isDragging) {
+      snapToHome()
+    }
+  }, [open, isDragging])
 
   // Pointer handlers for dragging
   const onPointerDown = (e: React.PointerEvent) => {
     const el = ref.current
     if (!el) return
-    (e.target as Element).setPointerCapture?.(e.pointerId)
+    
+    try {
+      (e.target as Element).setPointerCapture?.(e.pointerId)
+    } catch (err) {}
+
+    const rect = el.getBoundingClientRect()
     dragRef.current.dragging = true
     dragRef.current.moved = false
     dragRef.current.startX = e.clientX
     dragRef.current.startY = e.clientY
-    dragRef.current.origLeft = pos?.left ?? 0
-    dragRef.current.origTop = pos?.top ?? 0
+    dragRef.current.origLeft = rect.left
+    dragRef.current.origTop = rect.top
+
     window.addEventListener('pointermove', onPointerMove)
     window.addEventListener('pointerup', onPointerUp)
     window.addEventListener('pointercancel', onPointerUp)
@@ -113,25 +110,39 @@ export default function FloatingAdminButton() {
     const dx = e.clientX - dragRef.current.startX
     const dy = e.clientY - dragRef.current.startY
     const moved = Math.abs(dx) > 8 || Math.abs(dy) > 8
+    
     if (!moved && !dragRef.current.moved) return
-    dragRef.current.moved = true
-    const newLeft = Math.max(8, dragRef.current.origLeft + dx)
-    const newTop = Math.max(8, dragRef.current.origTop + dy)
+    
+    if (!dragRef.current.moved) {
+      dragRef.current.moved = true
+      setIsDragging(true)
+      setOpen(false) // Close popup when dragging
+    }
+
+    const newLeft = Math.min(window.innerWidth - 60, Math.max(0, dragRef.current.origLeft + dx))
+    const newTop = Math.min(window.innerHeight - 60, Math.max(0, dragRef.current.origTop + dy))
     setPos({ left: newLeft, top: newTop })
   }
 
   const onPointerUp = (e: PointerEvent) => {
     if (!dragRef.current.dragging) return
     dragRef.current.dragging = false
+
+    try {
+      ref.current?.releasePointerCapture(e.pointerId)
+    } catch (err) {}
+
     window.removeEventListener('pointermove', onPointerMove)
     window.removeEventListener('pointerup', onPointerUp)
     window.removeEventListener('pointercancel', onPointerUp)
+
     if (!dragRef.current.moved) {
-      // treat as click toggle
+      // Treat as click toggle
       setOpen(v => !v)
     } else {
-      // save position
-      if (pos) savePos(pos)
+      // End drag, snap back home
+      setIsDragging(false)
+      snapToHome()
     }
   }
 
@@ -146,17 +157,21 @@ export default function FloatingAdminButton() {
   const isAdmin = me.role === 'admin' || me.role === 'superadmin' || me.role === 'ceo'
   const RoleIcon = me.role === 'superadmin' ? Crown : me.role === 'admin' ? Shield : me.role === 'ceo' ? Crown : Users
 
+  const isExpanded = open || isDragging
+
   return (
     <div
       ref={ref}
-      style={pos ? { left: pos.left, top: pos.top, touchAction: 'none' } : undefined}
-      className="fixed z-[9999] flex flex-col items-end gap-2 touch-none"
+      style={pos ? { left: pos.left, top: pos.top, touchAction: 'none' } : { right: 0, top: 300, touchAction: 'none' }}
+      className={cn(
+        "fixed z-[9999] flex flex-col items-end gap-2 touch-none select-none",
+        isSnapping && "transition-all duration-300 ease-out"
+      )}
       onPointerDown={onPointerDown}
     >
-
       {/* Popup card */}
       {open && (
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl shadow-black/60 p-4 w-64 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="mr-3 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl shadow-black/60 p-4 w-64 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* User info */}
           <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
@@ -210,35 +225,39 @@ export default function FloatingAdminButton() {
 
       {/* Main FAB button */}
       <button
-        // click handled via pointer up when not dragged
+        type="button"
         className={cn(
-          'relative flex items-center shadow-2xl shadow-black/40 border transition-all duration-200 group select-none',
-          open
-            ? 'bg-slate-800 border-slate-600 shadow-violet-500/10'
-            : 'bg-slate-900 border-slate-700 hover:border-violet-500/40 hover:shadow-violet-500/10',
-          'rounded-full p-2.5 sm:rounded-2xl sm:pl-3 sm:pr-4 sm:py-2.5 gap-0 sm:gap-2.5'
+          'relative flex items-center shadow-2xl shadow-black/40 transition-all duration-300 group select-none hover:shadow-violet-500/10 focus:outline-none',
+          isExpanded
+            ? 'bg-slate-800 border-slate-600 rounded-2xl pl-4 pr-3 py-2.5 gap-2.5 border'
+            : 'bg-slate-900 border-y border-l border-slate-700 hover:border-violet-500/40 rounded-l-2xl rounded-r-none pl-2 pr-3 py-2 gap-0 border-r-0'
         )}
       >
+        {/* Name + role - visible on left when expanded */}
+        {isExpanded && (
+          <div className="text-left animate-in fade-in zoom-in-95 duration-200">
+            <p className="text-xs font-bold text-white leading-none truncate max-w-[120px]">{me.name}</p>
+            <p className={cn(
+              'text-[10px] font-semibold mt-0.5 flex items-center gap-0.5',
+              me.role === 'superadmin' ? 'text-violet-400' : me.role === 'admin' ? 'text-blue-400' : me.role === 'ceo' ? 'text-amber-400' : 'text-slate-400'
+            )}>
+              <RoleIcon className="w-2.5 h-2.5" />
+              {me.role}
+            </p>
+          </div>
+        )}
+
         {/* Avatar */}
         <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
           {me.name.charAt(0).toUpperCase()}
         </div>
 
-        {/* Name + role */}
-        <div className="text-left hidden sm:block">
-          <p className="text-xs font-bold text-white leading-none truncate max-w-[100px]">{me.name}</p>
-          <p className={cn(
-            'text-[10px] font-semibold mt-0.5 flex items-center gap-0.5',
-            me.role === 'superadmin' ? 'text-violet-400' : me.role === 'admin' ? 'text-blue-400' : me.role === 'ceo' ? 'text-amber-400' : 'text-slate-400'
-          )}>
-            <RoleIcon className="w-2.5 h-2.5" />
-            {me.role}
-          </p>
-        </div>
-
         {/* Pending badge — always visible on FAB */}
         {pendingCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg shadow-red-500/40 animate-pulse">
+          <span className={cn(
+            "absolute min-w-[20px] h-5 px-1 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg shadow-red-500/40 animate-pulse",
+            isExpanded ? "-top-1.5 -right-1.5" : "top-0 left-0 -translate-x-1/3 -translate-y-1/3"
+          )}>
             {pendingCount}
           </span>
         )}

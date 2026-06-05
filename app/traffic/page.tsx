@@ -1,7 +1,7 @@
 // app/traffic/page.tsx
 'use client';
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useTrafficPeriod } from '@/hooks/useTrafficData'
 import { useDailyTrafficData } from '@/hooks/useDailyTrafficData'
 import { TrafficRow, TrafficSource, TrafficCountry } from '@/lib/types'
@@ -20,13 +20,30 @@ import CountryDonutChart from '@/components/charts/CountryDonutChart'
 import TrafficQuarterlyTable from '@/components/traffic/TrafficQuarterlyTable'
 import TrafficYearlyTable from '@/components/traffic/TrafficYearlyTable'
 import { getQuarterlyBreakdown, getYearlyBreakdown } from '@/lib/calculations'
-import { Users, UserPlus, Compass, Globe, Info } from 'lucide-react'
+import { Users, UserPlus, Compass, Globe, Info, RefreshCw } from 'lucide-react'
 
 export default function TrafficOverview() {
   const [timeframe, setTimeframe] = useState<'monthly' | 'daily'>('monthly')
+  const [syncing, setSyncing] = useState(false)
+  const [syncSuccess, setSyncSuccess] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  
+  const [selectedCurrentMonth, setSelectedCurrentMonth] = useState('')
+  const [selectedCompareMonth, setSelectedCompareMonth] = useState('')
 
-  const monthlyTraffic = useTrafficPeriod('monthly')
+  const monthlyTraffic = useTrafficPeriod('monthly', selectedCurrentMonth || undefined, selectedCompareMonth || undefined)
   const dailyTraffic = useDailyTrafficData()
+
+  const monthsList = useMemo(() => {
+    return (monthlyTraffic.rows || []).map(r => r.month)
+  }, [monthlyTraffic.rows])
+
+  useEffect(() => {
+    if (monthsList.length > 0 && !selectedCurrentMonth && !selectedCompareMonth) {
+      setSelectedCurrentMonth(monthsList[monthsList.length - 1])
+      setSelectedCompareMonth(monthsList.length >= 2 ? monthsList[monthsList.length - 2] : monthsList[monthsList.length - 1])
+    }
+  }, [monthsList, selectedCurrentMonth, selectedCompareMonth])
 
   // Map daily rows to TrafficRow shape (date string goes to month property)
   const mappedDailyRows = useMemo((): TrafficRow[] => {
@@ -107,6 +124,48 @@ export default function TrafficOverview() {
     fallbackReason: dailyTraffic.fallbackReason,
     lastUpdated: dailyTraffic.lastUpdated,
     refresh: dailyTraffic.refresh
+  }
+
+  const handleSyncGa4Monthly = async () => {
+    setSyncing(true)
+    setSyncSuccess(false)
+    setSyncError(null)
+
+    try {
+      const clientSeoSheetId = localStorage.getItem('client-seo-sheet-id')
+      const apiKey = localStorage.getItem('client-api-key')
+      const gaPropertyId = localStorage.getItem('client-ga-property-id')
+      const gaClientEmail = localStorage.getItem('client-ga-client-email')
+      const gaPrivateKey = localStorage.getItem('client-ga-private-key')
+
+      if (!clientSeoSheetId || clientSeoSheetId === 'mock' || !gaPropertyId || !gaClientEmail || !gaPrivateKey) {
+        throw new Error('GA4 integration is not configured in Settings.')
+      }
+
+      const res = await fetch('/api/traffic/sync-ga4-monthly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seoSheetId: clientSeoSheetId,
+          apiKey,
+          gaPropertyId,
+          gaClientEmail,
+          gaPrivateKey
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Sync failed')
+
+      setSyncSuccess(true)
+      await activeData.refresh()
+      setTimeout(() => setSyncSuccess(false), 5000)
+    } catch (err: any) {
+      setSyncError(err.message || 'Error syncing GA4 monthly traffic.')
+      setTimeout(() => setSyncError(null), 5000)
+    } finally {
+      setSyncing(false)
+    }
   }
 
   const {
@@ -205,6 +264,67 @@ export default function TrafficOverview() {
           <span className="text-xs text-slate-400 font-semibold">
             Automated GA4 Sync: Enabled (Updates daily)
           </span>
+        )}
+
+        {timeframe === 'monthly' && (
+          <div className="flex flex-wrap items-center gap-3">
+            {monthsList.length > 0 && (
+              <>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                  <span>Current:</span>
+                  <select
+                    value={selectedCurrentMonth}
+                    onChange={e => setSelectedCurrentMonth(e.target.value)}
+                    className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 outline-none font-bold text-xs"
+                  >
+                    {monthsList.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                  <span>Compare vs:</span>
+                  <select
+                    value={selectedCompareMonth}
+                    onChange={e => setSelectedCompareMonth(e.target.value)}
+                    className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 outline-none font-bold text-xs"
+                  >
+                    {monthsList.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center gap-2">
+              {syncing && (
+                <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3 animate-spin text-indigo-500" />
+                  Syncing GA4...
+                </span>
+              )}
+              {syncSuccess && (
+                <span className="text-xs text-emerald-600 font-semibold">
+                  ✓ GA4 Sync completed!
+                </span>
+              )}
+              {syncError && (
+                <span className="text-xs text-red-500 font-semibold">
+                  ⚠ {syncError}
+                </span>
+              )}
+              <button
+                onClick={handleSyncGa4Monthly}
+                disabled={syncing}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 text-xs font-bold rounded-xl transition-all border border-indigo-200 disabled:opacity-50"
+              >
+                <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} />
+                Sync GA4 Monthly Traffic
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

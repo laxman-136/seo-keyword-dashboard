@@ -7,11 +7,11 @@ import {
   Pie,
   Cell,
   Tooltip,
-  ResponsiveContainer,
-  Legend
+  ResponsiveContainer
 } from 'recharts'
 import { TrafficSource } from '@/lib/types'
 import { TRAFFIC_SOURCES } from '@/lib/calculations'
+import { cn } from '@/lib/utils'
 
 interface SourceDonutChartProps {
   sources: Record<TrafficSource, number>
@@ -31,15 +31,7 @@ const SOURCE_COLORS: Record<TrafficSource, string> = {
 }
 
 export default function SourceDonutChart({ sources }: SourceDonutChartProps) {
-  const [isMobile, setIsMobile] = React.useState(false)
-  
-  React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-  
+  const [activeIndex, setActiveIndex] = React.useState<number | null>(null)
   const total = TRAFFIC_SOURCES.reduce((sum, s) => sum + (sources[s] || 0), 0)
 
   const data = TRAFFIC_SOURCES.map(s => {
@@ -53,20 +45,10 @@ export default function SourceDonutChart({ sources }: SourceDonutChartProps) {
     }
   }).filter(d => d.value > 0) // Only render active channels
 
-  // Custom legend showing source name and share percentage
-  const renderLegend = (value: string) => {
-    const sourceData = data.find(d => d.name === value)
-    return (
-      <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 pl-1 inline-flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
-        <span className="text-slate-700 font-semibold">{value}:</span>
-        <span className="text-slate-800 font-bold">{sourceData?.value.toLocaleString()}</span>
-        <span className="text-slate-400">({sourceData?.percentLabel})</span>
-      </span>
-    )
-  }
+  const activeItem = activeIndex !== null ? data[activeIndex] : null
 
   return (
-    <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm h-auto sm:h-[360px] md:h-[400px] flex flex-col justify-between relative">
+    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm h-[380px] sm:h-[360px] md:h-[380px] flex flex-col justify-between relative transition-all duration-300 hover:shadow-md">
       <div>
         <h4 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">
           Traffic Acquisition Channels
@@ -76,57 +58,106 @@ export default function SourceDonutChart({ sources }: SourceDonutChartProps) {
         </p>
       </div>
 
-      <div className={`flex-1 w-full mt-2 sm:mt-4 flex items-center justify-center relative text-[10px] ${isMobile ? 'flex-col' : ''}`}>
-        {/* Center Total label - repositioned for mobile */}
-        <div className={`${isMobile ? 'mb-2' : 'absolute top-1/2 left-[30%] -translate-x-1/2 -translate-y-1/2'} flex flex-col items-center justify-center pointer-events-none select-none`}>
-          <span className="text-lg sm:text-xl md:text-2xl font-black text-slate-800">{total.toLocaleString()}</span>
-          <span className="text-[7px] sm:text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Total Users</span>
+      <div className="flex-1 grid grid-cols-12 items-center gap-4 mt-2 overflow-hidden">
+        {/* Left/Center: Donut Chart */}
+        <div className="col-span-12 sm:col-span-5 h-[160px] sm:h-[180px] md:h-[200px] flex items-center justify-center relative">
+          {/* Total Users Label in Center */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none transition-all duration-300">
+            <span 
+              className="text-2xl sm:text-3xl font-extrabold tracking-tight transition-colors duration-200"
+              style={{ color: activeItem ? activeItem.color : '#1e293b' }}
+            >
+              {(activeItem ? activeItem.value : total).toLocaleString()}
+            </span>
+            <span 
+              className="text-[7px] sm:text-[8px] uppercase tracking-widest font-extrabold transition-colors duration-200 mt-0.5"
+              style={{ color: activeItem ? activeItem.color : '#94a3b8' }}
+            >
+              {activeItem ? activeItem.name : 'Total Users'}
+            </span>
+          </div>
+
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#0f172a',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '11px'
+                }}
+                formatter={(val: any) => `${Number(val).toLocaleString()} users`}
+              />
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={50}
+                outerRadius={65}
+                paddingAngle={2.5}
+                dataKey="value"
+                onMouseEnter={(_, index) => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
+                className="cursor-pointer outline-none focus:outline-none"
+              >
+                {data.map((entry, index) => {
+                  const isHovered = activeIndex === index
+                  return (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.color}
+                      stroke={isHovered ? entry.color : '#fff'}
+                      strokeWidth={isHovered ? 2 : 1}
+                      opacity={activeIndex === null || isHovered ? 1 : 0.5}
+                      style={{
+                        transition: 'all 0.2s ease-in-out',
+                        outline: 'none'
+                      }}
+                    />
+                  )
+                })}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
         </div>
 
-        <ResponsiveContainer width="100%" height={isMobile ? 200 : 250}>
-          <PieChart>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#0f172a',
-                border: 'none',
-                borderRadius: '8px',
-                color: '#fff',
-                fontSize: '11px'
-              }}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              formatter={(val: any) => `${Number(val).toLocaleString()} users`}
-            />
-            <Pie
-              data={data}
-              cx={isMobile ? "50%" : "30%"}
-              cy="50%"
-              innerRadius={isMobile ? 35 : 45}
-              outerRadius={isMobile ? 55 : 65}
-              paddingAngle={2}
-              dataKey="value"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Legend
-              layout={isMobile ? "horizontal" : "vertical"}
-              align={isMobile ? "center" : "right"}
-              verticalAlign={isMobile ? "bottom" : "middle"}
-              formatter={renderLegend}
-              iconSize={6}
-              iconType="circle"
-              wrapperStyle={{
-                fontSize: isMobile ? '10px' : '11px',
-                paddingLeft: isMobile ? '0' : '10px',
-                paddingTop: isMobile ? '16px' : '0',
-                width: isMobile ? '100%' : 160,
-                maxHeight: isMobile ? 'auto' : '100%',
-                overflowY: isMobile ? 'visible' : 'auto'
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        {/* Right: Custom HTML Legend */}
+        <div className="col-span-12 sm:col-span-7 overflow-y-auto max-h-[140px] sm:max-h-[200px] pr-2.5 space-y-1 sm:space-y-1.5 scrollbar-thin">
+          {data.map((item, index) => {
+            const isHovered = activeIndex === index
+            return (
+              <div 
+                key={item.name} 
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
+                className={cn(
+                  "flex items-center justify-between text-xs py-1 px-2.5 rounded-xl border transition-all duration-150 cursor-pointer",
+                  isHovered 
+                    ? 'bg-slate-50 border-slate-200 shadow-sm translate-x-1' 
+                    : 'bg-transparent border-transparent'
+                )}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span 
+                    className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform duration-150 group-hover:scale-125" 
+                    style={{ backgroundColor: item.color }} 
+                  />
+                  <span className={cn(
+                    "text-xs transition-colors duration-150",
+                    isHovered ? 'text-slate-900 font-bold' : 'text-slate-600 font-medium'
+                  )}>
+                    {item.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                  <span className="font-bold text-slate-800 font-mono">{item.value.toLocaleString()}</span>
+                  <span className="text-slate-400 text-[10px] font-normal">({item.percentLabel})</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
