@@ -136,6 +136,19 @@ export async function fetchKeywordData(
     const data = await fetchSheetValues(sheetId, apiKey, 'Keywords', bypassCache)
     const { rows, months } = parseSheetGrid(data)
 
+    if (rows.length === 0) {
+      console.warn('Keywords sheet exists but is empty. Falling back to mock data.')
+      const mockGrid = getMockSheetsResponse()
+      const fallback = parseSheetGrid(mockGrid.values)
+      return {
+        rows: fallback.rows,
+        months: fallback.months,
+        isMock: true,
+        lastUpdated: nowString,
+        fallbackReason: 'Keywords sheet is empty (only headers found). Showing demo data.'
+      }
+    }
+
     return {
       rows,
       months,
@@ -164,7 +177,7 @@ interface CacheEntry {
 const sheetsCache = new Map<string, CacheEntry>()
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache
 
-async function fetchSheetValues(
+export async function fetchSheetValues(
   sheetId: string,
   apiKey: string,
   sheetName: string,
@@ -350,6 +363,17 @@ export async function fetchTrafficData(
   try {
     const data = await fetchSheetValues(sheetId, apiKey, 'Traffic', bypassCache)
     const rows = parseTrafficSheetGrid(data)
+
+    if (rows.length === 0) {
+      console.warn('Traffic sheet exists but is empty. Falling back to mock data.')
+      const mockGrid = getMockTrafficSheetsResponse()
+      return {
+        rows: parseTrafficSheetGrid(mockGrid.values),
+        isMock: true,
+        lastUpdated: nowString,
+        fallbackReason: 'Traffic sheet is empty (only headers found). Showing demo data.'
+      }
+    }
 
     return {
       rows,

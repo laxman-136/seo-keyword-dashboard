@@ -7,6 +7,9 @@ export interface SheetConfig {
   leadsSheetId?: string // Leads spreadsheet ID
   revenueSheetId?: string // Revenue & Conversion spreadsheet ID
   apiKey?: string       // Google Sheets API key
+  gaPropertyId?: string  // GA4 property ID
+  gaClientEmail?: string // Service account client email
+  gaPrivateKey?: string  // Service account private key
   createdAt: string    // ISO timestamp
   sheetId?: string     // Keep for legacy compatibility
 }
@@ -121,6 +124,9 @@ export function setActiveConfig(config: SheetConfig): void {
   localStorage.setItem('client-leads-sheet-id', config.leadsSheetId || '')
   localStorage.setItem('client-revenue-sheet-id', config.revenueSheetId || '')
   localStorage.setItem('client-api-key', config.apiKey || '')
+  localStorage.setItem('client-ga-property-id', config.gaPropertyId || '')
+  localStorage.setItem('client-ga-client-email', config.gaClientEmail || '')
+  localStorage.setItem('client-ga-private-key', config.gaPrivateKey || '')
   dispatchActiveConfigUpdate()
 }
 
@@ -130,5 +136,8 @@ export function clearActiveConfig(): void {
   localStorage.removeItem('client-leads-sheet-id')
   localStorage.removeItem('client-revenue-sheet-id')
   localStorage.removeItem('client-api-key')
+  localStorage.removeItem('client-ga-property-id')
+  localStorage.removeItem('client-ga-client-email')
+  localStorage.removeItem('client-ga-private-key')
   dispatchActiveConfigUpdate()
 }

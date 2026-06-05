@@ -27,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full`}>
-      <body className="h-full bg-slate-50 font-sans text-slate-900 antialiased selection:bg-emerald-500/10 selection:text-emerald-700">
+    <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
+      <body className="h-full bg-slate-50 font-sans text-slate-900 antialiased selection:bg-emerald-500/10 selection:text-emerald-700" suppressHydrationWarning>
         {/* AuthShell handles everything:
             - /login and /register → full-screen, NO sidebar
             - all other routes    → sidebar + main layout */}

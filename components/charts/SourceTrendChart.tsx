@@ -53,8 +53,19 @@ export default function SourceTrendChart({ rows, variant }: SourceTrendChartProp
 
   // Format data for chart
   const data = rows.map(r => {
-    const [monthName, yearStr] = r.month.split('-')
-    const label = `${monthName.substring(0, 3)}-${yearStr.substring(2)}`
+    let label = ''
+    // Handle daily dates (e.g. 2026-06-04)
+    if (r.month && r.month.includes('-') && r.month.split('-').length === 3) {
+      const parts = r.month.split('-')
+      const month = parts[1]
+      const day = parts[2]
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const mIdx = parseInt(month, 10) - 1
+      label = `${day} ${monthNames[mIdx] || month}`
+    } else {
+      const [monthName, yearStr] = r.month.split('-')
+      label = `${monthName.substring(0, 3)}-${yearStr.substring(2)}`
+    }
     
     const sourceData: Record<string, number> = {}
     TRAFFIC_SOURCES.forEach(s => {

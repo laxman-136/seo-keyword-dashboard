@@ -1,8 +1,11 @@
-// app/page.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useKeywordData } from '@/hooks/useKeywordData'
+import { useDailyKeywordData } from '@/hooks/useDailyKeywordData'
+import { useDailyTrafficData } from '@/hooks/useDailyTrafficData'
+import { calculateGroupSummaries } from '@/lib/calculations'
+import { cn } from '@/lib/utils'
 import Header from '@/components/layout/Header'
 import KPICard from '@/components/ui/KPICard'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
@@ -14,10 +17,41 @@ import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react'
 
 export default function OverviewDashboard() {
   const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null)
+  const [timeframe, setTimeframe] = useState<'monthly' | 'daily'>('monthly')
+
+  const monthlyData = useKeywordData()
+  const dailyData = useDailyKeywordData()
+  const dailyTraffic = useDailyTrafficData()
+
+  const activeData = useMemo(() => {
+    return timeframe === 'monthly' ? monthlyData : {
+      keywords: dailyData.keywords,
+      stats: dailyData.stats,
+      isMock: dailyData.isMock,
+      fallbackReason: dailyData.fallbackReason,
+      lastUpdated: dailyData.lastUpdated,
+      loading: dailyData.loading,
+      refreshing: dailyData.refreshing,
+      error: dailyData.error,
+      refresh: dailyData.refresh
+    }
+  }, [timeframe, monthlyData, dailyData])
+
+  const activeGroupSummaries = useMemo(() => {
+    if (timeframe === 'monthly') {
+      return monthlyData.groupSummaries
+    }
+    return calculateGroupSummaries(dailyData.keywords)
+  }, [timeframe, monthlyData.groupSummaries, dailyData.keywords])
+
+  // Groups names array
+  const groupsList = useMemo(() => {
+    return activeGroupSummaries.map(g => g.name)
+  }, [activeGroupSummaries])
+
   const {
     keywords,
     stats,
-    groupSummaries,
     isMock,
     fallbackReason,
     lastUpdated,
@@ -25,7 +59,51 @@ export default function OverviewDashboard() {
     refreshing,
     error,
     refresh
-  } = useKeywordData()
+  } = activeData
+
+  // Auto-sync GA4 in the background once per day
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const clientSeoSheetId = localStorage.getItem('client-seo-sheet-id')
+    const apiKey = localStorage.getItem('client-api-key')
+    const gaPropertyId = localStorage.getItem('client-ga-property-id')
+    const gaClientEmail = localStorage.getItem('client-ga-client-email')
+    const gaPrivateKey = localStorage.getItem('client-ga-private-key')
+
+    if (!clientSeoSheetId || clientSeoSheetId === 'mock' || !gaPropertyId || !gaClientEmail || !gaPrivateKey) {
+      return // Not configured
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0]
+    const lastAttempt = localStorage.getItem('last-ga4-sync-attempt')
+    if (lastAttempt === todayStr) return
+
+    localStorage.setItem('last-ga4-sync-attempt', todayStr)
+    console.log('Auto-triggering GA4 traffic sync in background...')
+
+    fetch('/api/traffic/sync-ga4', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seoSheetId: clientSeoSheetId,
+        apiKey,
+        gaPropertyId,
+        gaClientEmail,
+        gaPrivateKey
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          console.log('Auto GA4 traffic sync succeeded!')
+          window.dispatchEvent(new Event('active-config-updated'))
+        } else {
+          console.warn('Auto GA4 traffic sync failed:', data.error)
+        }
+      })
+      .catch(err => console.error('Auto GA4 traffic sync error:', err))
+  }, [dailyData.isMock])
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -66,22 +144,55 @@ export default function OverviewDashboard() {
     )
   }
 
-  // Groups names array
-  const groupsList = groupSummaries.map(g => g.name)
+
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 min-h-screen">
       {/* Header Panel */}
       <Header
-        title="SEO Keyword Rankings"
-        currentMonth={stats.currentMonth}
-        previousMonth={stats.previousMonth}
+        title={timeframe === 'monthly' ? "SEO Keyword Rankings (Monthly)" : "SEO Keyword Rankings (Daily)"}
+        currentMonth={timeframe === 'monthly' ? ((stats as any)?.currentMonth || '') : ((stats as any)?.date || 'Today')}
+        previousMonth={timeframe === 'monthly' ? ((stats as any)?.previousMonth || '') : ((stats as any)?.prevDate || 'Yesterday')}
         lastUpdated={lastUpdated}
         isMock={isMock}
         warningText={fallbackReason}
         onRefresh={refresh}
         isRefreshing={refreshing}
       />
+
+      {/* Timeframe Toggle Bar */}
+      <div className="flex items-center justify-between border-b border-slate-200 pb-3 no-print">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          <button
+            onClick={() => setTimeframe('monthly')}
+            className={cn(
+              "px-4 py-2 text-xs font-bold rounded-lg transition-all",
+              timeframe === 'monthly'
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            🗓️ Monthly Rankings
+          </button>
+          <button
+            onClick={() => setTimeframe('daily')}
+            className={cn(
+              "px-4 py-2 text-xs font-bold rounded-lg transition-all",
+              timeframe === 'daily'
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            ⚡ Daily Rankings
+          </button>
+        </div>
+
+        {timeframe === 'daily' && stats && (
+          <span className="text-xs text-slate-400 font-semibold">
+            Latest Daily Date: {(stats as any).date} (vs. {(stats as any).prevDate})
+          </span>
+        )}
+      </div>
       {/* Client login access (for emailed viewer links) */}
       {currentUser?.role !== 'viewer' && (
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -181,9 +292,9 @@ export default function OverviewDashboard() {
 
       {/* SECTION C: Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <PageDistributionChart stats={stats} />
-        <MovementDonutChart stats={stats} />
-        <GroupPerformanceChart groupSummaries={groupSummaries} />
+        <PageDistributionChart stats={stats as any} />
+        <MovementDonutChart stats={stats as any} />
+        <GroupPerformanceChart groupSummaries={activeGroupSummaries} />
       </div>
 
       {/* SECTION D: Full Keywords Table */}

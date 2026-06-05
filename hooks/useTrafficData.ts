@@ -31,6 +31,7 @@ export function useTrafficData(): TrafficDataResult {
   const [loading, setLoading] = useState(globalTrafficCache ? false : true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasFetched, setHasFetched] = useState(false)
 
   const loadData = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) {
@@ -90,15 +91,17 @@ export function useTrafficData(): TrafficDataResult {
   }, [rows.length])
 
   useEffect(() => {
-    if (rows.length === 0) {
+    if (rows.length === 0 && !hasFetched) {
+      setHasFetched(true)
       loadData()
     }
-  }, [loadData, rows.length])
+  }, [loadData, rows.length, hasFetched])
 
   useEffect(() => {
     const handleConfigChange = () => {
       globalTrafficCache = null
       setRows([])
+      setHasFetched(false)
       setLoading(true)
     }
     

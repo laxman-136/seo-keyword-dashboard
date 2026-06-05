@@ -22,6 +22,21 @@ export default function TotalUsersTrendChart({ rows }: TotalUsersTrendChartProps
   
   // Format data for chart
   const data = rows.map(r => {
+    // Handle daily dates (e.g. 2026-06-04)
+    if (r.month && r.month.includes('-') && r.month.split('-').length === 3) {
+      const parts = r.month.split('-')
+      const month = parts[1]
+      const day = parts[2]
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const mIdx = parseInt(month, 10) - 1
+      const label = `${day} ${monthNames[mIdx] || month}`
+      return {
+        label,
+        'Total Users': r.totalUsers,
+        'New Users': r.newUsers
+      }
+    }
+
     const [monthName, yearStr] = r.month.split('-')
     const shortMonth = monthName.substring(0, 3)
     const shortYear = yearStr.substring(2)

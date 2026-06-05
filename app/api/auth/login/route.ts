@@ -6,6 +6,7 @@ import { getUserByEmail } from '@/lib/user-store'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
+  console.log("--> /api/auth/login POST handler hit!")
   try {
     const { email, password } = await request.json()
 
