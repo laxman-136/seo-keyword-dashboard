@@ -324,7 +324,10 @@ export default function SettingsPage() {
   }
 
   const handleSyncGa4 = async () => {
-    if (!activeConfig || !gaPropertyId.trim() || !gaClientEmail.trim() || !gaPrivateKey.trim()) return
+    const targetSeoId = derivedSeoId || (activeConfig?.seoSheetId || activeConfig?.sheetId)
+    const targetApiKey = apiKey.trim() || activeConfig?.apiKey
+    
+    if (!targetSeoId || !gaPropertyId.trim() || !gaClientEmail.trim() || !gaPrivateKey.trim()) return
     setSyncStatus('syncing')
     setSyncMessage('')
 
@@ -333,8 +336,8 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          seoSheetId: activeConfig.seoSheetId || activeConfig.sheetId,
-          apiKey: activeConfig.apiKey,
+          seoSheetId: targetSeoId,
+          apiKey: targetApiKey,
           gaPropertyId: gaPropertyId.trim(),
           gaClientEmail: gaClientEmail.trim(),
           gaPrivateKey: gaPrivateKey.trim()
@@ -353,7 +356,10 @@ export default function SettingsPage() {
   }
 
   const handleSyncGa4Monthly = async () => {
-    if (!activeConfig || !gaPropertyId.trim() || !gaClientEmail.trim() || !gaPrivateKey.trim()) return
+    const targetSeoId = derivedSeoId || (activeConfig?.seoSheetId || activeConfig?.sheetId)
+    const targetApiKey = apiKey.trim() || activeConfig?.apiKey
+    
+    if (!targetSeoId || !gaPropertyId.trim() || !gaClientEmail.trim() || !gaPrivateKey.trim()) return
     setSyncMonthlyStatus('syncing')
     setSyncMonthlyMessage('')
 
@@ -362,8 +368,8 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          seoSheetId: activeConfig.seoSheetId || activeConfig.sheetId,
-          apiKey: activeConfig.apiKey,
+          seoSheetId: targetSeoId,
+          apiKey: targetApiKey,
           gaPropertyId: gaPropertyId.trim(),
           gaClientEmail: gaClientEmail.trim(),
           gaPrivateKey: gaPrivateKey.trim()
@@ -858,7 +864,7 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  {activeConfig && gaPropertyId.trim() && gaClientEmail.trim() && gaPrivateKey.trim() && (
+                  {(derivedSeoId || (activeConfig?.seoSheetId || activeConfig?.sheetId)) && gaPropertyId.trim() && gaClientEmail.trim() && gaPrivateKey.trim() && (
                     <div className="pt-1 space-y-3">
                       <div className="grid grid-cols-1 gap-2">
                         <button
