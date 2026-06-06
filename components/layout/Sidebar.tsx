@@ -22,11 +22,14 @@ import {
   User2,
   Eye,
   EyeOff,
-  X
+  X,
+  Megaphone
 } from 'lucide-react'
 import { getActiveConfig, ACTIVE_CONFIG_UPDATED_EVENT, setActiveConfig } from '@/lib/config'
 import { cn } from '@/lib/utils'
 import { isSectionAllowed } from '@/lib/auth'
+import { useBudgetAlerts } from '@/hooks/useBudgetAlerts'
+
 
 // ─── Active Config Badge ─────────────────────────────────────────────────────
 function ActiveConfigBadge() {
@@ -278,6 +281,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     return () => window.removeEventListener(ACTIVE_CONFIG_UPDATED_EVENT, updateConfig)
   }, [])
 
+  const { count: budgetAlertCount } = useBudgetAlerts()
+
   const handleToggle = () => {
     setIsCollapsed(prev => {
       const next = !prev
@@ -292,6 +297,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     leads: false,
     site: false,
     revenue: false,
+    ads: false
   })
 
   const navigationSections = [
@@ -314,6 +320,17 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         { label: 'By Source',       href: '/traffic/sources',  icon: Layers },
         { label: 'By Countries',    href: '/traffic/countries',icon: LayoutDashboard },
         { label: 'Compare Periods', href: '/traffic/compare',  icon: BarChart2 }
+      ]
+    },
+    {
+      id: 'ads',
+      title: 'Ads Performance',
+      icon: Megaphone,
+      items: [
+        { label: 'Combined Overview', href: '/ads',            icon: LayoutDashboard },
+        { label: 'Meta Ads',          href: '/ads/meta',       icon: Layers },
+        { label: 'Google Ads',        href: '/ads/google',     icon: Layers },
+        { label: 'Compare Platforms', href: '/ads/compare',    icon: BarChart2 }
       ]
     },
     {
@@ -411,6 +428,9 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             {hasActiveItem && (
               <span className="absolute right-1.5 top-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/50" />
             )}
+            {section.id === 'ads' && budgetAlertCount > 0 && !hasActiveItem && (
+              <span className="absolute right-1.5 top-1.5 w-1.5 h-1.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50 animate-pulse" />
+            )}
           </button>
         </div>
       )
@@ -430,6 +450,11 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           <div className="flex items-center gap-2.5">
             <SectionIcon className={cn("w-4 h-4 transition-colors", hasActiveItem ? "text-emerald-400" : "text-slate-400 group-hover:text-slate-300")} />
             <span className="truncate">{section.title}</span>
+            {section.id === 'ads' && budgetAlertCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-extrabold bg-rose-500 text-white rounded-full leading-none animate-pulse">
+                {budgetAlertCount}
+              </span>
+            )}
           </div>
           <ChevronRight className={cn(
             "w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0",

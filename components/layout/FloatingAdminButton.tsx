@@ -27,23 +27,36 @@ export default function FloatingAdminButton() {
 
   // Fetch current user
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.user) setMe(d.user) })
+    const loadUser = async () => {
+      try {
+        const r = await fetch('/api/auth/me')
+        if (r.ok) {
+          const d = await r.json()
+          if (d?.user) setMe(d.user)
+        }
+      } catch (err) {
+        console.warn('Failed to fetch user context:', err)
+      }
+    }
+    loadUser()
   }, [])
 
   // Poll pending users every 30s (admins only)
   useEffect(() => {
     if (!me || (me.role !== 'admin' && me.role !== 'superadmin')) return
 
-    const check = () => {
-      fetch('/api/admin/users')
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
+    const check = async () => {
+      try {
+        const r = await fetch('/api/admin/users')
+        if (r.ok) {
+          const d = await r.json()
           if (d?.users) {
             setPending(d.users.filter((u: { status: string }) => u.status === 'pending').length)
           }
-        })
+        }
+      } catch (err) {
+        console.warn('Failed to poll admin users count:', err)
+      }
     }
 
     check()

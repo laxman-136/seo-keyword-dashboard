@@ -35,6 +35,24 @@ export default function SettingsPage() {
   const [syncMonthlyStatus, setSyncMonthlyStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle')
   const [syncMonthlyMessage, setSyncMonthlyMessage] = useState('')
 
+  // Ads API Credentials state
+  const [metaAdAccountId, setMetaAdAccountId] = useState('')
+  const [metaAccessToken, setMetaAccessToken] = useState('')
+  const [googleDeveloperToken, setGoogleDeveloperToken] = useState('')
+  const [googleClientId, setGoogleClientId] = useState('')
+  const [googleClientSecret, setGoogleClientSecret] = useState('')
+  const [googleRefreshToken, setGoogleRefreshToken] = useState('')
+  const [googleCustomerId, setGoogleCustomerId] = useState('')
+  const [googleManagerId, setGoogleManagerId] = useState('')
+  const [metaPrepaidBalance, setMetaPrepaidBalance] = useState('')
+  const [googlePrepaidBalance, setGooglePrepaidBalance] = useState('')
+
+  // Visibility states
+  const [showMetaToken, setShowMetaToken] = useState(false)
+  const [showGoogleDevToken, setShowGoogleDevToken] = useState(false)
+  const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false)
+  const [showGoogleRefreshToken, setShowGoogleRefreshToken] = useState(false)
+
   // UI state
   const [savedConfigs, setSavedConfigs] = useState<SheetConfig[]>([])
   const [activeConfig, setActiveConfigState] = useState<SheetConfig | null>(null)
@@ -208,6 +226,19 @@ export default function SettingsPage() {
     setGaPropertyId(config.gaPropertyId || '')
     setGaClientEmail(config.gaClientEmail || '')
     setGaPrivateKey(config.gaPrivateKey || '')
+    
+    // Ads credentials
+    setMetaAdAccountId(config.metaAdAccountId || '')
+    setMetaAccessToken(config.metaAccessToken || '')
+    setGoogleDeveloperToken(config.googleDeveloperToken || '')
+    setGoogleClientId(config.googleClientId || '')
+    setGoogleClientSecret(config.googleClientSecret || '')
+    setGoogleRefreshToken(config.googleRefreshToken || '')
+    setGoogleCustomerId(config.googleCustomerId || '')
+    setGoogleManagerId(config.googleManagerId || '')
+    setMetaPrepaidBalance(config.metaPrepaidBalance ? String(config.metaPrepaidBalance) : '')
+    setGooglePrepaidBalance(config.googlePrepaidBalance ? String(config.googlePrepaidBalance) : '')
+
     setTestStatus('idle')
     setTestMessage('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -223,6 +254,19 @@ export default function SettingsPage() {
     setGaPropertyId('')
     setGaClientEmail('')
     setGaPrivateKey('')
+    
+    // Ads credentials
+    setMetaAdAccountId('')
+    setMetaAccessToken('')
+    setGoogleDeveloperToken('')
+    setGoogleClientId('')
+    setGoogleClientSecret('')
+    setGoogleRefreshToken('')
+    setGoogleCustomerId('')
+    setGoogleManagerId('')
+    setMetaPrepaidBalance('')
+    setGooglePrepaidBalance('')
+
     setTestStatus('idle')
     setTestMessage('')
     setSyncStatus('idle')
@@ -233,11 +277,14 @@ export default function SettingsPage() {
   const derivedLeadsId = extractSheetId(leadsUrl)
   const derivedRevenueId = extractSheetId(revenueUrl)
   
+  const hasAtLeastOneSheet = seoUrl.trim() !== '' || leadsUrl.trim() !== '' || revenueUrl.trim() !== ''
+  const hasAtLeastOneAdsAcc = metaAdAccountId.trim() !== '' || googleCustomerId.trim() !== ''
+
   const formIsValid = label.trim().length > 0
     && (seoUrl.trim() === '' || isValidSheetId(derivedSeoId))
     && (leadsUrl.trim() === '' || isValidSheetId(derivedLeadsId))
     && (revenueUrl.trim() === '' || isValidSheetId(derivedRevenueId))
-    && (seoUrl.trim() !== '' || leadsUrl.trim() !== '' || revenueUrl.trim() !== '')
+    && (hasAtLeastOneSheet || hasAtLeastOneAdsAcc)
     && (!apiKey || isValidApiKey(apiKey))
 
   // Test connection to Google Sheets
@@ -293,6 +340,19 @@ export default function SettingsPage() {
       gaPropertyId: gaPropertyId.trim() || undefined,
       gaClientEmail: gaClientEmail.trim() || undefined,
       gaPrivateKey: gaPrivateKey.trim() || undefined,
+      
+      // Ads API Credentials
+      metaAdAccountId: metaAdAccountId.trim() || undefined,
+      metaAccessToken: metaAccessToken.trim() || undefined,
+      googleDeveloperToken: googleDeveloperToken.trim() || undefined,
+      googleClientId: googleClientId.trim() || undefined,
+      googleClientSecret: googleClientSecret.trim() || undefined,
+      googleRefreshToken: googleRefreshToken.trim() || undefined,
+      googleCustomerId: googleCustomerId.trim() || undefined,
+      googleManagerId: googleManagerId.trim() || undefined,
+      metaPrepaidBalance: metaPrepaidBalance.trim() ? Number(metaPrepaidBalance) : undefined,
+      googlePrepaidBalance: googlePrepaidBalance.trim() ? Number(googlePrepaidBalance) : undefined,
+
       createdAt: editingConfig?.createdAt || new Date().toISOString(),
       sheetId: seoUrl.trim() ? derivedSeoId : ''
     }
@@ -317,6 +377,19 @@ export default function SettingsPage() {
     setGaPropertyId('')
     setGaClientEmail('')
     setGaPrivateKey('')
+    
+    // Clear ads credentials
+    setMetaAdAccountId('')
+    setMetaAccessToken('')
+    setGoogleDeveloperToken('')
+    setGoogleClientId('')
+    setGoogleClientSecret('')
+    setGoogleRefreshToken('')
+    setGoogleCustomerId('')
+    setGoogleManagerId('')
+    setMetaPrepaidBalance('')
+    setGooglePrepaidBalance('')
+
     setTestStatus('idle')
     setTestMessage('')
     setSyncStatus('idle')
@@ -536,10 +609,11 @@ export default function SettingsPage() {
                 {/* Section selection checkboxes */}
                 <div className="border-t border-slate-100 pt-4">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Dashboard Sections to Share</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-3">
                     {[
                       { id: 'keywords', label: 'Keyword Rankings' },
                       { id: 'traffic', label: 'Traffic Analytics' },
+                      { id: 'ads', label: 'Ads Performance' },
                       { id: 'leads', label: 'Leads Report' },
                       { id: 'revenue', label: 'Revenue & Conversion' },
                       { id: 'site', label: 'Site Status' }
@@ -611,7 +685,7 @@ export default function SettingsPage() {
                           <div className="flex flex-wrap gap-1.5 pt-0.5">
                             {allowed.map(sec => (
                               <span key={sec} className="px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider">
-                                {sec === 'site' ? 'site status' : sec === 'keywords' ? 'keywords' : sec === 'traffic' ? 'traffic' : sec === 'leads' ? 'leads' : 'revenue'}
+                                {sec === 'site' ? 'site status' : sec === 'keywords' ? 'keywords' : sec === 'traffic' ? 'traffic' : sec === 'leads' ? 'leads' : sec === 'revenue' ? 'revenue' : sec === 'ads' ? 'ads performance' : sec}
                               </span>
                             ))}
                           </div>
@@ -917,6 +991,196 @@ export default function SettingsPage() {
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* Meta & Google Ads API Credentials */}
+                <div className="space-y-4 border-t border-slate-100 pt-4">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <span>📢</span> Meta & Google Ads API Credentials
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Provide credentials to fetch live ad performance data. Leave empty to use fallback mock data.
+                  </p>
+
+                  {/* Meta Ads Group */}
+                  <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      Meta Ads Integration
+                    </h4>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Ad Account ID</label>
+                        <input
+                          type="text"
+                          value={metaAdAccountId}
+                          onChange={e => setMetaAdAccountId(e.target.value)}
+                          placeholder="e.g. act_1234567890"
+                          disabled={isViewer}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-medium text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Access Token</label>
+                        <div className="relative">
+                          <input
+                            type={showMetaToken ? 'text' : 'password'}
+                            value={metaAccessToken}
+                            onChange={e => setMetaAccessToken(e.target.value)}
+                            placeholder="EAAb..."
+                            disabled={isViewer}
+                            className="w-full px-3 py-2 pr-9 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-mono text-slate-800 placeholder:text-slate-400 placeholder:font-sans transition-all disabled:bg-slate-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowMetaToken(v => !v)}
+                            disabled={isViewer}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                          >
+                            {showMetaToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Prepaid Balance (₹)</label>
+                        <input
+                          type="number"
+                          value={metaPrepaidBalance}
+                          onChange={e => setMetaPrepaidBalance(e.target.value)}
+                          placeholder="e.g. 15000"
+                          disabled={isViewer}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-medium text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Google Ads Group */}
+                  <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Google Ads Integration
+                    </h4>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Customer ID</label>
+                        <input
+                          type="text"
+                          value={googleCustomerId}
+                          onChange={e => setGoogleCustomerId(e.target.value)}
+                          placeholder="e.g. 123-456-7890"
+                          disabled={isViewer}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-medium text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Developer Token</label>
+                        <div className="relative">
+                          <input
+                            type={showGoogleDevToken ? 'text' : 'password'}
+                            value={googleDeveloperToken}
+                            onChange={e => setGoogleDeveloperToken(e.target.value)}
+                            placeholder="Dev Token"
+                            disabled={isViewer}
+                            className="w-full px-3 py-2 pr-9 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-mono text-slate-800 placeholder:text-slate-400 placeholder:font-sans transition-all disabled:bg-slate-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowGoogleDevToken(v => !v)}
+                            disabled={isViewer}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                          >
+                            {showGoogleDevToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Client ID</label>
+                        <input
+                          type="text"
+                          value={googleClientId}
+                          onChange={e => setGoogleClientId(e.target.value)}
+                          placeholder="OAuth Client ID"
+                          disabled={isViewer}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Client Secret</label>
+                        <div className="relative">
+                          <input
+                            type={showGoogleClientSecret ? 'text' : 'password'}
+                            value={googleClientSecret}
+                            onChange={e => setGoogleClientSecret(e.target.value)}
+                            placeholder="OAuth Client Secret"
+                            disabled={isViewer}
+                            className="w-full px-3 py-2 pr-9 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-mono text-slate-800 placeholder:text-slate-400 placeholder:font-sans transition-all disabled:bg-slate-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowGoogleClientSecret(v => !v)}
+                            disabled={isViewer}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                          >
+                            {showGoogleClientSecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Refresh Token</label>
+                        <div className="relative">
+                          <input
+                            type={showGoogleRefreshToken ? 'text' : 'password'}
+                            value={googleRefreshToken}
+                            onChange={e => setGoogleRefreshToken(e.target.value)}
+                            placeholder="OAuth Refresh Token"
+                            disabled={isViewer}
+                            className="w-full px-3 py-2 pr-9 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-mono text-slate-800 placeholder:text-slate-400 placeholder:font-sans transition-all disabled:bg-slate-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowGoogleRefreshToken(v => !v)}
+                            disabled={isViewer}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                          >
+                            {showGoogleRefreshToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Manager ID (Optional)</label>
+                        <input
+                          type="text"
+                          value={googleManagerId}
+                          onChange={e => setGoogleManagerId(e.target.value)}
+                          placeholder="MCC / Manager ID"
+                          disabled={isViewer}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-medium text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Prepaid Balance (₹)</label>
+                        <input
+                          type="number"
+                          value={googlePrepaidBalance}
+                          onChange={e => setGooglePrepaidBalance(e.target.value)}
+                          placeholder="e.g. 20000"
+                          disabled={isViewer}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-medium text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Test Result Banner */}

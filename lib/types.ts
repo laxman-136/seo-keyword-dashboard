@@ -522,7 +522,337 @@ export interface LeadsYearlyDetailRow {
   convRate: number
 }
 
+// ── SHARED ADS TYPES ─────────────────────────────────────
 
+export interface AdsDateRange {
+  from: string
+  to: string
+  preset: string
+  label: string
+}
 
+export interface AdsBudgetAlert {
+  platform: 'meta' | 'google'
+  campaignName: string
+  campaignId: string
+  dailyBudget: number
+  spentToday: number
+  remaining: number
+  percentUsed: number
+  alertLevel: 'healthy' | 'warning' | 'critical' | 'exhausted'
+}
 
+// ── META ADS TYPES ────────────────────────────────────────
 
+export interface MetaAccountOverview {
+  accountId: string
+  accountName: string
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  cpm: number
+  cpc: number
+  reach: number
+  frequency: number
+  leadFormFills: number           // Meta instant form leads
+  websiteLeads: number            // Website form submissions
+  websiteRegistrations: number    // Website registrations
+  landingPageViews: number
+  costPerLeadForm: number
+  costPerWebsiteLead: number
+  totalConversions: number
+  costPerConversion: number
+  roas: number
+  totalDailyBudget: number
+  totalSpentToday: number
+  budgetAlerts: AdsBudgetAlert[]
+  lastRefreshedAt?: string
+  nextRefreshAt?: string
+  isCached?: boolean
+}
+
+export interface MetaCampaign {
+  id: string
+  name: string
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DELETED'
+  objective: string
+  dailyBudget: number
+  lifetimeBudget: number
+  spentToday: number
+  budgetRemaining: number
+  budgetPercentUsed: number
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  cpm: number
+  cpc: number
+  reach: number
+  frequency: number
+  leadFormFills: number
+  websiteLeads: number
+  totalConversions: number
+  costPerConversion: number
+  roas: number
+  startTime: string
+  stopTime: string | null
+}
+
+export interface MetaAdSet {
+  id: string
+  campaignId: string
+  name: string
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED'
+  dailyBudget: number
+  optimizationGoal: string
+  billingEvent: string
+  bidStrategy: string
+  targetingsummary: string
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  cpm: number
+  cpc: number
+  reach: number
+  frequency: number
+  leadFormFills: number
+  websiteLeads: number
+  totalConversions: number
+  costPerConversion: number
+}
+
+export interface MetaAd {
+  id: string
+  adSetId: string
+  name: string
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED'
+  creativeType: 'image' | 'video' | 'carousel' | 'collection' | 'other'
+  previewUrl: string | null
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  cpc: number
+  leadFormFills: number
+  websiteLeads: number
+  totalConversions: number
+  costPerConversion: number
+}
+
+export interface MetaDemographicBreakdown {
+  ageGender: Array<{
+    age: string
+    gender: string
+    spend: number
+    impressions: number
+    clicks: number
+    conversions: number
+  }>
+}
+
+export interface MetaPlacementBreakdown {
+  placements: Array<{
+    placement: string        // "facebook_feed", "instagram_feed", "reels", "stories"
+    spend: number
+    impressions: number
+    clicks: number
+    ctr: number
+    conversions: number
+    costPerConversion: number
+  }>
+}
+
+export interface MetaDailyTrend {
+  date: string
+  spend: number
+  impressions: number
+  clicks: number
+  leadFormFills: number
+  websiteLeads: number
+  totalConversions: number
+  ctr: number
+  cpc: number
+}
+
+// ── GOOGLE ADS TYPES ──────────────────────────────────────
+
+export interface GoogleAccountOverview {
+  customerId: string
+  accountName: string
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  avgCpc: number
+  conversions: number
+  costPerConversion: number
+  conversionRate: number
+  searchImpressionShare: number
+  formSubmissions: number
+  phoneCalls: number
+  websiteConversions: number
+  costPerFormSubmission: number
+  costPerCall: number
+  totalDailyBudget: number
+  totalSpentToday: number
+  budgetAlerts: AdsBudgetAlert[]
+  lastRefreshedAt?: string
+  nextRefreshAt?: string
+  isCached?: boolean
+}
+
+export interface GoogleCampaign {
+  id: string
+  name: string
+  status: 'ENABLED' | 'PAUSED' | 'REMOVED'
+  type: 'SEARCH' | 'DISPLAY' | 'PERFORMANCE_MAX' | 'VIDEO' | 'SHOPPING' | 'SMART'
+  dailyBudget: number
+  spentToday: number
+  budgetRemaining: number
+  budgetPercentUsed: number
+  biddingStrategy: string
+  targetCpa: number | null
+  targetRoas: number | null
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  avgCpc: number
+  conversions: number
+  costPerConversion: number
+  conversionRate: number
+  searchImpressionShare: number
+}
+
+export interface GoogleAdGroup {
+  id: string
+  campaignId: string
+  name: string
+  status: 'ENABLED' | 'PAUSED' | 'REMOVED'
+  type: string
+  cpcBidMicros: number
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  avgCpc: number
+  conversions: number
+  costPerConversion: number
+  conversionRate: number
+}
+
+export interface GoogleKeyword {
+  id: string
+  adGroupId: string
+  text: string
+  matchType: 'BROAD' | 'PHRASE' | 'EXACT'
+  status: 'ENABLED' | 'PAUSED' | 'REMOVED'
+  qualityScore: number | null
+  expectedCtr: string | null
+  adRelevance: string | null
+  landingPageExp: string | null
+  cpcBidMicros: number
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  avgCpc: number
+  conversions: number
+  costPerConversion: number
+  conversionRate: number
+}
+
+export interface GoogleSearchTerm {
+  searchTerm: string
+  matchType: string
+  campaignName: string
+  adGroupName: string
+  impressions: number
+  clicks: number
+  ctr: number
+  avgCpc: number
+  spend: number
+  conversions: number
+  costPerConversion: number
+}
+
+export interface GoogleAd {
+  id: string
+  adGroupId: string
+  type: string
+  status: 'ENABLED' | 'PAUSED' | 'REMOVED'
+  headlines: string[]
+  descriptions: string[]
+  finalUrls: string[]
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  avgCpc: number
+  conversions: number
+  costPerConversion: number
+}
+
+export interface GoogleDeviceBreakdown {
+  devices: Array<{
+    device: 'MOBILE' | 'DESKTOP' | 'TABLET'
+    spend: number
+    impressions: number
+    clicks: number
+    ctr: number
+    conversions: number
+    costPerConversion: number
+  }>
+}
+
+export interface GoogleGeoBreakdown {
+  locations: Array<{
+    city: string
+    state: string
+    spend: number
+    clicks: number
+    conversions: number
+  }>
+}
+
+export interface GoogleDailyTrend {
+  date: string
+  spend: number
+  impressions: number
+  clicks: number
+  conversions: number
+  ctr: number
+  avgCpc: number
+  costPerConversion: number
+}
+
+// ── COMBINED TYPES ────────────────────────────────────────
+
+export interface AdsCombinedOverview {
+  dateRange: AdsDateRange
+  totalSpend: number
+  totalImpressions: number
+  totalClicks: number
+  totalConversions: number
+  totalLeads: number
+  avgCostPerLead: number
+  overallCTR: number
+  overallCPC: number
+  metaSpend: number
+  googleSpend: number
+  metaConversions: number
+  googleConversions: number
+  metaCPL: number
+  googleCPL: number
+  metaLeadFormFills: number
+  metaWebsiteLeads: number
+  metaLeadFormCPL: number
+  metaWebsiteLeadCPL: number
+  googleFormSubmissions: number
+  googlePhoneCalls: number
+  budgetAlerts: AdsBudgetAlert[]
+  lastRefreshedAt: string
+  nextRefreshAt: string
+}

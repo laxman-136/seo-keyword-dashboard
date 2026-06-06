@@ -10,6 +10,16 @@ export interface SheetConfig {
   gaPropertyId?: string  // GA4 property ID
   gaClientEmail?: string // Service account client email
   gaPrivateKey?: string  // Service account private key
+  metaAdAccountId?: string
+  metaAccessToken?: string
+  googleDeveloperToken?: string
+  googleClientId?: string
+  googleClientSecret?: string
+  googleRefreshToken?: string
+  googleCustomerId?: string
+  googleManagerId?: string
+  metaPrepaidBalance?: number
+  googlePrepaidBalance?: number
   createdAt: string    // ISO timestamp
   sheetId?: string     // Keep for legacy compatibility
 }
@@ -127,6 +137,16 @@ export function setActiveConfig(config: SheetConfig): void {
   localStorage.setItem('client-ga-property-id', config.gaPropertyId || '')
   localStorage.setItem('client-ga-client-email', config.gaClientEmail || '')
   localStorage.setItem('client-ga-private-key', config.gaPrivateKey || '')
+  localStorage.setItem('client-meta-ad-account-id', config.metaAdAccountId || '')
+  localStorage.setItem('client-meta-access-token', config.metaAccessToken || '')
+  localStorage.setItem('client-google-developer-token', config.googleDeveloperToken || '')
+  localStorage.setItem('client-google-client-id', config.googleClientId || '')
+  localStorage.setItem('client-google-client-secret', config.googleClientSecret || '')
+  localStorage.setItem('client-google-refresh-token', config.googleRefreshToken || '')
+  localStorage.setItem('client-google-customer-id', config.googleCustomerId || '')
+  localStorage.setItem('client-google-manager-id', config.googleManagerId || '')
+  localStorage.setItem('client-meta-prepaid-balance', String(config.metaPrepaidBalance || ''))
+  localStorage.setItem('client-google-prepaid-balance', String(config.googlePrepaidBalance || ''))
   dispatchActiveConfigUpdate()
 }
 
@@ -139,5 +159,15 @@ export function clearActiveConfig(): void {
   localStorage.removeItem('client-ga-property-id')
   localStorage.removeItem('client-ga-client-email')
   localStorage.removeItem('client-ga-private-key')
+  localStorage.removeItem('client-meta-ad-account-id')
+  localStorage.removeItem('client-meta-access-token')
+  localStorage.removeItem('client-google-developer-token')
+  localStorage.removeItem('client-google-client-id')
+  localStorage.removeItem('client-google-client-secret')
+  localStorage.removeItem('client-google-refresh-token')
+  localStorage.removeItem('client-google-customer-id')
+  localStorage.removeItem('client-google-manager-id')
+  localStorage.removeItem('client-meta-prepaid-balance')
+  localStorage.removeItem('client-google-prepaid-balance')
   dispatchActiveConfigUpdate()
 }
