@@ -172,8 +172,15 @@ export function useDailyKeywordData(): DailyKeywordResult {
       return { dates: [], latestDate: null, prevDate: null, keywords: [], stats: null }
     }
 
-    // 1. Find all unique dates
-    const uniqueDates = Array.from(new Set(rawRows.map(r => r.date))).sort()
+    // 1. Find all unique dates sorted chronologically
+    const uniqueDates = Array.from(new Set(rawRows.map(r => r.date))).sort((a, b) => {
+      const timeA = new Date(a).getTime()
+      const timeB = new Date(b).getTime()
+      if (isNaN(timeA) && isNaN(timeB)) return 0
+      if (isNaN(timeA)) return 1
+      if (isNaN(timeB)) return -1
+      return timeA - timeB
+    })
     if (uniqueDates.length === 0) {
       return { dates: [], latestDate: null, prevDate: null, keywords: [], stats: null }
     }
@@ -188,7 +195,7 @@ export function useDailyKeywordData(): DailyKeywordResult {
     const prevMap = new Map<string, DailyKeywordRow>()
     prevKeywords.forEach(k => prevMap.set(k.keyword, k))
 
-    // 3. Compute stats for latest date
+    // 3. Compute stats for latest date using standard getPageBand
     let p1Top = 0
     let p1Good = 0
     let page2 = 0
@@ -197,13 +204,13 @@ export function useDailyKeywordData(): DailyKeywordResult {
     let notRanking = 0
 
     latestKeywords.forEach(k => {
-      const pos = k.position
-      if (pos === 0) notRanking++
-      else if (pos >= 1 && pos <= 4) p1Top++
-      else if (pos >= 5 && pos <= 10) p1Good++
-      else if (pos >= 11 && pos <= 20) page2++
-      else if (pos >= 21 && pos <= 30) page3++
-      else page4Plus++
+      const band = getPageBand(k.page, k.position)
+      if (band === 'P1 Top (1-4)') p1Top++
+      else if (band === 'P1 Good (5-10)') p1Good++
+      else if (band === 'Page 2') page2++
+      else if (band === 'Page 3') page3++
+      else if (band === 'Page 4+') page4Plus++
+      else notRanking++
     })
 
     // Compute stats for previous date
@@ -215,16 +222,16 @@ export function useDailyKeywordData(): DailyKeywordResult {
     let prevNotRanking = 0
 
     prevKeywords.forEach(k => {
-      const pos = k.position
-      if (pos === 0) prevNotRanking++
-      else if (pos >= 1 && pos <= 4) prevP1Top++
-      else if (pos >= 5 && pos <= 10) prevP1Good++
-      else if (pos >= 11 && pos <= 20) prevPage2++
-      else if (pos >= 21 && pos <= 30) prevPage3++
-      else prevPage4Plus++
+      const band = getPageBand(k.page, k.position)
+      if (band === 'P1 Top (1-4)') prevP1Top++
+      else if (band === 'P1 Good (5-10)') prevP1Good++
+      else if (band === 'Page 2') prevPage2++
+      else if (band === 'Page 3') prevPage3++
+      else if (band === 'Page 4+') prevPage4Plus++
+      else prevNotRanking++
     })
 
-    // 4. Calculate day-over-day movement trends
+    // 4. Calculate day-over-day movement trends using standard getMovement
     let improved = 0
     let neutral = 0
     let dropped = 0
@@ -233,36 +240,20 @@ export function useDailyKeywordData(): DailyKeywordResult {
 
     latestKeywords.forEach(k => {
       const prev = prevMap.get(k.keyword)
-      const currentPos = k.position
+      const prevPage = prev?.page || 0
+      const prevPos = prev?.position || 0
 
-      if (!prev) {
-        // Keyword was not tracked on the previous date
-        if (currentPos > 0) {
-          newEntries++
-          improved++
-        } else {
-          neutral++
-        }
-      } else {
-        const prevPos = prev.position
+      const movement = getMovement(k.page, k.position, prevPage, prevPos)
 
-        if (prevPos === 0 && currentPos > 0) {
-          // Gained ranking
-          newEntries++
-          improved++
-        } else if (prevPos > 0 && currentPos === 0) {
-          // Lost ranking
-          lostRankings++
-          dropped++
-        } else if (currentPos > 0 && currentPos < prevPos) {
-          // Rank improved (smaller number is better rank)
-          improved++
-        } else if (currentPos > 0 && currentPos > prevPos) {
-          // Rank dropped
-          dropped++
-        } else {
-          neutral++
-        }
+      if (movement === 'Improved') improved++
+      else if (movement === 'Dropped') dropped++
+      else if (movement === 'Neutral') neutral++
+      else if (movement === 'New Entry') {
+        newEntries++
+        improved++
+      } else if (movement === 'Lost Ranking') {
+        lostRankings++
+        dropped++
       }
     })
 
