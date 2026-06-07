@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
 import { getFunnelData, getChannelBreakdown, TeleCRMApiError } from '@/lib/telecrm-api'
+import { fetchLeadsMonthly, fetchLeadsDetail } from '@/lib/sheets'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,30 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const bypassCache = searchParams.get('refresh') === 'true'
+    
+    // Check if Google Sheets is explicitly requested via sheetId
+    const sheetId = searchParams.get('sheetId') || undefined
+    const apiKey = searchParams.get('apiKey') || undefined
+
+    if (sheetId) {
+      const monthlyData = await fetchLeadsMonthly(bypassCache, sheetId === 'mock' ? undefined : sheetId, apiKey)
+      const detailData = await fetchLeadsDetail(bypassCache, sheetId === 'mock' ? undefined : sheetId, apiKey)
+
+      return NextResponse.json({
+        monthly: monthlyData.rows,
+        detail: detailData.rows,
+        isMock: monthlyData.isMock || detailData.isMock,
+        lastUpdated: monthlyData.lastUpdated,
+        fallbackReason: monthlyData.fallbackReason
+      }, {
+        headers: {
+          'Cache-Control': bypassCache 
+            ? 'no-store, max-age=0' 
+            : 'public, s-maxage=900, stale-while-revalidate=300'
+        }
+      })
+    }
+
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
 

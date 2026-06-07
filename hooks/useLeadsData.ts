@@ -44,9 +44,14 @@ export function useLeadsData(): LeadsDataResult {
     setError(null)
 
     try {
-      const isTelecrm = typeof window !== 'undefined' 
-        && localStorage.getItem('client-telecrm-api-token') 
-        && localStorage.getItem('client-telecrm-enterprise-id')
+      const clientLeadsSheetId = typeof window !== 'undefined' ? localStorage.getItem('client-leads-sheet-id') : null
+      const hasSheetsLeads = !!(clientLeadsSheetId && clientLeadsSheetId !== 'mock' && clientLeadsSheetId.trim() !== '')
+
+      const clientToken = typeof window !== 'undefined' ? localStorage.getItem('client-telecrm-api-token') : null
+      const clientEnterpriseId = typeof window !== 'undefined' ? localStorage.getItem('client-telecrm-enterprise-id') : null
+      const hasTelecrmLocal = !!(clientToken && clientEnterpriseId)
+
+      const isTelecrm = hasTelecrmLocal || !hasSheetsLeads
 
       let url = ''
       const headers: Record<string, string> = {}

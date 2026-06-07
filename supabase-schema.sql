@@ -69,3 +69,37 @@ ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS seo_sheet_id VARCHAR(255);
 ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS leads_sheet_id VARCHAR(255);
 ALTER TABLE access_grants ADD COLUMN IF NOT EXISTS revenue_sheet_id VARCHAR(255);
 ALTER TABLE access_grants ALTER COLUMN sheet_id DROP NOT NULL;
+
+-- Configurations table for administrative accounts (multi-device synchronization)
+CREATE TABLE IF NOT EXISTS configurations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  label VARCHAR(255) NOT NULL UNIQUE,
+  seo_sheet_id VARCHAR(255),
+  leads_sheet_id VARCHAR(255),
+  revenue_sheet_id VARCHAR(255),
+  api_key VARCHAR(255),
+  ga_property_id VARCHAR(255),
+  ga_client_email VARCHAR(255),
+  ga_private_key TEXT,
+  meta_ad_account_id VARCHAR(255),
+  meta_access_token TEXT,
+  google_developer_token VARCHAR(255),
+  google_client_id VARCHAR(255),
+  google_client_secret VARCHAR(255),
+  google_refresh_token VARCHAR(255),
+  google_customer_id VARCHAR(255),
+  google_manager_id VARCHAR(255),
+  meta_prepaid_balance NUMERIC,
+  google_prepaid_balance NUMERIC,
+  telecrm_api_token VARCHAR(255),
+  telecrm_enterprise_id VARCHAR(255),
+  is_active BOOLEAN DEFAULT false,
+  owner_email VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for faster query filtering
+CREATE INDEX IF NOT EXISTS idx_configurations_owner_email ON configurations(owner_email);
+CREATE INDEX IF NOT EXISTS idx_configurations_is_active ON configurations(is_active);
+

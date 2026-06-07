@@ -24,6 +24,7 @@ export interface SheetConfig {
   telecrmEnterpriseId?: string
   createdAt: string    // ISO timestamp
   sheetId?: string     // Keep for legacy compatibility
+  isActive?: boolean   // True if active on the server
 }
 
 const CONFIGS_KEY = 'sheet-configs'

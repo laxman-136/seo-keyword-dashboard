@@ -64,7 +64,7 @@ function ActiveConfigBadge() {
     return () => window.removeEventListener(ACTIVE_CONFIG_UPDATED_EVENT, update)
   }, [])
   
-  const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSelect = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value
     if (!val) return
     
@@ -81,6 +81,15 @@ function ActiveConfigBadge() {
           sheetId: matched.seoSheetId || matched.sheetId || ''
         })
       } else {
+        try {
+          await fetch('/api/configurations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'activate', label: matched.label })
+          })
+        } catch (err) {
+          console.error('Failed to sync active configuration change to database:', err)
+        }
         setActiveConfig(matched)
       }
     }

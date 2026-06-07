@@ -341,7 +341,7 @@ export default function SettingsPage() {
   }
 
   // Save config
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formIsValid) return
     setSaving(true)
 
@@ -373,12 +373,37 @@ export default function SettingsPage() {
       sheetId: seoUrl.trim() ? derivedSeoId : ''
     }
 
+    try {
+      const res = await fetch('/api/configurations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save', config })
+      })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to save configuration to database.')
+      }
+    } catch (err: any) {
+      console.error('Failed to sync configuration to database:', err)
+    }
+
     saveConfig(config)
 
     // Auto-activate on first save, or when editing the currently active config
     const active = getActiveConfig()
     const editingActive = editingConfig && active?.label === editingConfig.label
-    if (!active || editingActive || active.label === config.label) {
+    const shouldActivate = !active || editingActive || active.label === config.label
+
+    if (shouldActivate) {
+      try {
+        await fetch('/api/configurations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'activate', label: config.label })
+        })
+      } catch (err) {
+        console.error('Failed to sync active configuration to database:', err)
+      }
       setActiveConfig(config)
     }
 
@@ -478,18 +503,45 @@ export default function SettingsPage() {
     }
   }
 
-  const handleActivate = (config: SheetConfig) => {
+  const handleActivate = async (config: SheetConfig) => {
+    try {
+      await fetch('/api/configurations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'activate', label: config.label })
+      })
+    } catch (err) {
+      console.error('Failed to activate configuration in database:', err)
+    }
     setActiveConfig(config)
     loadConfigs()
   }
 
-  const handleDelete = (cfg: SheetConfig) => {
+  const handleDelete = async (cfg: SheetConfig) => {
     if (!window.confirm(`Delete config "${cfg.label}"? This cannot be undone.`)) return
+    try {
+      await fetch('/api/configurations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', label: cfg.label })
+      })
+    } catch (err) {
+      console.error('Failed to delete configuration from database:', err)
+    }
     deleteConfig(cfg.label)
     loadConfigs()
   }
 
-  const handleClearActive = () => {
+  const handleClearActive = async () => {
+    try {
+      await fetch('/api/configurations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'activate', label: null })
+      })
+    } catch (err) {
+      console.error('Failed to clear active configuration in database:', err)
+    }
     clearActiveConfig()
     loadConfigs()
   }

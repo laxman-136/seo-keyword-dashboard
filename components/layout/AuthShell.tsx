@@ -14,6 +14,8 @@ import { isSectionAllowed } from '@/lib/auth'
 
 const AUTH_PAGES = ['/login', '/register', '/client-login']
 
+let hasSyncedConfigs = false
+
 interface Props { children: React.ReactNode }
 
 export default function AuthShell({ children }: Props) {
@@ -136,6 +138,35 @@ export default function AuthShell({ children }: Props) {
               createdAt: grant.createdAt,
               sheetId: grant.seoSheetId || grant.sheetId || ''
             })
+          }
+        }
+
+        // Sync administrator configurations from database on initial load/mount
+        if (user && ['superadmin', 'admin', 'ceo'].includes(user.role) && !hasSyncedConfigs) {
+          try {
+            const configRes = await fetch('/api/configurations')
+            if (configRes.ok) {
+              const { configs } = await configRes.json()
+              const dbConfigs = Array.isArray(configs) ? configs : []
+              
+              localStorage.setItem('sheet-configs', JSON.stringify(dbConfigs))
+              
+              const activeDbConfig = dbConfigs.find((c: any) => c.isActive)
+              const currentActive = getActiveConfig()
+              
+              if (activeDbConfig) {
+                if (!currentActive || currentActive.label !== activeDbConfig.label) {
+                  setActiveConfig(activeDbConfig)
+                }
+              } else {
+                if (currentActive) {
+                  clearActiveConfig()
+                }
+              }
+              hasSyncedConfigs = true
+            }
+          } catch (err) {
+            console.error('Failed to sync administrative configurations in AuthShell:', err)
           }
         }
 
