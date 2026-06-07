@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import AuthShell from '@/components/layout/AuthShell'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -32,7 +33,10 @@ export default function RootLayout({
         {/* AuthShell handles everything:
             - /login and /register → full-screen, NO sidebar
             - all other routes    → sidebar + main layout */}
-        <AuthShell>{children}</AuthShell>
+        <AuthShell>
+          {children}
+          <SpeedInsights />
+        </AuthShell>
       </body>
     </html>
   )

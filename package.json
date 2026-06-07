@@ -12,6 +12,7 @@
   "dependencies": {
     "@google-analytics/data": "^4.10.0",
     "@supabase/supabase-js": "^2.38.0",
+    "@vercel/speed-insights": "^2.0.0",
     "date-fns": "^4.4.0",
     "google-ads-api": "^23.0.1",
     "googleapis": "^144.0.0",
