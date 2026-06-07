@@ -66,12 +66,24 @@ export async function POST(request: Request) {
     const apiKey = String(body.apiKey || '').trim()
     const label = String(body.label || '').trim()
     const durationDays = Number(body.durationDays || 0)
-    const allowedSections = Array.isArray(body.allowedSections) ? body.allowedSections : []
+    const allowedSections: string[] = Array.isArray(body.allowedSections) ? body.allowedSections : []
+
+    if (user.role === 'viewer') {
+      return NextResponse.json({ error: 'Viewer role is not allowed to share access.' }, { status: 403 })
+    }
+
+    const finalAllowedSections = user.role === 'user'
+      ? (allowedSections.length > 0 ? allowedSections.filter(s => ['keywords', 'traffic'].includes(s)) : ['keywords', 'traffic'])
+      : allowedSections
+
+    const finalSeoSheetId = seoSheetId
+    const finalLeadsSheetId = user.role === 'user' ? '' : leadsSheetId
+    const finalRevenueSheetId = user.role === 'user' ? '' : revenueSheetId
 
     if (!isValidEmail(recipientEmail)) {
       return NextResponse.json({ error: 'A valid recipient email is required.' }, { status: 400 })
     }
-    if ((!seoSheetId && !leadsSheetId && !revenueSheetId) || !apiKey || !label) {
+    if ((!finalSeoSheetId && !finalLeadsSheetId && !finalRevenueSheetId) || !apiKey || !label) {
       return NextResponse.json({ error: 'At least one active sheet configuration and an API key are required.' }, { status: 400 })
     }
     if (![15, 30, 90].includes(durationDays)) {
@@ -80,8 +92,8 @@ export async function POST(request: Request) {
 
     const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString()
     
-    const encodedLabel = allowedSections.length > 0
-      ? `${label} | allowed:${allowedSections.join(',')}`
+    const encodedLabel = finalAllowedSections.length > 0
+      ? `${label} | allowed:${finalAllowedSections.join(',')}`
       : label
 
     try {
@@ -89,10 +101,10 @@ export async function POST(request: Request) {
         recipientEmail,
         ownerEmail: user.email,
         label: encodedLabel,
-        seoSheetId: seoSheetId || undefined,
-        leadsSheetId: leadsSheetId || undefined,
-        revenueSheetId: revenueSheetId || undefined,
-        sheetId: seoSheetId || '', // keep for legacy compatibility
+        seoSheetId: finalSeoSheetId || undefined,
+        leadsSheetId: finalLeadsSheetId || undefined,
+        revenueSheetId: finalRevenueSheetId || undefined,
+        sheetId: finalSeoSheetId || '', // keep for legacy compatibility
         apiKey,
         expiresAt
       })

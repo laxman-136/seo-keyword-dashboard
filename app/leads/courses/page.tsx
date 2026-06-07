@@ -1,56 +1,152 @@
 // app/leads/courses/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react'
-import { useLeadsData } from '@/hooks/useLeadsData'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Header from '@/components/layout/Header'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LeadsCourseCard from '@/components/leads/LeadsCourseCard'
 import LeadsCourseTable from '@/components/leads/LeadsCourseTable'
 import LeadsCourseTrendChart from '@/components/leads/LeadsCourseTrendChart'
-import LeadsMonthSelector from '@/components/leads/LeadsMonthSelector'
-import { getAvailableLeadsMonths, getLeadsCourseBreakdown } from '@/lib/sheets'
+import LiveDataBadge from '@/components/leads/LiveDataBadge'
+import RefreshBar from '@/components/leads/RefreshBar'
+import DateRangePicker from '@/components/ads/DateRangePicker'
+import { useDateRange } from '@/hooks/useDateRange'
 import { Info, BookOpen } from 'lucide-react'
 
 export default function LeadsByCoursePage() {
-  const {
-    monthly,
-    detail,
-    loading,
-    refreshing,
-    error,
-    isMock,
-    fallbackReason,
-    lastUpdated,
-    refresh
-  } = useLeadsData()
+  const { preset, from, to, label: rangeLabel } = useDateRange()
 
-  const [selectedMonth, setSelectedMonth] = useState('')
+  const [courses, setCourses] = useState<any[]>([])
+  const [trend, setTrend] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [selectedCourse, setSelectedCourse] = useState('all')
 
-  // Set default selected month to latest month in dataset
-  useEffect(() => {
-    if (monthly.length > 0 && !selectedMonth) {
-      setSelectedMonth(monthly[monthly.length - 1].month)
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    else setLoading(true)
+    setError(null)
+
+    try {
+      const headers: Record<string, string> = {}
+      if (typeof window !== 'undefined') {
+        const clientToken = localStorage.getItem('client-telecrm-api-token')
+        const clientEnterpriseId = localStorage.getItem('client-telecrm-enterprise-id')
+        if (clientToken) headers['x-telecrm-api-token'] = clientToken
+        if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
+      }
+
+      const refreshParam = isRefresh ? '&refresh=true' : ''
+      const urlCourses = `/api/leads/courses?from=${from}&to=${to}${refreshParam}`
+      const urlTrend = `/api/leads/trend?months=6${refreshParam}`
+
+      const [resCourses, resTrend] = await Promise.all([
+        fetch(urlCourses, { headers }),
+        fetch(urlTrend, { headers })
+      ])
+
+      if (!resCourses.ok) {
+        const errorData = await resCourses.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch course breakdown (Status: ${resCourses.status})`)
+      }
+      if (!resTrend.ok) {
+        const errorData = await resTrend.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch monthly trend (Status: ${resTrend.status})`)
+      }
+
+      const payloadCourses = await resCourses.json()
+      const payloadTrend = await resTrend.json()
+
+      setCourses(payloadCourses)
+      setTrend(payloadTrend)
+    } catch (err: any) {
+      console.error(err)
+      setError(err?.message || 'Error loading course details')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
-  }, [monthly, selectedMonth])
+  }, [from, to])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    const handleConfigChange = () => {
+      fetchData()
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('active-config-updated', handleConfigChange)
+      return () => {
+        window.removeEventListener('active-config-updated', handleConfigChange)
+      }
+    }
+  }, [fetchData])
+
+  // Get unique courses list for filter dropdown
+  const uniqueCourses = useMemo(() => {
+    return Array.from(new Set(courses.map(c => c.courseName)))
+  }, [courses])
+
+  // Map courses to structure expected by table
+  const mappedCourses = useMemo(() => {
+    return courses.map(c => ({
+      ...c,
+      organic: c.organicLeads,
+      website: c.websiteLeads
+    }))
+  }, [courses])
+
+  // Filter breakdown list if a specific course is selected
+  const filteredCourses = useMemo(() => {
+    return selectedCourse === 'all'
+      ? mappedCourses
+      : mappedCourses.filter(c => c.courseName === selectedCourse)
+  }, [selectedCourse, mappedCourses])
+
+  // Map trend to list of detailRows for LeadsCourseTrendChart
+  const detailRows = useMemo(() => {
+    const rows: any[] = []
+    trend.forEach(t => {
+      if (t.courses) {
+        Object.entries(t.courses).forEach(([courseName, total]) => {
+          rows.push({
+            month: t.month,
+            courseName,
+            total: total as number,
+            enrolled: 0,
+            highPotential: 0,
+            mediumPotential: 0,
+            freshUnqualified: 0,
+            lowCold: 0,
+            organic: 0,
+            website: 0
+          })
+        })
+      }
+    })
+    return rows
+  }, [trend])
 
   if (loading) {
     return <SkeletonLoader />
   }
 
-  if (error || monthly.length === 0) {
+  if (error) {
     return (
       <div className="p-6 flex-1 flex flex-col items-center justify-center bg-slate-50 min-h-screen">
         <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-red-100 shadow-xl flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-500 mb-6 shadow-sm">
             <Info className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-bold text-slate-800">No leads data yet</h2>
+          <h2 className="text-xl font-bold text-slate-800">Connection Failed</h2>
           <p className="text-slate-400 text-sm mt-3">
-            {error || 'Please populate the leads sheets in your Google Sheet.'}
+            {error || 'Unable to retrieve course metrics from TeleCRM API.'}
           </p>
-          <button onClick={() => refresh()} className="mt-6 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl shadow-md transition-all w-full">
+          <button onClick={() => fetchData()} className="mt-6 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl shadow-md transition-all w-full">
             Retry Connection
           </button>
         </div>
@@ -58,42 +154,26 @@ export default function LeadsByCoursePage() {
     )
   }
 
-  const availableMonths = getAvailableLeadsMonths(monthly)
-  const currentMonth = selectedMonth || monthly[monthly.length - 1].month
-  const courseBreakdown = getLeadsCourseBreakdown(detail, currentMonth)
-
-  // Get unique courses list for filter dropdown
-  const uniqueCourses = Array.from(new Set(detail.map(d => d.courseName)))
-
-  // Filter breakdown list if a specific course is selected
-  const filteredBreakdown = selectedCourse === 'all'
-    ? courseBreakdown
-    : courseBreakdown.filter(c => c.courseName === selectedCourse)
-
   return (
     <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 lg:space-y-8 min-h-screen bg-slate-50">
       {/* Header Panel */}
       <Header
         title="📚 Leads by Course"
-        currentMonth={currentMonth}
-        lastUpdated={lastUpdated}
-        isMock={isMock}
-        warningText={fallbackReason}
-        onRefresh={refresh}
+        currentMonth={rangeLabel}
+        onRefresh={() => fetchData(true)}
         isRefreshing={refreshing}
       />
 
-      {/* Selectors Row */}
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-        {/* Course Selector */}
-        <div className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm w-full sm:w-auto">
-          <BookOpen className="w-5 h-5 text-slate-400 shrink-0" />
-          <div className="flex-1 sm:flex-initial flex flex-col gap-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter Course</span>
+      {/* Selectors & Info Row */}
+      <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <LiveDataBadge />
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto">
+            <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
             <select
               value={selectedCourse}
               onChange={e => setSelectedCourse(e.target.value)}
-              className="text-sm font-semibold border border-slate-200 rounded-xl px-4 py-1.5 text-slate-700 bg-white outline-none focus:ring-2 focus:ring-violet-400/20 focus:border-violet-400 cursor-pointer min-w-[200px]"
+              className="text-xs font-semibold bg-transparent text-slate-700 outline-none cursor-pointer min-w-[150px]"
             >
               <option value="all">All Courses</option>
               {uniqueCourses.map(c => (
@@ -102,22 +182,22 @@ export default function LeadsByCoursePage() {
             </select>
           </div>
         </div>
-
-        {/* Month Selector */}
-        <LeadsMonthSelector
-          months={availableMonths}
-          selected={currentMonth}
-          onChange={setSelectedMonth}
-          label="Analyze Month"
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshBar
+            loading={loading}
+            refreshing={refreshing}
+            lastUpdated={trend?.[trend.length - 1]?.monthStart ? new Date(trend[trend.length - 1].monthStart).toISOString() : new Date().toISOString()}
+            onRefresh={() => fetchData(true)}
+          />
+          <DateRangePicker />
+        </div>
       </div>
 
-      {/* SECTION A: Course cards (grid layout) */}
-      {filteredBreakdown.length > 0 ? (
+      {/* SECTION A: Course cards */}
+      {filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBreakdown.map((course, idx) => {
-            // Find rank index in the overall breakdown list (before filters)
-            const overallRank = courseBreakdown.findIndex(c => c.courseName === course.courseName) + 1
+          {filteredCourses.map((course, idx) => {
+            const overallRank = mappedCourses.findIndex(c => c.courseName === course.courseName) + 1
             return (
               <LeadsCourseCard 
                 key={course.courseName} 
@@ -129,23 +209,23 @@ export default function LeadsByCoursePage() {
         </div>
       ) : (
         <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm text-center">
-          <p className="text-slate-400 text-sm">No course breakdown details found. Make sure "Leads Detail" is populated for {currentMonth}.</p>
+          <p className="text-slate-400 text-sm">No course registrations recorded for this period.</p>
         </div>
       )}
 
       {/* SECTION B: Detailed course table */}
       <div className="grid grid-cols-1 gap-6">
-        <LeadsCourseTable courses={filteredBreakdown} />
+        <LeadsCourseTable courses={filteredCourses} />
       </div>
 
-      {/* SECTION C: Course trend chart over time */}
-      {detail.length > 0 ? (
+      {/* SECTION C: Course trend chart */}
+      {detailRows.length > 0 ? (
         <div className="grid grid-cols-1 gap-6">
-          <LeadsCourseTrendChart detailRows={detail} />
+          <LeadsCourseTrendChart detailRows={detailRows} />
         </div>
       ) : (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center">
-          <p className="text-slate-400 text-sm">Add Leads Detail sheet to display course trend lines</p>
+          <p className="text-slate-400 text-sm">No course trend logs available.</p>
         </div>
       )}
     </div>

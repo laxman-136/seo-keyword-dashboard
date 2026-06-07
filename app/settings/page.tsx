@@ -46,6 +46,9 @@ export default function SettingsPage() {
   const [googleManagerId, setGoogleManagerId] = useState('')
   const [metaPrepaidBalance, setMetaPrepaidBalance] = useState('')
   const [googlePrepaidBalance, setGooglePrepaidBalance] = useState('')
+  const [telecrmApiToken, setTelecrmApiToken] = useState('')
+  const [telecrmEnterpriseId, setTelecrmEnterpriseId] = useState('')
+  const [showTelecrmToken, setShowTelecrmToken] = useState(false)
 
   // Visibility states
   const [showMetaToken, setShowMetaToken] = useState(false)
@@ -72,7 +75,14 @@ export default function SettingsPage() {
   const [shareSections, setShareSections] = useState<string[]>(['keywords', 'traffic', 'leads', 'revenue', 'site'])
 
   const isViewer = currentUser?.role === 'viewer'
-  const canShare = currentUser?.role === 'superadmin' || currentUser?.role === 'admin' || currentUser?.role === 'ceo'
+  const canShare = currentUser?.role === 'superadmin' || currentUser?.role === 'admin' || currentUser?.role === 'ceo' || currentUser?.role === 'user'
+  const canEditConfigs = currentUser?.role === 'superadmin' || currentUser?.role === 'admin' || currentUser?.role === 'ceo'
+
+  useEffect(() => {
+    if (currentUser?.role === 'user') {
+      setShareSections(['keywords', 'traffic'])
+    }
+  }, [currentUser])
 
   // Load configs from localStorage
   const loadConfigs = useCallback(() => {
@@ -238,6 +248,8 @@ export default function SettingsPage() {
     setGoogleManagerId(config.googleManagerId || '')
     setMetaPrepaidBalance(config.metaPrepaidBalance ? String(config.metaPrepaidBalance) : '')
     setGooglePrepaidBalance(config.googlePrepaidBalance ? String(config.googlePrepaidBalance) : '')
+    setTelecrmApiToken(config.telecrmApiToken || '')
+    setTelecrmEnterpriseId(config.telecrmEnterpriseId || '')
 
     setTestStatus('idle')
     setTestMessage('')
@@ -266,6 +278,8 @@ export default function SettingsPage() {
     setGoogleManagerId('')
     setMetaPrepaidBalance('')
     setGooglePrepaidBalance('')
+    setTelecrmApiToken('')
+    setTelecrmEnterpriseId('')
 
     setTestStatus('idle')
     setTestMessage('')
@@ -352,6 +366,8 @@ export default function SettingsPage() {
       googleManagerId: googleManagerId.trim() || undefined,
       metaPrepaidBalance: metaPrepaidBalance.trim() ? Number(metaPrepaidBalance) : undefined,
       googlePrepaidBalance: googlePrepaidBalance.trim() ? Number(googlePrepaidBalance) : undefined,
+      telecrmApiToken: telecrmApiToken.trim() || undefined,
+      telecrmEnterpriseId: telecrmEnterpriseId.trim() || undefined,
 
       createdAt: editingConfig?.createdAt || new Date().toISOString(),
       sheetId: seoUrl.trim() ? derivedSeoId : ''
@@ -389,6 +405,8 @@ export default function SettingsPage() {
     setGoogleManagerId('')
     setMetaPrepaidBalance('')
     setGooglePrepaidBalance('')
+    setTelecrmApiToken('')
+    setTelecrmEnterpriseId('')
 
     setTestStatus('idle')
     setTestMessage('')
@@ -619,17 +637,29 @@ export default function SettingsPage() {
                       { id: 'site', label: 'Site Status' }
                     ].map(sec => {
                       const isChecked = shareSections.includes(sec.id)
+                      const isUserRole = currentUser?.role === 'user'
+                      const isDisabled = isUserRole && !['keywords', 'traffic'].includes(sec.id)
+                      const checkedValue = isDisabled ? false : isChecked
+
                       return (
-                        <label key={sec.id} className="flex items-center gap-2 px-3 py-2 border rounded-xl cursor-pointer hover:bg-slate-50 select-none text-xs font-semibold text-slate-700 transition-colors">
+                        <label 
+                          key={sec.id} 
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 border rounded-xl cursor-pointer select-none text-xs font-semibold text-slate-700 transition-colors",
+                            isDisabled ? "opacity-40 cursor-not-allowed bg-slate-50" : "hover:bg-slate-50"
+                          )}
+                        >
                           <input
                             type="checkbox"
-                            checked={isChecked}
+                            checked={checkedValue}
+                            disabled={isDisabled}
                             onChange={() => {
+                              if (isDisabled) return
                               setShareSections(prev => 
                                 isChecked ? prev.filter(x => x !== sec.id) : [...prev, sec.id]
                               )
                             }}
-                            className="rounded text-violet-600 focus:ring-violet-400"
+                            className="rounded text-violet-600 focus:ring-violet-400 disabled:opacity-50"
                           />
                           {sec.label}
                         </label>
@@ -725,7 +755,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-      {!isViewer && (
+      {canEditConfigs && (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -824,6 +854,53 @@ export default function SettingsPage() {
                         <span className="truncate">Leads Sheet ID: {derivedLeadsId || 'Invalid'}</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* TeleCRM Integration */}
+                  <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 space-y-3 mt-3">
+                    <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      TeleCRM Live Sync Integration
+                    </h4>
+                    <p className="text-[10px] text-slate-400">
+                      Configure your TeleCRM API credentials to fetch live leads dynamically. Leave empty to use fallback sheet or mock data.
+                    </p>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Enterprise ID</label>
+                        <input
+                          type="text"
+                          value={telecrmEnterpriseId}
+                          onChange={e => setTelecrmEnterpriseId(e.target.value)}
+                          placeholder="e.g. 68ca5820ff2a..."
+                          disabled={isViewer}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-medium text-slate-800 placeholder:text-slate-400 transition-all disabled:bg-slate-100"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">API Sync Token</label>
+                        <div className="relative">
+                          <input
+                            type={showTelecrmToken ? 'text' : 'password'}
+                            value={telecrmApiToken}
+                            onChange={e => setTelecrmApiToken(e.target.value)}
+                            placeholder="fcfd6918..."
+                            disabled={isViewer}
+                            className="w-full px-3 py-2 pr-9 rounded-xl border border-slate-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 outline-none text-xs font-mono text-slate-805 placeholder:text-slate-400 placeholder:font-sans transition-all disabled:bg-slate-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowTelecrmToken(v => !v)}
+                            disabled={isViewer}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+                          >
+                            {showTelecrmToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Revenue Sheet */}
@@ -1300,7 +1377,8 @@ export default function SettingsPage() {
 
                         <div className="text-[10px] text-slate-400 space-y-0.5 mb-3 pl-10 font-mono">
                           {(cfg.seoSheetId || cfg.sheetId) && <div className="truncate">SEO: {(cfg.seoSheetId || cfg.sheetId || '').slice(0, 12)}...</div>}
-                          {cfg.leadsSheetId && <div className="truncate">Leads: {cfg.leadsSheetId.slice(0, 12)}...</div>}
+                          {cfg.leadsSheetId && <div className="truncate">Leads Sheet: {cfg.leadsSheetId.slice(0, 12)}...</div>}
+                          {cfg.telecrmEnterpriseId && <div className="truncate text-emerald-600">TeleCRM Live ID: {cfg.telecrmEnterpriseId.slice(0, 12)}...</div>}
                           {cfg.revenueSheetId && <div className="truncate">Rev: {cfg.revenueSheetId.slice(0, 12)}...</div>}
                           {!cfg.seoSheetId && !cfg.sheetId && !cfg.leadsSheetId && !cfg.revenueSheetId && <div>All Demo Data</div>}
                         </div>

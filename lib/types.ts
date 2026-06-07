@@ -856,3 +856,148 @@ export interface AdsCombinedOverview {
   lastRefreshedAt: string
   nextRefreshAt: string
 }
+
+// ── TELECRM TYPES ─────────────────────────────────────────
+
+export type LeadCategory =
+  | 'Enrolled'
+  | 'High Potential'
+  | 'Medium Potential'
+  | 'Fresh/Unqualified'
+  | 'Low/Cold'
+
+export type LeadChannel =
+  | 'Organic'
+  | 'Website'
+  | 'Google Ads'
+  | 'Meta Ads'
+  | 'Referral'
+  | 'SOT'
+  | 'Other'
+
+export interface TeleCRMLead {
+  id: string
+  status: string                    // raw TeleCRM status
+  employeeid: string                // assigned agent email
+  createdBy: string
+  fields: {
+    name: string
+    phone: string
+    email?: string
+    course?: string
+    lead_source_1?: string
+    lead_date?: number              // Unix ms
+    created_on: number              // Unix ms
+    modified_on: number             // Unix ms
+    course_fee?: string
+    amount_paid?: string
+    amount_paid_emi_2?: string
+    batch_number?: number
+    mode_of_training?: string
+    remarks?: string
+    utmsource?: string
+    utmcampaign?: string
+    utmmedium?: string
+    utmcontent?: string
+    utmterm?: string
+    referrer?: string
+    fbclid?: string
+    google_gcl_id?: string
+  }
+  rating: number
+  isArchived: boolean
+  isSpam: boolean
+}
+
+export interface LeadsMonthlyTrend {
+  month: string                     // "May 2026"
+  monthStart: Date
+  totalLeads: number
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  websiteLeads: number
+  organicLeads: number
+  googleAdsLeads: number
+  metaAdsLeads: number
+  referralLeads: number
+  convRate: number                  // enrolled / total * 100
+  scmLeads?: number
+  hcmLeads?: number
+  financialsLeads?: number
+  techOicLeads?: number
+  ppmLeads?: number
+  sapEbsOthersLeads?: number
+  courses?: Record<string, number>
+}
+
+export interface LeadsFunnelData {
+  total: number
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  enrolledPct: number
+  highPotentialPct: number
+  mediumPotentialPct: number
+  freshUnqualifiedPct: number
+  lowColdPct: number
+  convRate: number
+  // Raw stage breakdown (for drill-down)
+  stageBreakdown: Record<string, number>
+}
+
+export interface LeadsCourseBreakdown {
+  courseName: string                // display name
+  rawCourses: string[]              // raw TeleCRM course values in this group
+  total: number
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  websiteLeads: number
+  organicLeads: number
+  googleAdsLeads: number
+  metaAdsLeads: number
+  convRate: number
+  sharePercent: number
+}
+
+export interface LeadsChannelBreakdown {
+  channel: LeadChannel
+  total: number
+  enrolled: number
+  highPotential: number
+  convRate: number
+  sharePercent: number
+}
+
+export interface LiveLeadsKPI {
+  // Current period
+  totalLeads: number
+  enrolled: number
+  highPotential: number
+  mediumPotential: number
+  freshUnqualified: number
+  lowCold: number
+  convRate: number
+  websiteLeads: number
+  organicLeads: number
+  googleAdsLeads: number
+  metaAdsLeads: number
+  // Previous period (for delta)
+  prevTotalLeads: number
+  prevEnrolled: number
+  prevHighPotential: number
+  prevConvRate: number
+  // Metadata
+  periodLabel: string
+  prevPeriodLabel: string
+  lastRefreshedAt: string
+  dataSource: 'telecrm'
+}
+

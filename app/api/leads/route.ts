@@ -1,11 +1,10 @@
 // app/api/leads/route.ts
 import { NextResponse } from 'next/server'
-import { fetchLeadsMonthly, fetchLeadsDetail } from '@/lib/sheets'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
+import { getFunnelData, getChannelBreakdown, TeleCRMApiError } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 3600 // Cache for 1 hour
 
 export async function GET(request: Request) {
   try {
@@ -31,29 +30,88 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const bypassCache = searchParams.get('refresh') === 'true'
-    const sheetId = searchParams.get('sheetId') || undefined
-    const apiKey = searchParams.get('apiKey') || undefined
+    const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
+    const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
 
-    const [monthlyResult, detailResult] = await Promise.all([
-      fetchLeadsMonthly(bypassCache, sheetId, apiKey),
-      fetchLeadsDetail(bypassCache, sheetId, apiKey)
+    const fromStr = searchParams.get('from')
+    const toStr = searchParams.get('to')
+
+    let fromDate: Date
+    let toDate: Date
+
+    if (fromStr && toStr) {
+      fromDate = new Date(fromStr)
+      toDate = new Date(toStr)
+    } else {
+      // Default to this month
+      const now = new Date()
+      fromDate = new Date(now.getFullYear(), now.getMonth(), 1)
+      toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+    }
+
+    const durationMs = toDate.getTime() - fromDate.getTime() + 1
+    const prevFromDate = new Date(fromDate.getTime() - durationMs)
+    const prevToDate = new Date(toDate.getTime() - durationMs)
+
+    const [currentFunnel, currentChannels, prevFunnel, prevChannels] = await Promise.all([
+      getFunnelData({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache),
+      getChannelBreakdown({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache),
+      getFunnelData({ from: prevFromDate, to: prevToDate }, customToken, customEnterpriseId, bypassCache),
+      getChannelBreakdown({ from: prevFromDate, to: prevToDate }, customToken, customEnterpriseId, bypassCache)
     ])
 
+    // Calculate website vs organic
+    const getWebsiteCount = (channels: any[]) => {
+      const web = channels.find((c: any) => c.channel === 'Website')?.total || 0
+      const gads = channels.find((c: any) => c.channel === 'Google Ads')?.total || 0
+      const fb = channels.find((c: any) => c.channel === 'Meta Ads')?.total || 0
+      return web + gads + fb
+    }
+
+    const currentWebsite = getWebsiteCount(currentChannels)
+    const currentOrganic = currentFunnel.total - currentWebsite
+
+    const prevWebsite = getWebsiteCount(prevChannels)
+    const prevOrganic = prevFunnel.total - prevWebsite
+
     return NextResponse.json({
-      monthly: monthlyResult.rows,
-      detail: detailResult.rows,
-      isMock: monthlyResult.isMock,
-      lastUpdated: monthlyResult.lastUpdated,
-      fallbackReason: monthlyResult.fallbackReason
+      kpi: {
+        totalLeads: currentFunnel.total,
+        websiteLeads: currentWebsite,
+        organicLeads: currentOrganic,
+        enrolled: currentFunnel.enrolled,
+        highPotential: currentFunnel.highPotential,
+        mediumPotential: currentFunnel.mediumPotential,
+        freshUnqualified: currentFunnel.freshUnqualified,
+        lowCold: currentFunnel.lowCold,
+        convRate: currentFunnel.convRate,
+        
+        prevTotalLeads: prevFunnel.total,
+        prevWebsiteLeads: prevWebsite,
+        prevOrganicLeads: prevOrganic,
+        prevEnrolled: prevFunnel.enrolled,
+        prevHighPotential: prevFunnel.highPotential,
+        prevConvRate: prevFunnel.convRate
+      },
+      funnel: currentFunnel,
+      channels: currentChannels,
+      dataSource: 'telecrm'
     }, {
       headers: {
         'Cache-Control': bypassCache 
           ? 'no-store, max-age=0' 
-          : 'public, s-maxage=3600, stale-while-revalidate=600'
+          : 'public, s-maxage=900, stale-while-revalidate=300'
       }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Leads API Route error:', error)
+    if (error instanceof TeleCRMApiError || (error && error.name === 'TeleCRMApiError')) {
+      const status = error.status === 401 || error.status === 403 || error.status === 404 ? 401 : 500
+      return NextResponse.json(
+        { error: `TeleCRM Live API: ${error.message}. Please verify your credentials in Settings.` },
+        { status }
+      )
+    }
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

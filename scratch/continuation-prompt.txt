@@ -1,0 +1,117 @@
+<USER_REQUEST>
+# TeleCRM Live Sync — Continuation Prompt
+## Upgrade Existing `/leads` Dashboard to Pull Live Data from TeleCRM API
+
+---
+
+## Context
+
+This is a **continuation** of the existing Next.js dashboard.
+The `/leads` pages already exist pulling data from Google Sheets (`Leads Monthly` + `Leads Detail` tabs).
+
+**This prompt REPLACES the Google Sheets data source for `/leads` with live TeleCRM API data.**
+Google Sheets tabs (`Leads Monthly`, `Leads Detail`) can remain as historical backup but the
+dashboard will now read from TeleCRM directly.
+
+**DO NOT touch any other pages** — keyword, traffic, revenue, ads pages untouched.
+
+---
+
+## What Was Discovered From Live API Exploration
+
+**Enterprise:** Tech Leads IT
+**Enterprise ID:** `68ca5820ff2a2eda16382e4a`
+**Total leads in system:** 12,362
+**API Base URL:** `https://next.telecrm.in/autoupdate/v2`
+**Auth:** Bearer token (Sync type)
+
+### Exact Field API Names (from live data)
+
+```typescript
+// These are the EXACT field names returned by TeleCRM API
+const TELECRM_FIELDS = {
+  name:            'name',
+  phone:           'phone',
+  email:           'email',
+  course:          'course',           // course name
+  leadSource:      'lead_source_1',    // lead source
+  leadDate:        'lead_date',        // Unix ms timestamp
+  createdOn:       'created_on',       // Unix ms timestamp
+  modifiedOn:      'modified_on',
+  courseFee:       'course_fee',       // string e.g. "23000"
+  amountPaid:      'amount_paid',      // EMI 1
+  amountPaidEmi2:  'amount_paid_emi_2',
+  batchNumber:     'batch_number',
+  modeOfTraining:  'mode_of_training', // "Live Online" | "Class Room"
+  remarks:         'remarks',
+  utmSource:       'utmsource',
+  utmCampaign:     'utmcampaign',
+  utmMedium:       'utmmedium',
+  utmContent:      'utmcontent',
+  utmTerm:         'utmterm',
+  referrer:        'referrer',
+  fbclid:          'fbclid',
+  gclid:           'google_gcl_id',
+}
+```
+
+### Lead Status Values (exact strings from API)
+
+``
+<truncated 18463 bytes>
+avoid sequential delays.
+
+---
+
+## README Update
+
+```markdown
+## Leads Dashboard — Live TeleCRM Integration
+
+Data source: TeleCRM API (live, refreshes every 15 minutes)
+
+### Setup
+1. Add to `.env.local`:
+   TELECRM_API_TOKEN=your_sync_token
+   TELECRM_ENTERPRISE_ID=your_enterprise_id
+
+2. Generate Sync API token:
+   TeleCRM → Settings → Integrations → Website/API → Create Token → Select "Sync APIs"
+
+3. Find Enterprise ID:
+   TeleCRM → Settings → Integrations → shown in API section
+
+### What's live
+- Total leads, by status, by course, by channel
+- Pipeline funnel (all 16 stages)
+- Monthly trend (auto-calculated, no manual entry)
+- Conversion rate (Enrolled / Total)
+
+### Fallback
+If TeleCRM API is unavailable, last cached data shown with warning banner.
+Historical months (before TeleCRM) still read from Google Sheets `Leads Monthly` tab.
+```
+
+---
+
+## Deliverables Checklist
+
+- [ ] `lib/telecrm-api.ts` — all read-only API functions
+- [ ] `lib/types.ts` — TeleCRM types added
+- [ ] `app/api/leads/route.ts` — updated to fetch from TeleCRM
+- [ ] `app/api/leads/stages/route.ts` — raw stage counts
+- [ ] `app/api/leads/search/route.ts` — lead search proxy
+- [ ] `app/leads/page.tsx` — updated with live data + date picker + refresh bar
+- [ ] `app/leads/courses/page.tsx` — updated with real course data
+- [ ] `app/leads/funnel/page.tsx` — updated with stage detail table
+- [ ] `app/leads/trends/page.tsx` — updated with auto monthly trend
+- [ ] `components/leads/StageDrillDown.tsx` — raw stage breakdown toggle
+- [ ] `components/leads/LiveDataBadge.tsx` — "● Live · TeleCRM" badge
+- [ ] `components/leads/RefreshBar.tsx` — "last updated X | refresh" (reuse from ads)
+- [ ] `.env.local.example` — updated with TeleCRM vars
+- [ ] README — TeleCRM setup section added
+- [ ] All existing keyword/traffic/revenue/ads pages untouched
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-06T18:11:09+05:30.
+</ADDITIONAL_METADATA>

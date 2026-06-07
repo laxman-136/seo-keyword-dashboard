@@ -933,7 +933,9 @@ export function getLeadsTrend(rows: LeadsMonthlyRow[]): LeadsTrendPoint[] {
 export function getLeadsFunnel(rows: LeadsMonthlyRow[], month?: string): LeadsFunnelData {
   const emptyFunnel: LeadsFunnelData = {
     enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0, total: 0,
-    enrolledPct: 0, highPotentialPct: 0, mediumPotentialPct: 0, freshUnqualifiedPct: 0, lowColdPct: 0
+    enrolledPct: 0, highPotentialPct: 0, mediumPotentialPct: 0, freshUnqualifiedPct: 0, lowColdPct: 0,
+    convRate: 0,
+    stageBreakdown: {}
   }
 
   if (!rows || rows.length === 0) return emptyFunnel
@@ -956,7 +958,9 @@ export function getLeadsFunnel(rows: LeadsMonthlyRow[], month?: string): LeadsFu
     highPotentialPct: parseFloat(((row.highPotential / total) * 100).toFixed(1)),
     mediumPotentialPct: parseFloat(((row.mediumPotential / total) * 100).toFixed(1)),
     freshUnqualifiedPct: parseFloat(((row.freshUnqualified / total) * 100).toFixed(1)),
-    lowColdPct: parseFloat(((row.lowCold / total) * 100).toFixed(1))
+    lowColdPct: parseFloat(((row.lowCold / total) * 100).toFixed(1)),
+    convRate: parseFloat(((row.enrolled / total) * 100).toFixed(1)),
+    stageBreakdown: {}
   }
 }
 
@@ -1032,40 +1036,7 @@ export function getAvailableLeadsMonths(rows: LeadsMonthlyRow[]): string[] {
   return rows.map(r => r.month)
 }
 
-export function getLeadsMonthComparison(
-  rows: LeadsMonthlyRow[],
-  monthA: string,
-  monthB: string
-): { a: LeadsMonthlyRow; b: LeadsMonthlyRow; deltas: Record<string, number> } {
-  const emptyRow = (m: string): LeadsMonthlyRow => ({
-    month: m, totalLeads: 0, websiteLeads: 0, organicLeads: 0, scmLeads: 0, hcmLeads: 0, financialsLeads: 0,
-    techOicLeads: 0, ppmLeads: 0, sapEbsOthersLeads: 0, enrolled: 0, highPotential: 0, mediumPotential: 0,
-    freshUnqualified: 0, lowCold: 0, convRate: 0
-  })
 
-  const a = rows.find(r => r.month.toLowerCase() === monthA.toLowerCase()) || emptyRow(monthA)
-  const b = rows.find(r => r.month.toLowerCase() === monthB.toLowerCase()) || emptyRow(monthB)
-
-  const deltas: Record<string, number> = {
-    totalLeads: a.totalLeads - b.totalLeads,
-    websiteLeads: a.websiteLeads - b.websiteLeads,
-    organicLeads: a.organicLeads - b.organicLeads,
-    scmLeads: a.scmLeads - b.scmLeads,
-    hcmLeads: a.hcmLeads - b.hcmLeads,
-    financialsLeads: a.financialsLeads - b.financialsLeads,
-    techOicLeads: a.techOicLeads - b.techOicLeads,
-    ppmLeads: a.ppmLeads - b.ppmLeads,
-    sapEbsOthersLeads: a.sapEbsOthersLeads - b.sapEbsOthersLeads,
-    enrolled: a.enrolled - b.enrolled,
-    highPotential: a.highPotential - b.highPotential,
-    mediumPotential: a.mediumPotential - b.mediumPotential,
-    freshUnqualified: a.freshUnqualified - b.freshUnqualified,
-    lowCold: a.lowCold - b.lowCold,
-    convRate: parseFloat((a.convRate - b.convRate).toFixed(2)) // percentage points delta
-  }
-
-  return { a, b, deltas }
-}
 
 // ── REVENUE DATA FETCHING & PARSING ──────────────────────────
 

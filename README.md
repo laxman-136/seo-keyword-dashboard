@@ -173,6 +173,18 @@ No redeploy or code changes needed!
 
 ---
 
+## 🔌 TeleCRM Live Sync Setup
+
+The **Leads Report** is powered by a live, real-time sync with TeleCRM. You can configure it dynamically:
+1. Go to `/settings` (click "Data Sources" in the sidebar)
+2. Enter your **TeleCRM Enterprise ID** and **API Sync Token** under the "TeleCRM Live Sync Integration" section.
+3. Save the configuration.
+
+The leads dashboard will now fetch live lead counts, conversion funnels, channels, and courses directly from TeleCRM with a 15-minute caching layer. If no live data is found for a given month, it will gracefully fall back to your Google Sheets historical logs.
+
+
+---
+
 ## 🔐 Changing the Password
 
 Update `NEXT_PUBLIC_DASHBOARD_PASSWORD` in your Vercel environment variables → Redeploy.

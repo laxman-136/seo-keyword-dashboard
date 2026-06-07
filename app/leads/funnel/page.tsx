@@ -1,71 +1,115 @@
 // app/leads/funnel/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react'
-import { useLeadsData } from '@/hooks/useLeadsData'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Header from '@/components/layout/Header'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LeadsFunnelChart from '@/components/leads/LeadsFunnelChart'
 import LeadsFunnelCard from '@/components/leads/LeadsFunnelCard'
-import LeadsMonthSelector from '@/components/leads/LeadsMonthSelector'
-import { getAvailableLeadsMonths, getLeadsFunnel } from '@/lib/sheets'
+import LiveDataBadge from '@/components/leads/LiveDataBadge'
+import RefreshBar from '@/components/leads/RefreshBar'
+import StageDrillDown from '@/components/leads/StageDrillDown'
+import DateRangePicker from '@/components/ads/DateRangePicker'
+import { useDateRange } from '@/hooks/useDateRange'
 import { Info, TrendingUp, TrendingDown, Minus, Target, Activity, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function LeadsFunnelPage() {
-  const {
-    monthly,
-    loading,
-    refreshing,
-    error,
-    isMock,
-    fallbackReason,
-    lastUpdated,
-    refresh
-  } = useLeadsData()
+  const { preset, from, to, label: rangeLabel } = useDateRange()
 
-  const [selectedMonth, setSelectedMonth] = useState('')
+  const [funnel, setFunnel] = useState<any>(null)
+  const [prevFunnel, setPrevFunnel] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    else setLoading(true)
+    setError(null)
+
+    try {
+      const headers: Record<string, string> = {}
+      if (typeof window !== 'undefined') {
+        const clientToken = localStorage.getItem('client-telecrm-api-token')
+        const clientEnterpriseId = localStorage.getItem('client-telecrm-enterprise-id')
+        if (clientToken) headers['x-telecrm-api-token'] = clientToken
+        if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
+      }
+
+      const durationMs = new Date(to).getTime() - new Date(from).getTime() + 1
+      const prevFrom = new Date(new Date(from).getTime() - durationMs).toISOString().split('T')[0]
+      const prevTo = new Date(new Date(to).getTime() - durationMs).toISOString().split('T')[0]
+
+      const refreshParam = isRefresh ? '&refresh=true' : ''
+      const urlCurrent = `/api/leads/funnel?from=${from}&to=${to}${refreshParam}`
+      const urlPrev = `/api/leads/funnel?from=${prevFrom}&to=${prevTo}${refreshParam}`
+
+      const [resCurrent, resPrev] = await Promise.all([
+        fetch(urlCurrent, { headers }),
+        fetch(urlPrev, { headers })
+      ])
+
+      if (!resCurrent.ok) {
+        const errorData = await resCurrent.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch current funnel metrics (Status: ${resCurrent.status})`)
+      }
+      if (!resPrev.ok) {
+        const errorData = await resPrev.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch previous funnel metrics (Status: ${resPrev.status})`)
+      }
+
+      const payloadCurrent = await resCurrent.json()
+      const payloadPrev = await resPrev.json()
+
+      setFunnel(payloadCurrent)
+      setPrevFunnel(payloadPrev)
+    } catch (err: any) {
+      console.error(err)
+      setError(err?.message || 'Error loading funnel details')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [from, to])
 
   useEffect(() => {
-    if (monthly.length > 0 && !selectedMonth) {
-      setSelectedMonth(monthly[monthly.length - 1].month)
+    fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    const handleConfigChange = () => {
+      fetchData()
     }
-  }, [monthly, selectedMonth])
-
-  if (loading) return <SkeletonLoader />
-
-  if (error || monthly.length === 0) {
-    return (
-      <div className="p-6 flex-1 flex flex-col items-center justify-center bg-slate-50 min-h-screen">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-red-100 shadow-xl flex flex-col items-center text-center">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-500 mb-6 shadow-sm">
-            <Info className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-bold text-slate-800">No leads data yet</h2>
-          <p className="text-slate-400 text-sm mt-3">
-            {error || 'Please populate the leads sheets in your Google Sheet.'}
-          </p>
-          <button onClick={() => refresh()} className="mt-6 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl shadow-md transition-all w-full">
-            Retry Connection
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  const availableMonths = getAvailableLeadsMonths(monthly)
-  const currentMonth = selectedMonth || monthly[monthly.length - 1].month
-  const currentIndex = availableMonths.indexOf(currentMonth)
-  const prevMonth = currentIndex > 0 ? availableMonths[currentIndex - 1] : 'N/A'
-
-  const funnel = getLeadsFunnel(monthly, currentMonth)
-  const prevFunnel = prevMonth !== 'N/A' ? getLeadsFunnel(monthly, prevMonth) : undefined
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('active-config-updated', handleConfigChange)
+      return () => {
+        window.removeEventListener('active-config-updated', handleConfigChange)
+      }
+    }
+  }, [fetchData])
 
   // Computed metrics
-  const convRateVal   = funnel.total > 0 ? (funnel.enrolled / funnel.total) * 100 : 0
-  const leadsPerEnroll = funnel.enrolled > 0 ? Math.round(funnel.total / funnel.enrolled) : 0
-  const highPotRate   = funnel.total > 0 ? (funnel.highPotential / funnel.total) * 100 : 0
-  const qualityScore  = funnel.total > 0 ? ((funnel.enrolled + funnel.highPotential) / funnel.total) * 100 : 0
+  const convRateVal = useMemo(() => {
+    if (!funnel || funnel.total === 0) return 0
+    return (funnel.enrolled / funnel.total) * 100
+  }, [funnel])
+
+  const leadsPerEnroll = useMemo(() => {
+    if (!funnel || funnel.enrolled === 0) return 0
+    return Math.round(funnel.total / funnel.enrolled)
+  }, [funnel])
+
+  const highPotRate = useMemo(() => {
+    if (!funnel || funnel.total === 0) return 0
+    return (funnel.highPotential / funnel.total) * 100
+  }, [funnel])
+
+  const qualityScore = useMemo(() => {
+    if (!funnel || funnel.total === 0) return 0
+    return ((funnel.enrolled + funnel.highPotential) / funnel.total) * 100
+  }, [funnel])
 
   const pipelineHealthLabel = highPotRate >= 30 ? 'Strong' : highPotRate >= 15 ? 'Average' : 'Weak'
   const pipelineHealthStyle = highPotRate >= 30
@@ -83,13 +127,37 @@ export default function LeadsFunnelPage() {
     'Low/Cold':          { action: 'Review & drop',           desc: 'Low-priority newsletter. Re-evaluate source quality.' },
   }
 
-  const tableRows = [
-    { name: 'Enrolled',          emoji: '🏆', count: funnel.enrolled,         pct: funnel.enrolledPct,         prevCount: prevFunnel?.enrolled,         isPositive: true,  color: 'text-emerald-600' },
-    { name: 'High Potential',    emoji: '🔥', count: funnel.highPotential,    pct: funnel.highPotentialPct,    prevCount: prevFunnel?.highPotential,    isPositive: true,  color: 'text-blue-600'    },
-    { name: 'Medium Potential',  emoji: '⚡', count: funnel.mediumPotential,  pct: funnel.mediumPotentialPct,  prevCount: prevFunnel?.mediumPotential,  isPositive: true,  color: 'text-amber-600'   },
-    { name: 'Fresh/Unqualified', emoji: '❄️', count: funnel.freshUnqualified, pct: funnel.freshUnqualifiedPct, prevCount: prevFunnel?.freshUnqualified, isPositive: false, color: 'text-slate-500'   },
-    { name: 'Low/Cold',          emoji: '🗑️', count: funnel.lowCold,          pct: funnel.lowColdPct,          prevCount: prevFunnel?.lowCold,          isPositive: false, color: 'text-red-600'     },
-  ]
+  const tableRows = useMemo(() => {
+    if (!funnel) return []
+    return [
+      { name: 'Enrolled',          emoji: '🏆', count: funnel.enrolled,         pct: funnel.enrolledPct,         prevCount: prevFunnel?.enrolled,         isPositive: true,  color: 'text-emerald-600' },
+      { name: 'High Potential',    emoji: '🔥', count: funnel.highPotential,    pct: funnel.highPotentialPct,    prevCount: prevFunnel?.highPotential,    isPositive: true,  color: 'text-blue-600'    },
+      { name: 'Medium Potential',  emoji: '⚡', count: funnel.mediumPotential,  pct: funnel.mediumPotentialPct,  prevCount: prevFunnel?.mediumPotential,  isPositive: true,  color: 'text-amber-600'   },
+      { name: 'Fresh/Unqualified', emoji: '❄️', count: funnel.freshUnqualified, pct: funnel.freshUnqualifiedPct, prevCount: prevFunnel?.freshUnqualified, isPositive: false, color: 'text-slate-500'   },
+      { name: 'Low/Cold',          emoji: '🗑️', count: funnel.lowCold,          pct: funnel.lowColdPct,          prevCount: prevFunnel?.lowCold,          isPositive: false, color: 'text-red-600'     },
+    ]
+  }, [funnel, prevFunnel])
+
+  if (loading) return <SkeletonLoader />
+
+  if (error || !funnel) {
+    return (
+      <div className="p-6 flex-1 flex flex-col items-center justify-center bg-slate-50 min-h-screen">
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-red-100 shadow-xl flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-500 mb-6 shadow-sm">
+            <Info className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">Connection Failed</h2>
+          <p className="text-slate-400 text-sm mt-3">
+            {error || 'Unable to retrieve funnel statistics from TeleCRM API.'}
+          </p>
+          <button onClick={() => fetchData()} className="mt-6 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl shadow-md transition-all w-full">
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-h-screen bg-slate-50">
@@ -97,30 +165,28 @@ export default function LeadsFunnelPage() {
       {/* ── HEADER ── */}
       <Header
         title="📊 Funnel & Conversion"
-        currentMonth={currentMonth}
-        previousMonth={prevMonth !== 'N/A' ? prevMonth : undefined}
-        lastUpdated={lastUpdated}
-        isMock={isMock}
-        warningText={fallbackReason}
-        onRefresh={refresh}
+        currentMonth={rangeLabel}
+        onRefresh={() => fetchData(true)}
         isRefreshing={refreshing}
       />
 
-      {/* ── MONTH SELECTOR ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <p className="text-sm font-bold text-slate-700">Funnel Analysis</p>
-          <p className="text-xs text-slate-400 mt-0.5">Select a month to see pipeline distribution and conversion metrics</p>
+      {/* ── LIVE BADGE & SELECTORS ROW ── */}
+      <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <LiveDataBadge />
         </div>
-        <LeadsMonthSelector
-          months={availableMonths}
-          selected={currentMonth}
-          onChange={setSelectedMonth}
-          label="Analyze Month"
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshBar
+            loading={loading}
+            refreshing={refreshing}
+            lastUpdated={new Date().toISOString()}
+            onRefresh={() => fetchData(true)}
+          />
+          <DateRangePicker />
+        </div>
       </div>
 
-      {/* ── SECTION A: 3 Score Cards + Funnel Card (side by side) ── */}
+      {/* ── SECTION A: 3 Score Cards + Funnel Card ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* Score cards stacked on left */}
@@ -184,7 +250,7 @@ export default function LeadsFunnelPage() {
           <LeadsFunnelCard
             funnel={funnel}
             compareWith={prevFunnel}
-            compareLabel={prevMonth !== 'N/A' ? prevMonth : undefined}
+            compareLabel="Prev Period"
           />
         </div>
       </div>
@@ -196,7 +262,7 @@ export default function LeadsFunnelPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
           <h3 className="font-bold text-slate-800 text-sm">📋 Stage Breakdown & Action Plan</h3>
-          <p className="text-xs text-slate-400 mt-0.5">MoM comparison with recommended team actions per funnel stage</p>
+          <p className="text-xs text-slate-400 mt-0.5">Period-over-Period comparison with recommended team actions per funnel stage</p>
         </div>
 
         <div className="overflow-x-auto">
@@ -206,7 +272,7 @@ export default function LeadsFunnelPage() {
                 <th className="px-6 py-3.5">Stage</th>
                 <th className="px-4 py-3.5 text-right">Count</th>
                 <th className="px-4 py-3.5 text-right">Share</th>
-                {prevFunnel && <th className="px-4 py-3.5 text-center">vs {prevMonth}</th>}
+                {prevFunnel && <th className="px-4 py-3.5 text-center">vs Prev Period</th>}
                 <th className="px-4 py-3.5">Recommended Action</th>
                 <th className="px-6 py-3.5 hidden lg:table-cell">Next Step</th>
               </tr>
@@ -258,6 +324,8 @@ export default function LeadsFunnelPage() {
         </div>
       </div>
 
+      {/* ── SECTION D: Accordion Drilldown ── */}
+      <StageDrillDown stageBreakdown={funnel.stageBreakdown} />
     </div>
   )
 }

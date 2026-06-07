@@ -1,7 +1,7 @@
 // components/leads/LeadsMonthComparison.tsx
 import React from 'react'
 import { LeadsMonthlyRow } from '@/lib/types'
-import { getLeadsMonthComparison } from '@/lib/sheets'
+import { getLeadsMonthComparison } from '@/lib/telecrm-api'
 import { 
   ArrowUpRight, 
   ArrowDownRight, 

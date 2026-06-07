@@ -23,9 +23,11 @@ const CACHE_TTL_MS = (Number(process.env.ADS_CACHE_TTL_SECONDS) || 21600) * 1000
 export async function getOrSetCache<T>(
   key: string,
   fetchFn: () => Promise<T>,
-  bypassCache: boolean = false
+  bypassCache: boolean = false,
+  customTtlMs?: number
 ): Promise<CacheResult<T>> {
   const now = Date.now()
+  const ttl = customTtlMs !== undefined ? customTtlMs : CACHE_TTL_MS
 
   if (!bypassCache) {
     const cached = cacheMap.get(key)
@@ -41,7 +43,7 @@ export async function getOrSetCache<T>(
   const data = await fetchFn()
   
   const cachedAt = new Date().toISOString()
-  const expiresAt = new Date(now + CACHE_TTL_MS).toISOString()
+  const expiresAt = new Date(now + ttl).toISOString()
 
   const result: CacheResult<T> = {
     data,

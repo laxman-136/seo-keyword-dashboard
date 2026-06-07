@@ -25,7 +25,7 @@ import {
   X,
   Megaphone
 } from 'lucide-react'
-import { getActiveConfig, ACTIVE_CONFIG_UPDATED_EVENT, setActiveConfig } from '@/lib/config'
+import { getActiveConfig, ACTIVE_CONFIG_UPDATED_EVENT, setActiveConfig, getSavedConfigs } from '@/lib/config'
 import { cn } from '@/lib/utils'
 import { isSectionAllowed } from '@/lib/auth'
 import { useBudgetAlerts } from '@/hooks/useBudgetAlerts'
@@ -34,27 +34,82 @@ import { useBudgetAlerts } from '@/hooks/useBudgetAlerts'
 // ─── Active Config Badge ─────────────────────────────────────────────────────
 function ActiveConfigBadge() {
   const [activeLabel, setActiveLabel] = React.useState<string | null>(null)
+  const [options, setOptions] = React.useState<any[]>([])
+  const [role, setRole] = React.useState<string | null>(null)
+  
   useEffect(() => {
-    const updateActive = () => {
+    const update = async () => {
       const cfg = getActiveConfig()
       setActiveLabel(cfg?.label || null)
+      
+      try {
+        const res = await fetch('/api/auth/me')
+        if (res.ok) {
+          const data = await res.json()
+          setRole(data.user?.role || null)
+          
+          if (data.user?.role === 'user' || data.user?.role === 'viewer') {
+            setOptions(data.viewerAccess || [])
+          } else {
+            setOptions(getSavedConfigs())
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch user configuration grants in sidebar:', err)
+      }
     }
-    updateActive()
-    window.addEventListener(ACTIVE_CONFIG_UPDATED_EVENT, updateActive)
-    return () => window.removeEventListener(ACTIVE_CONFIG_UPDATED_EVENT, updateActive)
+    
+    update()
+    window.addEventListener(ACTIVE_CONFIG_UPDATED_EVENT, update)
+    return () => window.removeEventListener(ACTIVE_CONFIG_UPDATED_EVENT, update)
   }, [])
+  
+  const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value
+    if (!val) return
+    
+    const matched = options.find(o => o.label === val)
+    if (matched) {
+      if (role === 'user' || role === 'viewer') {
+        setActiveConfig({
+          label: matched.label,
+          seoSheetId: matched.seoSheetId,
+          leadsSheetId: matched.leadsSheetId,
+          revenueSheetId: matched.revenueSheetId,
+          apiKey: matched.apiKey,
+          createdAt: matched.createdAt,
+          sheetId: matched.seoSheetId || matched.sheetId || ''
+        })
+      } else {
+        setActiveConfig(matched)
+      }
+    }
+  }
+  
   if (!activeLabel) return null
+  
   return (
-    <Link
-      href="/settings"
-      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20 transition-all"
-    >
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20 transition-all w-full relative">
       <Building2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
       <div className="flex-1 overflow-hidden">
         <p className="text-[10px] text-violet-300 uppercase tracking-wider font-bold">Active Source</p>
-        <p className="text-xs text-violet-200 font-semibold truncate">{activeLabel}</p>
+        {options.length > 1 ? (
+          <select
+            value={activeLabel}
+            onChange={handleSelect}
+            className="w-full text-xs text-violet-200 font-semibold bg-transparent border-none outline-none cursor-pointer pr-4 truncate"
+          >
+            {options.map(o => (
+              <option key={o.label} value={o.label} className="bg-slate-900 text-slate-200">
+                {o.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-xs text-violet-200 font-semibold truncate">{activeLabel}</p>
+        )}
       </div>
-    </Link>
+    </div>
   )
 }
 
@@ -371,7 +426,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     isSectionAllowed(sec.id, user?.role || null, activeConfig?.label || null)
   )
 
-  const showSettings = user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'ceo'
+  const showSettings = user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'ceo' || user?.role === 'user'
 
   useEffect(() => {
     const activeSection = navigationSections.find(sec =>
@@ -669,20 +724,15 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         <div className="h-full overflow-y-auto">
           <div className="bg-slate-900 border-r border-slate-800 text-slate-400 flex flex-col min-h-screen">
             {/* re-use header/nav/content from desktop */}
-            <div className={cn(
-              "relative p-6 border-b border-slate-800 flex items-center justify-between",
-              isMounted && isCollapsed && "justify-center p-4"
-            )}>
+            <div className="relative p-6 border-b border-slate-800 flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3 group shrink-0">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/10 transition-transform group-hover:scale-105 shrink-0">
                   <Sparkles className="w-5 h-5 fill-current text-white" />
                 </div>
-                {(!isMounted || !isCollapsed) && (
-                  <div className="flex flex-col">
-                    <h1 className="text-white font-bold leading-none tracking-wide text-base whitespace-nowrap">SEO INTELLIGENCE</h1>
-                    <span className="text-[10px] text-emerald-400 font-semibold tracking-widest uppercase mt-0.5">IT Training Hub</span>
-                  </div>
-                )}
+                <div className="flex flex-col">
+                  <h1 className="text-white font-bold leading-none tracking-wide text-base whitespace-nowrap">SEO INTELLIGENCE</h1>
+                  <span className="text-[10px] text-emerald-400 font-semibold tracking-widest uppercase mt-0.5">IT Training Hub</span>
+                </div>
               </Link>
 
               {mobileOpen && onClose && (
@@ -707,41 +757,19 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
               )}
             </nav>
 
-            <div className={cn("p-4 border-t border-slate-800 text-xs space-y-3", isMounted && isCollapsed && "p-2")}>
-              {(!isMounted || !isCollapsed) && (
-                <>
-                  <ActiveConfigBadge />
-                  <div className="glass-panel-dark px-3 py-2.5 rounded-lg flex items-center gap-2 border border-slate-800/80">
-                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <div className="overflow-hidden">
-                      <p className="text-slate-300 font-medium truncate">Secure Access</p>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">TechLeads IT Dashboard</p>
-                    </div>
-                  </div>
-                </>
-              )}
+            <div className="p-4 border-t border-slate-800 text-xs space-y-3">
+              <ActiveConfigBadge />
+              <div className="glass-panel-dark px-3 py-2.5 rounded-lg flex items-center gap-2 border border-slate-800/80">
+                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                <div className="overflow-hidden">
+                  <p className="text-slate-300 font-medium truncate">Secure Access</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">TechLeads IT Dashboard</p>
+                </div>
+              </div>
 
               <UserMenu collapsed={false} />
 
-              <button
-                onClick={handleToggle}
-                className={cn(
-                  "w-full flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border transition-all duration-150",
-                  isMounted && isCollapsed
-                    ? "justify-center text-slate-400 hover:text-slate-200 bg-slate-800/40 border-slate-800/80 hover:bg-slate-800"
-                    : "text-slate-400 hover:text-slate-200 bg-slate-800/20 border-slate-800/40 hover:bg-slate-800/60"
-                )}
-                title={isMounted && isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-              >
-                {isMounted && isCollapsed
-                  ? <ChevronRight className="w-4.5 h-4.5 text-emerald-400" />
-                  : <ChevronLeft className="w-4.5 h-4.5 text-emerald-400 shrink-0" />}
-                {(!isMounted || !isCollapsed) && <span>Collapse Sidebar</span>}
-              </button>
-
-              {(!isMounted || !isCollapsed) && (
-                <p className="text-center text-[10px] text-slate-600 mt-2">SEO Rankings v2.0.0</p>
-              )}
+              <p className="text-center text-[10px] text-slate-600 mt-2">SEO Rankings v2.0.0</p>
             </div>
           </div>
         </div>

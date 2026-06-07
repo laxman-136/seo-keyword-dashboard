@@ -9,7 +9,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Menu } from 'lucide-react'
 import Sidebar from '@/components/layout/Sidebar'
 import FloatingAdminButton from '@/components/layout/FloatingAdminButton'
-import { clearActiveConfig, setActiveConfig } from '@/lib/config'
+import { clearActiveConfig, setActiveConfig, getActiveConfig } from '@/lib/config'
 import { isSectionAllowed } from '@/lib/auth'
 
 const AUTH_PAGES = ['/login', '/register', '/client-login']
@@ -122,16 +122,21 @@ export default function AuthShell({ children }: Props) {
         const activeLabel = grants[0]?.label || null
 
         if (grants.length > 0 && (user?.role === 'user' || user?.role === 'viewer')) {
-          const grant = grants[0]
-          setActiveConfig({
-            label: grant.label,
-            seoSheetId: grant.seoSheetId,
-            leadsSheetId: grant.leadsSheetId,
-            revenueSheetId: grant.revenueSheetId,
-            apiKey: grant.apiKey,
-            createdAt: grant.createdAt,
-            sheetId: grant.seoSheetId || grant.sheetId || ''
-          })
+          const currentActive = getActiveConfig()
+          const isAlreadyAllowed = currentActive && grants.some((g: any) => g.label === currentActive.label)
+          
+          if (!isAlreadyAllowed) {
+            const grant = grants[0]
+            setActiveConfig({
+              label: grant.label,
+              seoSheetId: grant.seoSheetId,
+              leadsSheetId: grant.leadsSheetId,
+              revenueSheetId: grant.revenueSheetId,
+              apiKey: grant.apiKey,
+              createdAt: grant.createdAt,
+              sheetId: grant.seoSheetId || grant.sheetId || ''
+            })
+          }
         }
 
         // Section access validation
@@ -149,7 +154,7 @@ export default function AuthShell({ children }: Props) {
         } else if (pathname.startsWith('/site-status')) {
           pathSection = 'site'
         } else if (pathname.startsWith('/settings')) {
-          const allowedSettings = role === 'superadmin' || role === 'admin' || role === 'ceo'
+          const allowedSettings = role === 'superadmin' || role === 'admin' || role === 'ceo' || role === 'user'
           if (!allowedSettings) {
             router.replace('/')
             return

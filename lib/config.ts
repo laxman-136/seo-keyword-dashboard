@@ -20,6 +20,8 @@ export interface SheetConfig {
   googleManagerId?: string
   metaPrepaidBalance?: number
   googlePrepaidBalance?: number
+  telecrmApiToken?: string
+  telecrmEnterpriseId?: string
   createdAt: string    // ISO timestamp
   sheetId?: string     // Keep for legacy compatibility
 }
@@ -147,6 +149,8 @@ export function setActiveConfig(config: SheetConfig): void {
   localStorage.setItem('client-google-manager-id', config.googleManagerId || '')
   localStorage.setItem('client-meta-prepaid-balance', String(config.metaPrepaidBalance || ''))
   localStorage.setItem('client-google-prepaid-balance', String(config.googlePrepaidBalance || ''))
+  localStorage.setItem('client-telecrm-api-token', config.telecrmApiToken || '')
+  localStorage.setItem('client-telecrm-enterprise-id', config.telecrmEnterpriseId || '')
   dispatchActiveConfigUpdate()
 }
 
@@ -169,5 +173,7 @@ export function clearActiveConfig(): void {
   localStorage.removeItem('client-google-manager-id')
   localStorage.removeItem('client-meta-prepaid-balance')
   localStorage.removeItem('client-google-prepaid-balance')
+  localStorage.removeItem('client-telecrm-api-token')
+  localStorage.removeItem('client-telecrm-enterprise-id')
   dispatchActiveConfigUpdate()
 }
