@@ -23,7 +23,14 @@ import {
   Eye,
   EyeOff,
   X,
-  Megaphone
+  Megaphone,
+  Clock,
+  TrendingDown,
+  Target,
+  DollarSign,
+  MapPin,
+  Zap,
+  Award
 } from 'lucide-react'
 import { getActiveConfig, ACTIVE_CONFIG_UPDATED_EVENT, setActiveConfig, getSavedConfigs } from '@/lib/config'
 import { cn } from '@/lib/utils'
@@ -406,7 +413,18 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         { label: 'By Course',         href: '/leads/courses',  icon: Layers },
         { label: 'Funnel & Conversion',href: '/leads/funnel',   icon: BarChart2 },
         { label: 'Monthly Trends',     href: '/leads/trends',   icon: BarChart2 },
-        { label: 'Compare & Reports', href: '/leads/compare',  icon: BarChart2 }
+        { label: 'Compare & Reports', href: '/leads/compare',  icon: BarChart2 },
+        { label: '── INTELLIGENCE ──────────', href: '', isHeader: true },
+        { label: 'Lead Decay & Aging', href: '/leads/aging', icon: TrendingDown },
+        { label: 'Response Speed', href: '/leads/response', icon: Clock },
+        { label: 'Demo Conversion Funnel', href: '/leads/demo', icon: Target },
+        { label: 'Revenue Pipeline Value', href: '/leads/pipeline-value', icon: DollarSign },
+        { label: 'Best Time to Call', href: '/leads/best-time', icon: Clock },
+        { label: 'Source Quality Score', href: '/leads/source-quality', icon: Award },
+        { label: 'Course Demand vs Capacity', href: '/leads/course-demand', icon: Layers },
+        { label: 'Geographic Quality', href: '/leads/geography', icon: MapPin },
+        { label: 'Daily Action Dashboard', href: '/leads/daily', icon: Zap },
+        { label: 'Conversion Prediction', href: '/leads/prediction', icon: Sparkles }
       ]
     },
     {
@@ -529,8 +547,18 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         {isOpen && (
           <div className="pl-3.5 ml-4 border-l border-slate-800 space-y-1 mt-1 transition-all duration-200 animate-in fade-in slide-in-from-top-1 duration-150">
             {section.items.map(item => {
+              if ((item as any).isHeader) {
+                return (
+                  <div
+                    key={item.label}
+                    className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pt-3 pb-1 pl-3 select-none"
+                  >
+                    {item.label}
+                  </div>
+                )
+              }
               const isActive = pathname === item.href
-              const Icon = item.icon
+              const Icon = item.icon || Layers
               return (
                 <Link
                   key={item.href}

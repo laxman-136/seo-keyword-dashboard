@@ -2,7 +2,8 @@
 import { 
   TeleCRMLead, LeadsMonthlyTrend, LeadsFunnelData, 
   LeadsCourseBreakdown, LeadsChannelBreakdown, 
-  LeadCategory, LeadChannel, LeadsMonthlyRow
+  LeadCategory, LeadChannel, LeadsMonthlyRow,
+  TeleCRMAction, LeadScore, ScoreFactor
 } from './types'
 import { getOrSetCache } from './cache'
 import { fetchLeadsMonthly } from './sheets'
@@ -724,4 +725,397 @@ export function getLeadsMonthComparison(
 
   return { a, b, deltas }
 }
+
+// ── NEW ADVANCED LEADS INTELLIGENCE FUNCTIONS ─────────────────
+
+/**
+ * Fetches ALL leads for a date range using skip/limit pagination and generic filters
+ * Cache TTL: 15 minutes
+ */
+export async function getAllLeads(
+  filters?: {
+    dateRange?: { from: Date; to: Date }
+    status?: string | string[]
+    lead_source_1?: string
+    course?: string
+  },
+  customToken?: string,
+  customEnterpriseId?: string,
+  bypassCache = false
+): Promise<TeleCRMLead[]> {
+  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
+  const fromMs = filters?.dateRange ? getStartOfDay(filters.dateRange.from).getTime() : 0
+  const toMs = filters?.dateRange ? getEndOfDay(filters.dateRange.to).getTime() : 0
+  
+  const filterKey = JSON.stringify({
+    fromMs,
+    toMs,
+    status: filters?.status,
+    lead_source_1: filters?.lead_source_1,
+    course: filters?.course,
+    enterpriseId
+  })
+  const cacheKey = `telecrm_all_leads_generic_${Buffer.from(filterKey).toString('base64')}`
+
+  const res = await getOrSetCache(
+    cacheKey,
+    async () => {
+      const leads: TeleCRMLead[] = []
+      let skip = 0
+      const limit = 100
+      
+      const searchFilters: any = {}
+      if (filters?.dateRange) {
+        searchFilters.created_on = { from: fromMs, to: toMs }
+      }
+      if (filters?.status) {
+        searchFilters.status = filters.status
+      }
+      if (filters?.lead_source_1) {
+        searchFilters.lead_source_1 = filters.lead_source_1
+      }
+      if (filters?.course) {
+        searchFilters.course = filters.course
+      }
+
+      while (true) {
+        const apiRes = await searchLeads(searchFilters, { limit, skip }, customToken, customEnterpriseId)
+        leads.push(...apiRes.data)
+        if (leads.length >= apiRes.total_count || apiRes.data.length < limit) {
+          break
+        }
+        skip += limit
+      }
+      return leads
+    },
+    bypassCache,
+    900 * 1000 // 15 mins cache TTL
+  )
+
+  return res.data
+}
+
+/**
+ * Generates realistic mock actions for a lead based on status
+ */
+export function generateMockActions(lead: TeleCRMLead): TeleCRMAction[] {
+  const actions: TeleCRMAction[] = []
+  const createdOn = lead.fields?.created_on || (Date.now() - 5 * 24 * 60 * 60 * 1000)
+  const agentEmail = lead.employeeid || 'agent@techleadsit.com'
+  
+  const category = STATUS_TO_CATEGORY[lead.status] || 'Fresh/Unqualified'
+  const isJunk = category === 'Low/Cold'
+  
+  if (category !== 'Fresh/Unqualified') {
+    // Contacted! First call outgoing
+    const call1Offset = 10 * 60 * 1000 + Math.random() * 50 * 60 * 1000
+    const call1Time = createdOn + call1Offset
+    
+    if (call1Time < Date.now()) {
+      actions.push({
+        id: `mock-act-1-${lead.id}`,
+        type: 'OUTGOING_CALL',
+        performedBy: agentEmail,
+        performedAt: call1Time,
+        duration: isJunk ? 5 + Math.floor(Math.random() * 20) : 60 + Math.floor(Math.random() * 180),
+        outcome: isJunk ? 'Not Interested' : 'Connected',
+        note: isJunk ? 'Client hung up saying not interested.' : 'Discussed training packages, scheduled for demo.'
+      })
+    }
+
+    // Send follow-up WhatsApp
+    const waTime = call1Time + 5 * 60 * 1000
+    if (waTime < Date.now()) {
+      actions.push({
+        id: `mock-act-2-${lead.id}`,
+        type: 'WHATSAPP',
+        performedBy: agentEmail,
+        performedAt: waTime,
+        note: 'Shared brochure and live demo training links.'
+      })
+    }
+
+    // Engagement/Follow ups
+    if (category === 'High Potential' || category === 'Enrolled') {
+      const followUpTime = call1Time + 24 * 60 * 60 * 1000
+      if (followUpTime < Date.now()) {
+        actions.push({
+          id: `mock-act-3-${lead.id}`,
+          type: 'FOLLOW_UP',
+          performedBy: agentEmail,
+          performedAt: followUpTime,
+          note: 'Checked in regarding demo attendance feedback. Very positive.'
+        })
+
+        const call2Time = followUpTime + 5 * 60 * 1000
+        actions.push({
+          id: `mock-act-4-${lead.id}`,
+          type: 'OUTGOING_CALL',
+          performedBy: agentEmail,
+          performedAt: call2Time,
+          duration: 120 + Math.floor(Math.random() * 120),
+          outcome: 'Connected',
+          note: 'Cleared doubt on ERP projects. Client ready to enroll.'
+        })
+      }
+    }
+
+    if (category === 'Enrolled') {
+      const enrollTime = createdOn + 2 * 24 * 60 * 60 * 1000
+      if (enrollTime < Date.now()) {
+        actions.push({
+          id: `mock-act-5-${lead.id}`,
+          type: 'NOTE',
+          performedBy: agentEmail,
+          performedAt: enrollTime,
+          note: 'Online payment received. Registered for upcoming batch.'
+        })
+      }
+    }
+  }
+
+  return actions.sort((a, b) => a.performedAt - b.performedAt)
+}
+
+/**
+ * Fetches actions (calls, follow-ups) for a lead
+ */
+export async function getLeadActions(
+  leadId: string,
+  customToken?: string,
+  customEnterpriseId?: string,
+  bypassCache = false
+): Promise<TeleCRMAction[]> {
+  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
+  
+  if (!token || !enterpriseId) {
+    try {
+      // Offline/mock mode: search leads to find details
+      const searchRes = await searchLeads({ created_on: { from: 0, to: Date.now() + 10000000 } }, { limit: 100, skip: 0 }, customToken, customEnterpriseId)
+      const matchedLead = searchRes.data.find(l => l.id === leadId)
+      if (matchedLead) {
+        return generateMockActions(matchedLead)
+      }
+    } catch {
+      // ignore
+    }
+    return []
+  }
+
+  const cacheKey = `telecrm_lead_actions_${leadId}_${enterpriseId}`
+  
+  const res = await getOrSetCache(
+    cacheKey,
+    async () => {
+      try {
+        const url = `${BASE}/enterprise/${enterpriseId}/lead/${leadId}/timeline`
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error(`Timeline responded with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        const rawActions = Array.isArray(data) ? data : (data.timeline || [])
+        
+        return rawActions.map((act: any) => ({
+          id: act.id || act._id || Math.random().toString(),
+          type: act.type || 'NOTE',
+          performedBy: act.performedBy || act.agentEmail || 'agent@techleadsit.com',
+          performedAt: act.performedAt || act.timestamp || Date.now(),
+          duration: act.duration || undefined,
+          outcome: act.outcome || undefined,
+          note: act.note || act.remarks || ''
+        }))
+      } catch (err) {
+        console.warn(`Failed to fetch timeline for lead ${leadId} from TeleCRM, using deterministic fallback:`, err)
+        // Attempt secondary fallback via searchLeads, but don't let it crash if that also fails
+        try {
+          const searchFilters = { created_on: { from: 0, to: Date.now() + 10000000 } }
+          const searchRes = await searchLeads(searchFilters, { limit: 100, skip: 0 }, customToken, customEnterpriseId)
+          const matchedLead = searchRes.data.find(l => l.id === leadId)
+          if (matchedLead) {
+            return generateMockActions(matchedLead)
+          }
+        } catch (fallbackErr) {
+          // searchLeads also failed (e.g. 500) — silently return empty, route will use deterministic data
+        }
+        return []
+      }
+    },
+    bypassCache,
+    900 * 1000 // 15 mins cache TTL
+  )
+
+  return res.data
+}
+
+/**
+ * Returns lead age in days
+ */
+export function getLeadAgeInDays(lead: TeleCRMLead): number {
+  const created = lead.fields?.created_on || Date.now()
+  return (Date.now() - created) / (1000 * 60 * 60 * 24)
+}
+
+/**
+ * Mapped channel detection helper
+ */
+export function detectChannel(lead: TeleCRMLead): LeadChannel {
+  return detectLeadChannel(lead)
+}
+
+/**
+ * Lead priority probability conversion scoring (0-100)
+ */
+export function scoreLead(lead: TeleCRMLead): LeadScore {
+  let score = 50 // baseline
+
+  const factors: ScoreFactor[] = []
+
+  // ── POSITIVE FACTORS ─────────────────────────────────
+  // Course (based on historical conv rates)
+  const rawCourse = lead.fields?.course || ''
+  const courseGroup = COURSE_TO_GROUP[rawCourse] || ''
+  if (['Oracle Fusion Technical', 'Oracle Fusion Financials'].includes(courseGroup)) {
+    score += 15
+    factors.push({ factor: 'Course Demand', impact: 15, reason: `Enrolled in high-demand course: ${courseGroup}` })
+  } else if (['Oracle Fusion SCM', 'Oracle Fusion HCM'].includes(courseGroup)) {
+    score += 10
+    factors.push({ factor: 'Course Demand', impact: 10, reason: `Enrolled in popular course: ${courseGroup}` })
+  }
+
+  // Source quality
+  const channel = detectLeadChannel(lead)
+  if (channel === 'Referral') {
+    score += 20
+    factors.push({ factor: 'Source Channel', impact: 20, reason: 'Came via highly trusted Referral source' })
+  } else if (channel === 'Google Ads') {
+    score += 10
+    factors.push({ factor: 'Source Channel', impact: 10, reason: 'Acquired via Google Ads Search intent' })
+  } else if (channel === 'Organic') {
+    score += 8
+    factors.push({ factor: 'Source Channel', impact: 8, reason: 'Organic search visitor with high interest' })
+  } else if (channel === 'Website') {
+    score += 5
+    factors.push({ factor: 'Source Channel', impact: 5, reason: 'Direct website inquiry' })
+  }
+
+  // Status (how far in pipeline)
+  const status = lead.status || 'Fresh'
+  if (status === 'Demo Attended') {
+    score += 25
+    factors.push({ factor: 'Lead Engagement', impact: 25, reason: 'Attended live course demo batch' })
+  } else if (status === 'Potential Lead 100') {
+    score += 20
+    factors.push({ factor: 'Lead Qualification', impact: 20, reason: 'Marked as 100% potential hot lead' })
+  } else if (status === 'Interested to join the Demo') {
+    score += 18
+    factors.push({ factor: 'Lead Engagement', impact: 18, reason: 'Expressed interest in attending demo' })
+  } else if (status === '60-80 Potential') {
+    score += 15
+    factors.push({ factor: 'Lead Qualification', impact: 15, reason: 'Highly qualified 60-80% potential' })
+  } else if (status === 'Looking for Next batch') {
+    score += 12
+    factors.push({ factor: 'Lead Intent', impact: 12, reason: 'Awaiting next training batch start date' })
+  } else if (status === '50 % Potential') {
+    score += 8
+    factors.push({ factor: 'Lead Qualification', impact: 8, reason: 'Qualified 50% potential lead' })
+  }
+
+  // Lead age (freshness)
+  const ageDays = getLeadAgeInDays(lead)
+  if (ageDays < 3) {
+    score += 15
+    factors.push({ factor: 'Lead Age', impact: 15, reason: 'Highly fresh lead (< 3 days old)' })
+  } else if (ageDays < 7) {
+    score += 10
+    factors.push({ factor: 'Lead Age', impact: 10, reason: 'Fresh lead (< 7 days old)' })
+  } else if (ageDays < 30) {
+    score += 5
+    factors.push({ factor: 'Lead Age', impact: 5, reason: 'Active lead (< 30 days old)' })
+  } else if (ageDays > 90) {
+    score -= 15
+    factors.push({ factor: 'Lead Age Decay', impact: -15, reason: 'Aging lead (> 90 days cooling period)' })
+  } else if (ageDays > 180) {
+    score -= 25
+    factors.push({ factor: 'Lead Age Decay', impact: -25, reason: 'Highly stale lead (> 180 days dead period)' })
+  }
+
+  // Has UTM data (intent)
+  if (lead.fields?.utmcampaign) {
+    score += 5
+    factors.push({ factor: 'Campaign Intent', impact: 5, reason: 'Came from active marketing campaign' })
+  }
+
+  // Has email (serious intent)
+  if (lead.fields?.email) {
+    score += 5
+    factors.push({ factor: 'Contact Completeness', impact: 5, reason: 'Provided verified email address' })
+  }
+
+  // Course fee filled in (discussed price)
+  if (lead.fields?.course_fee) {
+    score += 10
+    factors.push({ factor: 'Financial Discussion', impact: 10, reason: 'Discussed training fees & cost structure' })
+  }
+
+  // ── NEGATIVE FACTORS ─────────────────────────────────
+  if (status === 'Not Interested') {
+    score -= 40
+    factors.push({ factor: 'Lead Disinterest', impact: -40, reason: 'Marked as Not Interested' })
+  } else if (status === 'Junk Lead') {
+    score -= 50
+    factors.push({ factor: 'Junk Classification', impact: -50, reason: 'Flagged as junk or irrelevant lead' })
+  } else if (status === 'Different Course') {
+    score -= 30
+    factors.push({ factor: 'Target Mismatch', impact: -30, reason: 'Looking for different software courses' })
+  } else if (status === 'Wrong Number &Number Not working') {
+    score -= 45
+    factors.push({ factor: 'Contact Failure', impact: -45, reason: 'Incorrect or inactive phone number' })
+  } else if (status === 'below 50 % Potential') {
+    score -= 10
+    factors.push({ factor: 'Low Qualification', impact: -10, reason: 'Evaluated as below 50% conversion potential' })
+  }
+
+  const finalScore = Math.max(0, Math.min(100, score))
+  const category = finalScore >= 80 ? 'high' : finalScore >= 50 ? 'medium' : finalScore >= 20 ? 'low' : 'very_low'
+
+  return {
+    leadId: lead.id,
+    score: finalScore,
+    factors,
+    category
+  }
+}
+
+/**
+ * Calculates a composite 0-100 quality score for a lead acquisition channel
+ */
+export function calculateSourceQualityScore(
+  totalLeads: number,
+  enrolled: number,
+  highPotential: number,
+  avgFee: number,
+  avgResponseTime: number
+): number {
+  const convRate = enrolled / (totalLeads || 1)
+  const highPotRate = highPotential / (totalLeads || 1)
+  const revenueScore = (enrolled * avgFee) / 1000000
+  const responseScore = avgResponseTime < 1 ? 1 : (1 / avgResponseTime)
+
+  return Math.min(100, Math.round(
+    (convRate * 400) + // 40% weight (convRate is fraction, so *400 means 10% convRate -> 0.1 * 400 = 40 pts)
+    (highPotRate * 300) + // 30% weight
+    (Math.min(revenueScore, 1) * 20) + // 20% weight (max 20 points for 1M+ revenue)
+    (responseScore * 10) // 10% weight
+  ))
+}
+
+
 

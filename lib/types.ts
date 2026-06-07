@@ -1001,3 +1001,57 @@ export interface LiveLeadsKPI {
   dataSource: 'telecrm'
 }
 
+export interface TeleCRMAction {
+  id: string
+  type: 'OUTGOING_CALL' | 'INCOMING_CALL' | 'FOLLOW_UP' | 'NOTE' | 'WHATSAPP' | 'EMAIL'
+  performedBy: string        // agent email
+  performedAt: number        // Unix ms timestamp
+  duration?: number          // call duration in seconds
+  outcome?: string           // call outcome
+  note?: string
+}
+
+export interface ScoreFactor {
+  factor: string
+  impact: number    // positive or negative
+  reason: string
+}
+
+export interface LeadScore {
+  leadId: string
+  score: number
+  category: 'high' | 'medium' | 'low' | 'very_low'
+  factors: ScoreFactor[]
+}
+
+export interface LeadResponseData {
+  leadId: string
+  createdOn: number
+  firstContactAt: number | null
+  responseTimeHours: number | null
+  responseCategory: 'under_1h' | '1_4h' | '4_24h' | 'over_24h' | 'never'
+  channel: LeadChannel
+  status: string
+  isEnrolled: boolean
+  assignedAgent: string
+}
+
+export interface PipelineValue {
+  category: LeadCategory
+  count: number
+  avgFee: number
+  totalValue: number           // count × avgFee
+  convRate: number             // historical conv rate for this category
+  expectedValue: number        // totalValue × convRate
+  weightedValue: number        // conservative estimate
+}
+
+export interface AgeBucket {
+  label: string
+  min: number
+  max: number
+  action: string
+  color: string
+}
+
+
