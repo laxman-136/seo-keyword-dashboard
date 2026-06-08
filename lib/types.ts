@@ -1054,4 +1054,125 @@ export interface AgeBucket {
   color: string
 }
 
+// ── GA4 ANALYTICS TYPES ─────────────────────────────────────
+
+export interface GA4Overview {
+  sessions: number
+  totalUsers: number
+  newUsers: number
+  returningUsers: number
+  bounceRate: number
+  avgSessionDuration: number
+  pageViews: number
+  conversions: number
+  conversionRate: number
+  prevSessions: number
+  prevConversions: number
+  prevBounceRate: number
+  sessionsDelta?: number
+  conversionsDelta?: number
+  bounceRateDelta?: number
+}
+
+export interface GA4TrafficSource {
+  channelGroup: string
+  source: string
+  medium: string
+  sessions: number
+  users: number
+  newUsers: number
+  bounceRate: number
+  avgSessionDuration: number
+  conversions: number
+  conversionRate: number
+  shareOfSessions: number
+}
+
+export interface GA4LandingPage {
+  pagePath: string
+  pageTitle: string
+  sessions: number
+  users: number
+  bounceRate: number
+  avgSessionDuration: number
+  conversions: number
+  conversionRate: number
+  engagedSessions: number
+  engagementRate: number
+  courseGroup: string | null
+  isCoursePage: boolean
+}
+
+export interface GA4PagePath {
+  pagePath: string
+  pageTitle: string
+  pageViews: number
+  users: number
+  avgTimeOnPage: number
+  bounceRate: number
+  exits: number
+  exitRate: number
+}
+
+export interface GA4DeviceData {
+  device: string
+  sessions: number
+  users: number
+  bounceRate: number
+  conversions: number
+  conversionRate: number
+  avgSessionDuration: number
+}
+
+export interface GA4GeoData {
+  city: string
+  region: string
+  sessions: number
+  users: number
+  conversions: number
+  conversionRate: number
+}
+
+export interface GA4ConversionData {
+  eventName: string
+  channelGroup: string
+  eventCount: number
+  users: number
+  conversionRate: number
+}
+
+export interface GA4DailyPoint {
+  date: string
+  sessions: number
+  users: number
+  newUsers: number
+  conversions: number
+  bounceRate: number
+}
+
+export interface GA4SourceLandingRow {
+  channelGroup: string
+  landingPage: string
+  sessions: number
+  conversions: number
+  bounceRate: number
+  conversionRate: number
+}
+
+export interface GA4ReturningData {
+  newUserSessions: number
+  returningUserSessions: number
+  newUserConversions: number
+  returningUserConversions: number
+  newUserConvRate: number
+  returningUserConvRate: number
+  byChannel: Array<{
+    channel: string
+    newSessions: number
+    returningSessions: number
+    newConversions: number
+    returningConversions: number
+  }>
+}
+
 

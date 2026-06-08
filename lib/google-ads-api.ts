@@ -743,3 +743,466 @@ export async function fetchGoogleAds(
     return getMockGoogleAds(adGroupId, dateRange.from, dateRange.to)
   }
 }
+
+// ── GOOGLE TARGETING EXPLORER FETCHERS & MOCKS ──────────────────
+
+export interface GoogleAdGroupTargeting {
+  keywords: string[]
+  ageRanges: string[]
+  genders: string[]
+  placements: string[]
+}
+
+function formatAgeRange(type: string | number): string {
+  if (type === undefined || type === null) return ''
+  if (typeof type === 'number') {
+    const numMap: Record<number, string> = {
+      2: '18-24',
+      3: '25-34',
+      4: '35-44',
+      5: '45-54',
+      6: '55-64',
+      7: '65+',
+      8: 'Unknown Age'
+    }
+    return numMap[type] || ''
+  }
+  const clean = type.replace('AGE_RANGE_', '')
+  if (clean === '65_UP') return '65+'
+  if (clean === 'UNDETERMINED') return 'Unknown Age'
+  return clean.replace('_', '-')
+}
+
+function formatGender(type: string | number): string {
+  if (type === undefined || type === null) return ''
+  if (typeof type === 'number') {
+    const numMap: Record<number, string> = {
+      2: 'Male',
+      3: 'Female',
+      4: 'Unknown Gender'
+    }
+    return numMap[type] || ''
+  }
+  if (type === 'MALE') return 'Male'
+  if (type === 'FEMALE') return 'Female'
+  if (type === 'UNDETERMINED') return 'Unknown Gender'
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
+}
+
+function getMockGoogleTargetingExplorer() {
+  return [
+    {
+      id: 'gg_camp_1',
+      name: 'HCM Search Campaign',
+      status: 'ENABLED',
+      type: 'SEARCH',
+      biddingStrategy: 'TARGET_CPA',
+      budget: 3000,
+      adGroups: [
+        {
+          id: 'gg_adgroup_1a',
+          name: 'Oracle HCM Training - Exact Match',
+          status: 'ENABLED',
+          targetingSummary: 'Keywords: oracle hcm cloud training, oracle hcm online certification',
+          targeting: {
+            keywords: ['oracle hcm cloud training', 'oracle hcm online certification', 'oracle fusion hcm course online', 'oracle cloud hcm certification cost', 'oracle hcm learning subscription'],
+            ageRanges: ['22-34', '35-44', '45-54'],
+            genders: ['Male', 'Female'],
+            placements: []
+          },
+          ads: [
+            {
+              id: 'gg_ad_1',
+              name: 'Responsive Search Ad 1',
+              status: 'ENABLED',
+              headlines: ['Oracle HCM Cloud Training', 'Oracle Fusion HCM Course', 'Job Placement Support'],
+              descriptions: ['Get certified in Oracle Fusion HCM. Live interactive online training by ERP experts.', 'Enroll today for flat 20% discount.']
+            }
+          ]
+        },
+        {
+          id: 'gg_adgroup_1b',
+          name: 'Oracle HCM Online Course - Phrase Match',
+          status: 'ENABLED',
+          targetingSummary: 'Keywords: learn oracle fusion hcm',
+          targeting: {
+            keywords: ['learn oracle fusion hcm', 'oracle fusion hcm technical training', 'oracle hcm technical online classes', 'oracle hcm cloud tutorial for beginners'],
+            ageRanges: ['25-34', '35-44'],
+            genders: ['Male', 'Female'],
+            placements: []
+          },
+          ads: [
+            {
+              id: 'gg_ad_2',
+              name: 'Responsive Search Ad 2',
+              status: 'ENABLED',
+              headlines: ['ERP Technical Online Classes', 'BIP Reports and OTBI Guide', 'Learn HDL & HCM Extracts'],
+              descriptions: ['Master Oracle Technical Cloud. Join top SCM/HCM technical functional modules course.']
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'gg_camp_2',
+      name: 'SCM Performance Max',
+      status: 'ENABLED',
+      type: 'PERFORMANCE_MAX',
+      biddingStrategy: 'MAXIMIZE_CONVERSIONS',
+      budget: 2000,
+      adGroups: [
+        {
+          id: 'gg_adgroup_2a',
+          name: 'SCM Performance Asset Group',
+          status: 'ENABLED',
+          targetingSummary: 'Audience Signal: Supply Chain Intent, Custom Segments',
+          targeting: {
+            keywords: ['supply chain management', 'scm certification online', 'logistics management training', 'oracle scm cloud tutorial'],
+            ageRanges: ['25-34', '35-44', '45-54'],
+            genders: ['Male', 'Female'],
+            placements: ['YouTube Video Placements', 'Gmail Ads', 'Google Display Network']
+          },
+          ads: [
+            {
+              id: 'gg_ad_3',
+              name: 'PMax Asset Group Ad',
+              status: 'ENABLED',
+              headlines: ['Oracle SCM Training Course', 'Master Fusion Supply Chain'],
+              descriptions: ['Hands-on Oracle SCM certification classes. Industry expert trainers.']
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+export interface GoogleTargetingExplorerCampaign {
+  id: string
+  name: string
+  status: string
+  type: string
+  biddingStrategy: string
+  budget: number
+  adGroups: {
+    id: string
+    name: string
+    status: string
+    targetingSummary: string
+    targeting: GoogleAdGroupTargeting
+    ads: {
+      id: string
+      name: string
+      status: string
+      headlines: string[]
+      descriptions: string[]
+    }[]
+  }[]
+}
+
+export async function fetchGoogleTargetingExplorer(
+  customDevToken?: string,
+  customClientId?: string,
+  customClientSecret?: string,
+  customRefreshToken?: string,
+  customCustomerId?: string,
+  customManagerId?: string
+): Promise<GoogleTargetingExplorerCampaign[]> {
+  if (!hasGoogleCredentials(customDevToken, customClientId, customClientSecret, customRefreshToken, customCustomerId)) {
+    return getMockGoogleTargetingExplorer()
+  }
+
+  try {
+    const customer = await getGoogleAdsClient(customDevToken, customClientId, customClientSecret, customRefreshToken, customCustomerId, customManagerId)
+    
+    // 1. Fetch campaigns
+    const campaignsQuery = `
+      SELECT
+        campaign.id,
+        campaign.name,
+        campaign.status,
+        campaign.advertising_channel_type,
+        campaign.bidding_strategy_type,
+        campaign_budget.amount_micros
+      FROM campaign
+      WHERE campaign.status IN ('ENABLED', 'PAUSED')
+    `
+    const campRows = await customer.query(campaignsQuery)
+
+    // 2. Fetch all ad groups
+    const adGroupsQuery = `
+      SELECT
+        ad_group.id,
+        ad_group.name,
+        ad_group.status,
+        ad_group.type,
+        campaign.id
+      FROM ad_group
+      WHERE campaign.status IN ('ENABLED', 'PAUSED') AND ad_group.status IN ('ENABLED', 'PAUSED')
+    `
+    const adGroupRows = await customer.query(adGroupsQuery)
+
+    // 3. Fetch all targeting criteria (keywords, ages, genders, placements)
+    const criteriaQuery = `
+      SELECT
+        ad_group_criterion.type,
+        ad_group_criterion.keyword.text,
+        ad_group_criterion.age_range.type,
+        ad_group_criterion.gender.type,
+        ad_group_criterion.placement.url,
+        ad_group_criterion.status,
+        ad_group.id
+      FROM ad_group_criterion
+      WHERE ad_group_criterion.type IN ('KEYWORD', 'AGE_RANGE', 'GENDER', 'PLACEMENT')
+        AND ad_group_criterion.status = 'ENABLED'
+    `
+    
+    const targetingMap: Record<string, GoogleAdGroupTargeting> = {}
+    try {
+      const critRows = await customer.query(criteriaQuery)
+      critRows.forEach((row: any) => {
+        const adGroupId = String(row.ad_group?.id || '')
+        if (adGroupId) {
+          if (!targetingMap[adGroupId]) {
+            targetingMap[adGroupId] = {
+              keywords: [],
+              ageRanges: [],
+              genders: [],
+              placements: []
+            }
+          }
+          const critType = row.ad_group_criterion?.type
+          
+          if (critType === 'KEYWORD' || row.ad_group_criterion?.keyword?.text) {
+            const text = row.ad_group_criterion?.keyword?.text
+            if (text) targetingMap[adGroupId].keywords.push(text)
+          } else if (critType === 'AGE_RANGE' || row.ad_group_criterion?.age_range?.type) {
+            const rawAge = row.ad_group_criterion?.age_range?.type
+            if (rawAge) {
+              const formatted = formatAgeRange(rawAge)
+              if (formatted) targetingMap[adGroupId].ageRanges.push(formatted)
+            }
+          } else if (critType === 'GENDER' || row.ad_group_criterion?.gender?.type) {
+            const rawGender = row.ad_group_criterion?.gender?.type
+            if (rawGender) {
+              const formatted = formatGender(rawGender)
+              if (formatted) targetingMap[adGroupId].genders.push(formatted)
+            }
+          } else if (critType === 'PLACEMENT' || row.ad_group_criterion?.placement?.url) {
+            const url = row.ad_group_criterion?.placement?.url
+            if (url) targetingMap[adGroupId].placements.push(url)
+          }
+        }
+      })
+    } catch (e) {
+      console.warn('Failed to query Google Ads targeting criteria:', e)
+    }
+
+    // 4. Fetch all ads
+    const adsQuery = `
+      SELECT
+        ad_group_ad.ad.id,
+        ad_group_ad.ad.type,
+        ad_group_ad.status,
+        ad_group_ad.ad.responsive_search_ad.headlines,
+        ad_group_ad.ad.responsive_search_ad.descriptions,
+        ad_group.id
+      FROM ad_group_ad
+      WHERE campaign.status IN ('ENABLED', 'PAUSED') AND ad_group_ad.status IN ('ENABLED', 'PAUSED')
+    `
+    const adRows = await customer.query(adsQuery)
+
+    // Group ads by ad group ID
+    const adsByAdGroup: Record<string, any[]> = {}
+    adRows.forEach((r: any) => {
+      const adGroupId = String(r.ad_group?.id || '')
+      if (adGroupId) {
+        if (!adsByAdGroup[adGroupId]) adsByAdGroup[adGroupId] = []
+        
+        const headlines = (r.ad_group_ad?.ad?.responsive_search_ad?.headlines || [])
+          .map((h: any) => h.text)
+          .filter(Boolean)
+          
+        const descriptions = (r.ad_group_ad?.ad?.responsive_search_ad?.descriptions || [])
+          .map((d: any) => d.text)
+          .filter(Boolean)
+
+        adsByAdGroup[adGroupId].push({
+          id: String(r.ad_group_ad?.ad?.id || ''),
+          name: headlines[0] || r.ad_group_ad?.ad?.type || 'Search Ad',
+          status: mapAdGroupStatus(r.ad_group_ad?.status),
+          headlines,
+          descriptions
+        })
+      }
+    })
+
+    // Group ad groups by campaign ID
+    const adGroupsByCampaign: Record<string, any[]> = {}
+    adGroupRows.forEach((r: any) => {
+      const campaignId = String(r.campaign?.id || '')
+      if (campaignId) {
+        if (!adGroupsByCampaign[campaignId]) adGroupsByCampaign[campaignId] = []
+        
+        const adGroupId = String(r.ad_group?.id || '')
+        const targeting = targetingMap[adGroupId] || {
+          keywords: [],
+          ageRanges: [],
+          genders: [],
+          placements: []
+        }
+        
+        const kws = targeting.keywords
+        const targetingSummary = kws.length > 0
+          ? `Keywords: ${kws.slice(0, 5).join(', ')}${kws.length > 5 ? '...' : ''}`
+          : r.ad_group?.type === 'SEARCH_STANDARD' ? 'Keywords targeting' : 'Audience Expansion targeting'
+
+        adGroupsByCampaign[campaignId].push({
+          id: adGroupId,
+          name: r.ad_group?.name || 'Ad Group',
+          status: mapAdGroupStatus(r.ad_group?.status),
+          targetingSummary,
+          targeting,
+          ads: adsByAdGroup[adGroupId] || []
+        })
+      }
+    })
+
+    // Construct final tree
+    const result: GoogleTargetingExplorerCampaign[] = campRows.map((r: any) => {
+      const campaignId = String(r.campaign?.id || '')
+      const budget = microsToCurrency(r.campaign_budget?.amount_micros || 0)
+      
+      return {
+        id: campaignId,
+        name: r.campaign?.name || 'Campaign',
+        status: mapCampaignStatus(r.campaign?.status),
+        type: mapAdvertisingChannelType(r.campaign?.advertising_channel_type),
+        biddingStrategy: r.campaign?.bidding_strategy_type || 'MAXIMIZE_CONVERSIONS',
+        budget,
+        adGroups: adGroupsByCampaign[campaignId] || []
+      }
+    })
+
+    return result
+  } catch (err) {
+    console.error('Failed to fetch Google Targeting Explorer, using fallback:', err)
+    return getMockGoogleTargetingExplorer()
+  }
+}
+
+export async function fetchGoogleAdsWithInsights(
+  dateRange: DateRange,
+  customDevToken?: string,
+  customClientId?: string,
+  customClientSecret?: string,
+  customRefreshToken?: string,
+  customCustomerId?: string,
+  customManagerId?: string
+): Promise<any[]> {
+  if (!hasGoogleCredentials(customDevToken, customClientId, customClientSecret, customRefreshToken, customCustomerId)) {
+    // Return mock ads with mock insights
+    return [
+      {
+        id: 'gg_ad_1',
+        name: 'Responsive Search Ad 1',
+        status: 'ENABLED',
+        headlines: ['Oracle HCM Cloud Training', 'Oracle Fusion HCM Course', 'Job Placement Support'],
+        descriptions: ['Get certified in Oracle Fusion HCM. Live interactive online training by ERP experts.', 'Enroll today for flat 20% discount.'],
+        campaignName: 'HCM Search Campaign',
+        adGroupName: 'Oracle HCM Training - Exact Match',
+        spend: 38000,
+        impressions: 22000,
+        clicks: 1800,
+        ctr: 8.18,
+        cpc: 21.11,
+        conversions: 160
+      },
+      {
+        id: 'gg_ad_2',
+        name: 'Responsive Search Ad 2',
+        status: 'ENABLED',
+        headlines: ['ERP Technical Online Classes', 'BIP Reports and OTBI Guide', 'Learn HDL & HCM Extracts'],
+        descriptions: ['Master Oracle Technical Cloud. Join top SCM/HCM technical functional modules course.'],
+        campaignName: 'HCM Search Campaign',
+        adGroupName: 'Oracle HCM Online Course - Phrase Match',
+        spend: 21000,
+        impressions: 14000,
+        clicks: 920,
+        ctr: 6.57,
+        cpc: 22.82,
+        conversions: 75
+      },
+      {
+        id: 'gg_ad_3',
+        name: 'PMax Asset Group Ad',
+        status: 'ENABLED',
+        headlines: ['Oracle SCM Training Course', 'Master Fusion Supply Chain'],
+        descriptions: ['Hands-on Oracle SCM certification classes. Industry expert trainers.'],
+        campaignName: 'SCM Performance Max',
+        adGroupName: 'SCM Performance Asset Group',
+        spend: 49000,
+        impressions: 85000,
+        clicks: 4300,
+        ctr: 5.05,
+        cpc: 11.39,
+        conversions: 280
+      }
+    ]
+  }
+
+  try {
+    const customer = await getGoogleAdsClient(customDevToken, customClientId, customClientSecret, customRefreshToken, customCustomerId, customManagerId)
+    
+    const query = `
+      SELECT
+        ad_group_ad.ad.id,
+        ad_group_ad.ad.type,
+        ad_group_ad.status,
+        ad_group_ad.ad.responsive_search_ad.headlines,
+        ad_group_ad.ad.responsive_search_ad.descriptions,
+        campaign.name,
+        ad_group.name,
+        metrics.cost_micros,
+        metrics.impressions,
+        metrics.clicks,
+        metrics.ctr,
+        metrics.average_cpc,
+        metrics.conversions
+      FROM ad_group_ad
+      WHERE campaign.status IN ('ENABLED', 'PAUSED') AND ad_group_ad.status IN ('ENABLED', 'PAUSED')
+        AND segments.date BETWEEN '${dateRange.from}' AND '${dateRange.to}'
+      LIMIT 100
+    `
+    const rows = await customer.query(query)
+
+    return rows.map((r: any) => {
+      const spend = microsToCurrency(r.metrics?.cost_micros || 0)
+      const headlines = (r.ad_group_ad?.ad?.responsive_search_ad?.headlines || [])
+        .map((h: any) => h.text)
+        .filter(Boolean)
+      const descriptions = (r.ad_group_ad?.ad?.responsive_search_ad?.descriptions || [])
+        .map((d: any) => d.text)
+        .filter(Boolean)
+
+      return {
+        id: String(r.ad_group_ad?.ad?.id || ''),
+        name: headlines[0] || r.ad_group_ad?.ad?.type || 'Search Ad',
+        status: r.ad_group_ad?.status || 'ENABLED',
+        headlines,
+        descriptions,
+        campaignName: r.campaign?.name || 'Campaign',
+        adGroupName: r.ad_group?.name || 'Ad Group',
+        spend,
+        impressions: Number(r.metrics?.impressions || 0),
+        clicks: Number(r.metrics?.clicks || 0),
+        ctr: Number(r.metrics?.ctr || 0) * 100,
+        cpc: microsToCurrency(r.metrics?.average_cpc || 0),
+        conversions: Number(r.metrics?.conversions || 0)
+      }
+    })
+  } catch (err) {
+    console.error('Failed to fetch Google Ads with insights, using fallback:', err)
+    return []
+  }
+}

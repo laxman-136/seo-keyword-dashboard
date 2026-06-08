@@ -393,3 +393,486 @@ export async function fetchMetaDailyTrend(
     return getMockMetaDailyTrend(dateRange.from, dateRange.to)
   }
 }
+
+// ── TARGETING EXPLORER FORMATTERS & FETCHERS ───────────────────
+
+export interface MetaAdSetTargeting {
+  locations: string[]
+  age: string
+  genders: string[]
+  interests: string[]
+  behaviors: string[]
+  demographics: string[]
+  exclusions: string[]
+  customAudiences: string[]
+  excludedCustomAudiences: string[]
+  placements: string[]
+  devices: string[]
+}
+
+function getDetailedTargeting(targeting: any): MetaAdSetTargeting {
+  const result: MetaAdSetTargeting = {
+    locations: [],
+    age: '18-65+',
+    genders: [],
+    interests: [],
+    behaviors: [],
+    demographics: [],
+    exclusions: [],
+    customAudiences: [],
+    excludedCustomAudiences: [],
+    placements: [],
+    devices: []
+  }
+
+  if (!targeting) return result
+
+  // Locations
+  if (targeting.geo_locations) {
+    const countries = targeting.geo_locations.countries || []
+    const regions = (targeting.geo_locations.regions || []).map((r: any) => r.name)
+    const cities = (targeting.geo_locations.cities || []).map((c: any) => c.name)
+    const zips = (targeting.geo_locations.zips || []).map((z: any) => z.name)
+    result.locations = [...countries, ...regions, ...cities, ...zips].filter(Boolean)
+  }
+
+  // Age
+  const ageMin = targeting.age_min || 18
+  const ageMax = targeting.age_max ? `${targeting.age_max}` : '65+'
+  result.age = `${ageMin}-${ageMax}`
+
+  // Genders
+  if (targeting.genders && Array.isArray(targeting.genders)) {
+    result.genders = targeting.genders.map((g: number) => g === 1 ? 'Male' : 'Female')
+  } else {
+    result.genders = ['All Genders']
+  }
+
+  // Placements
+  if (targeting.publisher_platforms && Array.isArray(targeting.publisher_platforms)) {
+    result.placements = targeting.publisher_platforms.map((p: string) => {
+      const map: Record<string, string> = {
+        facebook: 'Facebook',
+        instagram: 'Instagram',
+        audience_network: 'Audience Network',
+        messenger: 'Messenger'
+      }
+      return map[p] || p
+    })
+  }
+
+  // Devices
+  if (targeting.device_platforms && Array.isArray(targeting.device_platforms)) {
+    result.devices = targeting.device_platforms.map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
+  }
+
+  // Detailed targeting (interests, behaviors, demographics)
+  if (targeting.flexible_spec && Array.isArray(targeting.flexible_spec)) {
+    targeting.flexible_spec.forEach((spec: any) => {
+      if (spec.interests && Array.isArray(spec.interests)) {
+        spec.interests.forEach((item: any) => {
+          if (item.name) result.interests.push(item.name)
+        })
+      }
+      if (spec.behaviors && Array.isArray(spec.behaviors)) {
+        spec.behaviors.forEach((item: any) => {
+          if (item.name) result.behaviors.push(item.name)
+        })
+      }
+      if (spec.demographics && Array.isArray(spec.demographics)) {
+        spec.demographics.forEach((item: any) => {
+          if (item.name) result.demographics.push(item.name)
+        })
+      }
+    })
+  }
+
+  // Exclusions
+  if (targeting.exclusions) {
+    const exList: string[] = []
+    if (Array.isArray(targeting.exclusions)) {
+      targeting.exclusions.forEach((spec: any) => {
+        if (spec.interests && Array.isArray(spec.interests)) {
+          spec.interests.forEach((item: any) => { if (item.name) exList.push(item.name) })
+        }
+        if (spec.behaviors && Array.isArray(spec.behaviors)) {
+          spec.behaviors.forEach((item: any) => { if (item.name) exList.push(item.name) })
+        }
+      })
+    } else if (targeting.exclusions.flexible_spec && Array.isArray(targeting.exclusions.flexible_spec)) {
+      targeting.exclusions.flexible_spec.forEach((spec: any) => {
+        if (spec.interests && Array.isArray(spec.interests)) {
+          spec.interests.forEach((item: any) => { if (item.name) exList.push(item.name) })
+        }
+        if (spec.behaviors && Array.isArray(spec.behaviors)) {
+          spec.behaviors.forEach((item: any) => { if (item.name) exList.push(item.name) })
+        }
+      })
+    }
+    result.exclusions = exList
+  }
+
+  // Custom Audiences
+  if (targeting.custom_audiences && Array.isArray(targeting.custom_audiences)) {
+    result.customAudiences = targeting.custom_audiences.map((ca: any) => ca.name || 'Custom Audience').filter(Boolean)
+  }
+
+  // Excluded Custom Audiences
+  if (targeting.excluded_custom_audiences && Array.isArray(targeting.excluded_custom_audiences)) {
+    result.excludedCustomAudiences = targeting.excluded_custom_audiences.map((ca: any) => ca.name || 'Custom Audience').filter(Boolean)
+  }
+
+  return result
+}
+
+function getMockMetaTargetingExplorer() {
+  return [
+    {
+      id: 'meta_camp_1',
+      name: 'SCM Lead Gen Campaign',
+      status: 'ACTIVE',
+      objective: 'LEADS',
+      budgetType: 'CBO' as const,
+      budget: 2000,
+      adsets: [
+        {
+          id: 'meta_adset_1a',
+          name: 'SCM Broad - IT Professionals Interest',
+          status: 'ACTIVE',
+          targeting: {
+            locations: ['India'],
+            age: '22-45',
+            genders: ['All Genders'],
+            interests: ['Supply Chain Management', 'Enterprise Resource Planning (ERP)', 'SAP ERP', 'Oracle SCM Cloud'],
+            behaviors: ['Business Decision Makers'],
+            demographics: ['IT & Technical Services (Industries)'],
+            exclusions: ['Current Enrolled Students'],
+            customAudiences: [],
+            excludedCustomAudiences: [],
+            placements: ['Facebook Feed', 'Instagram Reels', 'Audience Network'],
+            devices: ['Mobile', 'Desktop']
+          },
+          ads: [
+            {
+              id: 'meta_ad_1a_1',
+              name: 'SCM Course Benefit List - Image Creative',
+              status: 'ACTIVE',
+              creativeType: 'image' as const,
+              thumbnailUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&q=80'
+            },
+            {
+              id: 'meta_ad_1a_2',
+              name: 'SCM Job Placement Guarantee - Video Ad',
+              status: 'ACTIVE',
+              creativeType: 'video' as const,
+              thumbnailUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&q=80'
+            }
+          ]
+        },
+        {
+          id: 'meta_adset_1b',
+          name: 'SCM Lookalike Audience 2%',
+          status: 'ACTIVE',
+          targeting: {
+            locations: ['India'],
+            age: '24-40',
+            genders: ['All Genders'],
+            interests: [],
+            behaviors: [],
+            demographics: [],
+            exclusions: [],
+            customAudiences: ['Lookalike (IN, 2%) - SCM Website Leads'],
+            excludedCustomAudiences: ['Existing Contacts CRM'],
+            placements: ['Facebook Feed', 'Instagram Stories'],
+            devices: ['Mobile']
+          },
+          ads: [
+            {
+              id: 'meta_ad_generic_1',
+              name: 'Creative Ad Variation A (Image)',
+              status: 'ACTIVE',
+              creativeType: 'image' as const,
+              thumbnailUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&q=80'
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'meta_camp_2',
+      name: 'Financials Brand Awareness',
+      status: 'ACTIVE',
+      objective: 'OUTCOME_AWARENESS',
+      budgetType: 'ABO' as const,
+      budget: 1500,
+      adsets: [
+        {
+          id: 'meta_adset_generic_1',
+          name: 'Financials Core - Accountants',
+          status: 'ACTIVE',
+          targeting: {
+            locations: ['India'],
+            age: '25-50',
+            genders: ['All Genders'],
+            interests: ['Finance', 'Accounting', 'Certified Public Accountant (CPA)', 'Oracle Financials'],
+            behaviors: [],
+            demographics: ['Finance & Accounting (Industries)'],
+            exclusions: [],
+            customAudiences: [],
+            excludedCustomAudiences: [],
+            placements: ['Facebook Feed', 'Messenger Inbox'],
+            devices: ['Mobile', 'Desktop']
+          },
+          ads: [
+            {
+              id: 'meta_ad_generic_2',
+              name: 'Financials Brochure Ad',
+              status: 'ACTIVE',
+              creativeType: 'image' as const,
+              thumbnailUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&q=80'
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'meta_camp_3',
+      name: 'HCM Lookalike Conversions',
+      status: 'ACTIVE',
+      objective: 'CONVERSIONS',
+      budgetType: 'CBO' as const,
+      budget: 1500,
+      adsets: [
+        {
+          id: 'meta_adset_generic_2',
+          name: 'HCM Lookalike 1%',
+          status: 'ACTIVE',
+          targeting: {
+            locations: ['India'],
+            age: '22-45',
+            genders: ['All Genders'],
+            interests: [],
+            behaviors: [],
+            demographics: [],
+            exclusions: [],
+            customAudiences: ['Lookalike (IN, 1%) - HCM Leads'],
+            excludedCustomAudiences: ['Converted Students list'],
+            placements: ['Instagram Feed', 'Instagram Reels'],
+            devices: ['Mobile']
+          },
+          ads: [
+            {
+              id: 'meta_ad_generic_3',
+              name: 'HCM Video Demo',
+              status: 'ACTIVE',
+              creativeType: 'video' as const,
+              thumbnailUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&q=80'
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+export interface MetaTargetingExplorerCampaign {
+  id: string
+  name: string
+  status: string
+  objective: string
+  budgetType: 'CBO' | 'ABO'
+  budget: number
+  adsets: {
+    id: string
+    name: string
+    status: string
+    targeting: MetaAdSetTargeting
+    ads: {
+      id: string
+      name: string
+      status: string
+      creativeType: 'image' | 'video' | 'carousel' | 'slideshow' | 'other'
+      thumbnailUrl: string | null
+    }[]
+  }[]
+}
+
+export async function fetchMetaTargetingExplorer(
+  customAccountId?: string,
+  customToken?: string
+): Promise<MetaTargetingExplorerCampaign[]> {
+  const { accountId, token } = getCredentials(customAccountId, customToken)
+  if (!hasCredentials(customAccountId, customToken)) {
+    return getMockMetaTargetingExplorer()
+  }
+
+  try {
+    // Fetch campaigns, adsets, and ads in parallel
+    const campaignsUrl = `${META_BASE}/${accountId}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget&limit=100`
+    const adsetsUrl = `${META_BASE}/${accountId}/adsets?fields=id,name,status,campaign_id,targeting,daily_budget,publisher_platforms,device_platforms&limit=250`
+    const adsUrl = `${META_BASE}/${accountId}/ads?fields=id,name,status,adset_id,creative{object_type,thumbnail_url}&limit=500`
+
+    const [campaignsJson, adsetsJson, adsJson] = await Promise.all([
+      safeMetaRequest(campaignsUrl, token!),
+      safeMetaRequest(adsetsUrl, token!),
+      safeMetaRequest(adsUrl, token!)
+    ])
+
+    const campaignsList = campaignsJson.data || []
+    const adsetsList = adsetsJson.data || []
+    const adsList = adsJson.data || []
+
+    // Group ads by adset_id
+    const adsByAdset: Record<string, any[]> = {}
+    adsList.forEach((ad: any) => {
+      const adsetId = ad.adset_id
+      if (adsetId) {
+        if (!adsByAdset[adsetId]) adsByAdset[adsetId] = []
+        adsByAdset[adsetId].push({
+          id: ad.id,
+          name: ad.name,
+          status: ad.status,
+          creativeType: (ad.creative?.object_type || 'other').toLowerCase(),
+          thumbnailUrl: ad.creative?.thumbnail_url || null
+        })
+      }
+    })
+
+    // Group adsets by campaign_id
+    const adsetsByCampaign: Record<string, any[]> = {}
+    adsetsList.forEach((adset: any) => {
+      const campaignId = adset.campaign_id
+      if (campaignId) {
+        if (!adsetsByCampaign[campaignId]) adsetsByCampaign[campaignId] = []
+        
+        adsetsByCampaign[campaignId].push({
+          id: adset.id,
+          name: adset.name,
+          status: adset.status,
+          targeting: getDetailedTargeting(adset.targeting),
+          ads: adsByAdset[adset.id] || []
+        })
+      }
+    })
+
+    // Build the final tree
+    const result: MetaTargetingExplorerCampaign[] = campaignsList.map((c: any) => {
+      const dailyBudget = Number(c.daily_budget || 0) / 100
+      const lifetimeBudget = Number(c.lifetime_budget || 0) / 100
+      const hasCampaignBudget = dailyBudget > 0 || lifetimeBudget > 0
+      
+      const budgetType = hasCampaignBudget ? 'CBO' : 'ABO'
+      const budget = hasCampaignBudget ? (dailyBudget || lifetimeBudget) : 0
+
+      return {
+        id: c.id,
+        name: c.name,
+        status: c.status,
+        objective: c.objective,
+        budgetType,
+        budget,
+        adsets: adsetsByCampaign[c.id] || []
+      }
+    })
+
+    return result
+  } catch (err) {
+    console.error('Failed to fetch Meta Targeting Explorer, using fallback:', err)
+    return getMockMetaTargetingExplorer()
+  }
+}
+
+export async function fetchMetaAdsWithInsights(
+  dateRange: DateRange,
+  customAccountId?: string,
+  customToken?: string
+): Promise<any[]> {
+  const { accountId, token } = getCredentials(customAccountId, customToken)
+  if (!hasCredentials(customAccountId, customToken)) {
+    // Return mock ads with mock insights
+    return [
+      {
+        id: 'meta_ad_1',
+        name: 'SCM Course Benefit List - Image Creative',
+        status: 'ACTIVE',
+        creativeType: 'image',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&q=80',
+        spend: 34500,
+        impressions: 48000,
+        clicks: 1200,
+        ctr: 2.5,
+        cpc: 28.75,
+        conversions: 84
+      },
+      {
+        id: 'meta_ad_2',
+        name: 'SCM Job Placement Guarantee - Video Ad',
+        status: 'ACTIVE',
+        creativeType: 'video',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&q=80',
+        spend: 48000,
+        impressions: 72000,
+        clicks: 2200,
+        ctr: 3.05,
+        cpc: 21.8,
+        conversions: 142
+      },
+      {
+        id: 'meta_ad_3',
+        name: 'Creative Ad Variation A (Image)',
+        status: 'ACTIVE',
+        creativeType: 'image',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&q=80',
+        spend: 18500,
+        impressions: 24000,
+        clicks: 580,
+        ctr: 2.41,
+        cpc: 31.89,
+        conversions: 38
+      },
+      {
+        id: 'meta_ad_4',
+        name: 'Financials Brochure Ad',
+        status: 'ACTIVE',
+        creativeType: 'image',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&q=80',
+        spend: 29000,
+        impressions: 38000,
+        clicks: 940,
+        ctr: 2.47,
+        cpc: 30.85,
+        conversions: 62
+      }
+    ]
+  }
+
+  const timeRange = JSON.stringify({ since: dateRange.from, until: dateRange.to })
+  const url = `${META_BASE}/${accountId}/ads?fields=id,name,status,adset_id,creative{object_type,thumbnail_url},insights.time_range(${encodeURIComponent(timeRange)}){spend,impressions,clicks,ctr,cpc,actions}&limit=100`
+
+  try {
+    const json = await safeMetaRequest(url, token!)
+    return (json.data || []).map((ad: any) => {
+      const insight = ad.insights?.data?.[0] || {}
+      const actions = insight.actions || []
+      const convs = parseMetaConversions(actions)
+      const spend = Number(insight.spend || 0)
+
+      return {
+        id: ad.id,
+        name: ad.name,
+        status: ad.status,
+        creativeType: (ad.creative?.object_type || 'other').toLowerCase(),
+        thumbnailUrl: ad.creative?.thumbnail_url || null,
+        spend,
+        impressions: Number(insight.impressions || 0),
+        clicks: Number(insight.clicks || 0),
+        ctr: Number(insight.ctr || 0),
+        cpc: Number(insight.cpc || 0),
+        conversions: convs.totalConversions
+      }
+    })
+  } catch (err) {
+    console.error('Failed to fetch Meta Ads with insights, using fallback:', err)
+    return []
+  }
+}

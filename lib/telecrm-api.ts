@@ -120,6 +120,98 @@ export class TeleCRMApiError extends Error {
 }
 
 // ── CORE SEARCH FUNCTION ──────────────────────────────────
+function generateMockCRMLeads(fromMs: number, toMs: number): TeleCRMLead[] {
+  const leads: TeleCRMLead[] = []
+  
+  const courses = [
+    'Oracle Fusion SCM Course',
+    'Oracle Fusion HCM Online Training',
+    'Oracle Fusion Technical Training',
+    'Oracle Fusion Financial Course',
+    'Oracle Fusion PPM Projects Training'
+  ]
+  
+  const campaigns = [
+    { source: 'google', medium: 'cpc', campaign: 'SCM Performance Max', gclid: 'gclid_mock_123', channel: 'Google Ads' },
+    { source: 'google', medium: 'cpc', campaign: 'HCM Search Campaign', gclid: 'gclid_mock_456', channel: 'Google Ads' },
+    { source: 'google', medium: 'display', campaign: 'Oracle Integration Display', gclid: 'gclid_mock_789', channel: 'Google Ads' },
+    { source: 'facebook', medium: 'cpc', campaign: 'SCM Lead Gen Campaign', fbclid: 'fbclid_mock_111', channel: 'Meta Ads' },
+    { source: 'facebook', medium: 'cpc', campaign: 'HCM Lookalike Conversions', fbclid: 'fbclid_mock_222', channel: 'Meta Ads' },
+    { source: 'instagram', medium: 'cpc', campaign: 'SCM Lead Gen Campaign', fbclid: 'fbclid_mock_333', channel: 'Meta Ads' },
+    { source: 'instagram', medium: 'cpc', campaign: 'PPM Retargeting Funnel', fbclid: 'fbclid_mock_444', channel: 'Meta Ads' },
+    { source: 'organic', medium: 'organic', campaign: null, fbclid: null, gclid: null, channel: 'Organic' },
+    { source: 'direct', medium: 'direct', campaign: null, fbclid: null, gclid: null, channel: 'Website' }
+  ]
+
+  const firstNames = ['Amit', 'Rahul', 'Priya', 'Srinivas', 'Vikram', 'Deepa', 'Karan', 'Sunita', 'Anil', 'Jyoti', 'Sanjay', 'Meera', 'Ravi', 'Geeta', 'Vijay', 'Neha', 'Rohan', 'Aditi', 'Rajesh', 'Preeti']
+  const lastNames = ['Sharma', 'Verma', 'Patel', 'Rao', 'Singh', 'Nair', 'Johar', 'Gupta', 'Kumar', 'Reddy', 'Choudhury', 'Joshi', 'Mehta', 'Das', 'Sen', 'Mishra', 'Prasad', 'Bose', 'Pillai', 'Narayanan']
+
+  const totalLeads = 120
+  const now = Date.now()
+  const dayMs = 24 * 60 * 60 * 1000
+
+  for (let i = 0; i < totalLeads; i++) {
+    const createdOffset = (i / totalLeads) * 90 * dayMs
+    const createdOn = now - createdOffset
+    
+    const course = courses[i % courses.length]
+    const campaignInfo = campaigns[i % campaigns.length]
+    
+    let status = 'Fresh'
+    if (i % 6 === 0) {
+      status = 'Enrolled'
+    } else if (i % 5 === 0) {
+      status = 'Potential Lead 100'
+    } else if (i % 4 === 0) {
+      status = 'Demo Attended'
+    } else if (i % 3 === 0) {
+      status = 'Interested to join the Demo'
+    } else if (i % 7 === 0) {
+      status = 'Not Interested'
+    } else if (i % 8 === 0) {
+      status = 'Junk Lead'
+    }
+
+    const name = `${firstNames[i % firstNames.length]} ${lastNames[(i + 3) % lastNames.length]}`
+    const phone = `+91 ${9000000000 + i}`
+    const email = `${name.toLowerCase().replace(' ', '.')}@example.com`
+    
+    leads.push({
+      id: `mock-lead-${i}`,
+      status,
+      employeeid: `agent${(i % 3) + 1}@techleadsit.com`,
+      createdBy: 'API Integrator',
+      fields: {
+        name,
+        phone,
+        email,
+        course,
+        lead_source_1: campaignInfo.channel,
+        lead_date: createdOn,
+        created_on: createdOn,
+        modified_on: createdOn + dayMs,
+        course_fee: status === 'Enrolled' ? '25000' : undefined,
+        amount_paid: status === 'Enrolled' ? '25000' : undefined,
+        utmsource: campaignInfo.source,
+        utmmedium: campaignInfo.medium,
+        utmcampaign: campaignInfo.campaign || undefined,
+        fbclid: campaignInfo.fbclid || undefined,
+        google_gcl_id: campaignInfo.gclid || undefined
+      },
+      rating: status === 'Enrolled' ? 5 : 2,
+      isArchived: status === 'Not Interested' || status === 'Junk Lead',
+      isSpam: status === 'Junk Lead'
+    })
+  }
+  
+  return leads.filter(lead => {
+    const created = lead.fields.created_on
+    if (fromMs && created < fromMs) return false
+    if (toMs && created > toMs) return false
+    return true
+  })
+}
+
 export async function searchLeads(
   filters: {
     status?: string | string[]
@@ -135,8 +227,31 @@ export async function searchLeads(
   const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
   
   if (!token || !enterpriseId) {
-    // If no credentials are set, return mock empty data structure
-    return { data: [], total_count: 0 }
+    const fromMs = filters.created_on?.from || 0
+    const toMs = filters.created_on?.to || Date.now() + 1000 * 60 * 60 * 24
+    let mockLeads = generateMockCRMLeads(fromMs, toMs)
+    
+    if (filters.status) {
+      const statuses = Array.isArray(filters.status) ? filters.status : [filters.status]
+      mockLeads = mockLeads.filter(l => statuses.includes(l.status))
+    }
+    
+    if (filters.course) {
+      mockLeads = mockLeads.filter(l => l.fields.course === filters.course)
+    }
+    
+    if (filters.lead_source_1) {
+      const sources = Array.isArray(filters.lead_source_1) ? filters.lead_source_1 : [filters.lead_source_1]
+      mockLeads = mockLeads.filter(l => l.fields.lead_source_1 && sources.includes(l.fields.lead_source_1))
+    }
+    
+    const totalCount = mockLeads.length
+    const paginatedLeads = mockLeads.slice(pagination.skip, pagination.skip + pagination.limit)
+    
+    return {
+      data: paginatedLeads,
+      total_count: totalCount
+    }
   }
 
   const url = `${BASE}/enterprise/${enterpriseId}/lead/search?limit=${pagination.limit}&skip=${pagination.skip}`

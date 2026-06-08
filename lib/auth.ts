@@ -129,7 +129,7 @@ export function isSectionAllowed(
 
   // Standard user role: can ONLY access Keywords, Traffic, and Site Status
   if (userRole === 'user') {
-    return ['keywords', 'traffic', 'site'].includes(sectionId)
+    return ['keywords', 'traffic', 'site', 'analytics'].includes(sectionId)
   }
 
   // Viewer role (shared link): check the allowed list encoded in the active config label

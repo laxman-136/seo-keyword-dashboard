@@ -1,0 +1,139 @@
+// app/analytics/traffic-sources/page.tsx
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react'
+import { useDateRange } from '@/hooks/useDateRange'
+import DateRangePicker from '@/components/ads/DateRangePicker'
+import RefreshBar from '@/components/ads/RefreshBar'
+import { TrafficSourceTable } from '@/components/analytics/GA4Components'
+import { BarChart2, AlertCircle } from 'lucide-react'
+
+export default function TrafficSourcesPage() {
+  const { preset, from, to, label, setDateRange } = useDateRange()
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(async (bypassCache = false) => {
+    try {
+      if (bypassCache) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+      setError(null)
+
+      const query = new URLSearchParams({ preset })
+      if (preset === 'custom' && from && to) {
+        query.set('from', from)
+        query.set('to', to)
+      }
+      if (bypassCache) {
+        query.set('refresh', 'true')
+      }
+
+      const res = await fetch(`/api/analytics/traffic-sources?${query.toString()}`)
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Failed to fetch GA4 traffic sources data')
+      }
+
+      const resData = await res.json()
+      setData(resData)
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || 'An error occurred while fetching GA4 traffic sources')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [preset, from, to])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  const handleRefresh = () => {
+    fetchData(true)
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md">
+            <BarChart2 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-slate-800 leading-none">Acquisition Traffic Sources</h1>
+            <p className="text-xs text-slate-400 mt-1">Breakdown of organic search, paid ads, referrals, and custom campaign channels</p>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangePicker />
+          <RefreshBar
+            loading={loading}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2.5 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs font-semibold">
+          <AlertCircle className="w-4.5 h-4.5" />
+          <span>Error loading Traffic Sources: {error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-6 animate-pulse">
+          <div className="h-[300px] bg-white border border-slate-200 rounded-2xl" />
+          <div className="h-[250px] bg-white border border-slate-200 rounded-2xl" />
+        </div>
+      ) : data ? (
+        <div className="space-y-6">
+          <TrafficSourceTable sources={data.trafficSources} />
+
+          {/* Goals and conversions event breakdown */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100">
+              <h4 className="text-base font-bold text-slate-800">Conversion Event Logs</h4>
+              <p className="text-xs text-slate-400">Trigger counts for specific target user events (e.g. form submissions, registrations)</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold tracking-wider border-b border-slate-100">
+                    <th className="py-3 px-5">Event Name</th>
+                    <th className="py-3 px-5">Channel Group</th>
+                    <th className="py-3 px-5 text-center">Event Count</th>
+                    <th className="py-3 px-5 text-center">Unique Users</th>
+                    <th className="py-3 px-5 text-center">Session Conversion Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+                  {data.conversions.map((c: any, idx: number) => (
+                    <tr key={`${c.eventName}-${c.channelGroup}-${idx}`} className="hover:bg-slate-50/50">
+                      <td className="py-3 px-5 font-mono text-slate-800">{c.eventName}</td>
+                      <td className="py-3 px-5 text-indigo-600">{c.channelGroup}</td>
+                      <td className="py-3 px-5 text-center">{c.eventCount.toLocaleString()}</td>
+                      <td className="py-3 px-5 text-center text-slate-500">{c.users.toLocaleString()}</td>
+                      <td className="py-3 px-5 text-center">
+                        <span className="inline-flex px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold">{c.conversionRate}%</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}

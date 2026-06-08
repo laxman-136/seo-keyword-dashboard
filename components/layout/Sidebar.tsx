@@ -30,7 +30,13 @@ import {
   DollarSign,
   MapPin,
   Zap,
-  Award
+  Award,
+  Activity,
+  Compass,
+  TrendingUp,
+  AlertTriangle,
+  ShieldAlert,
+  Flame
 } from 'lucide-react'
 import { getActiveConfig, ACTIVE_CONFIG_UPDATED_EVENT, setActiveConfig, getSavedConfigs } from '@/lib/config'
 import { cn } from '@/lib/utils'
@@ -365,6 +371,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     keywords: true,
     traffic: false,
+    analytics: false,
     leads: false,
     site: false,
     revenue: false,
@@ -394,6 +401,17 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       ]
     },
     {
+      id: 'analytics',
+      title: 'Website Analytics',
+      icon: Activity,
+      items: [
+        { label: 'GA4 Overview',      href: '/analytics',                    icon: LayoutDashboard },
+        { label: 'Landing Pages',     href: '/analytics/landing-pages',      icon: Layers },
+        { label: 'User Journey',      href: '/analytics/user-journey',       icon: Compass },
+        { label: 'Traffic Sources',   href: '/analytics/traffic-sources',    icon: BarChart2 }
+      ]
+    },
+    {
       id: 'ads',
       title: 'Ads Performance',
       icon: Megaphone,
@@ -401,7 +419,22 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         { label: 'Combined Overview', href: '/ads',            icon: LayoutDashboard },
         { label: 'Meta Ads',          href: '/ads/meta',       icon: Layers },
         { label: 'Google Ads',        href: '/ads/google',     icon: Layers },
-        { label: 'Compare Platforms', href: '/ads/compare',    icon: BarChart2 }
+        { label: 'Compare Platforms', href: '/ads/compare',    icon: BarChart2 },
+        { label: '── INTELLIGENCE ──────────', href: '', isHeader: true },
+        { label: 'Intelligence Hub',  href: '/ads/intelligence',              icon: Sparkles },
+        { label: 'Lead Quality',      href: '/ads/intelligence/lead-quality', icon: Target },
+        { label: 'Audience',          href: '/ads/intelligence/audience',     icon: Users },
+        { label: 'Attribution',       href: '/ads/intelligence/attribution',  icon: Compass },
+        { label: 'Creative Perf.',    href: '/ads/intelligence/creative',     icon: Zap },
+        { label: 'Funnel Leak',       href: '/ads/intelligence/funnel-leak',  icon: Layers },
+        { label: 'Keywords',          href: '/ads/intelligence/keywords',     icon: Target },
+        { label: 'Budget Pacing',     href: '/ads/intelligence/budget-pacing',icon: DollarSign },
+        { label: 'Retargeting',       href: '/ads/intelligence/retargeting',  icon: Flame },
+        { label: 'Placement',         href: '/ads/intelligence/placement',    icon: MapPin },
+        { label: 'Course Ads',        href: '/ads/intelligence/course-ads',   icon: Award },
+        { label: 'Forecast',          href: '/ads/intelligence/forecast',     icon: TrendingUp },
+        { label: 'Competitor Intel',  href: '/ads/intelligence/competitor',   icon: ShieldAlert },
+        { label: 'Alerts',            href: '/ads/intelligence/alerts',       icon: AlertTriangle }
       ]
     },
     {

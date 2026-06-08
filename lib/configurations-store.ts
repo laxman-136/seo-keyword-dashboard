@@ -180,3 +180,23 @@ export async function setActiveConfiguration(label: string | null): Promise<void
     throw err
   }
 }
+
+export async function getActiveConfiguration(): Promise<SheetConfig | null> {
+  if (!supabase) return null
+  try {
+    const { data, error } = await supabase
+      .from('configurations')
+      .select('*')
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (error) {
+      if (error.code === '42P01') return null
+      throw error
+    }
+    return data ? mapRowToConfig(data) : null
+  } catch (err) {
+    console.error('Error fetching active configuration from Supabase:', err)
+    return null
+  }
+}
