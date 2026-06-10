@@ -505,7 +505,7 @@ export async function GET(
         .reduce((sum, c) => sum + (c.dailyBudget || 0), 0)
 
       const activeGoogleDailyBudget = googleCampaigns
-        .filter(c => c.status === 'ENABLED' || c.status === 'ACTIVE')
+        .filter(c => c.status === 'ENABLED')
         .reduce((sum, c) => sum + (c.dailyBudget || 0), 0)
 
       const totalDailyBudget = activeMetaDailyBudget + activeGoogleDailyBudget
@@ -684,7 +684,7 @@ export async function GET(
             id: c.id,
             name: c.name,
             platform: 'google',
-            status: c.status === 'ENABLED' || c.status === 'ACTIVE' ? 'ACTIVE' : 'PAUSED',
+            status: c.status === 'ENABLED' ? 'ACTIVE' : 'PAUSED',
             spend: Math.round(c.spend),
             adConversions: c.conversions || 0,
             crmLeads: matchedLeads.length,
@@ -1208,7 +1208,7 @@ export async function GET(
           .reduce((sum, c) => sum + (c.dailyBudget || 0), 0)
 
         const activeGoogleDailyBudget = googleCampaigns
-          .filter(c => c.status === 'ENABLED' || c.status === 'ACTIVE')
+          .filter(c => c.status === 'ENABLED')
           .reduce((sum, c) => sum + (c.dailyBudget || 0), 0)
 
         const totalDailyBudget = activeMetaDailyBudget + activeGoogleDailyBudget
