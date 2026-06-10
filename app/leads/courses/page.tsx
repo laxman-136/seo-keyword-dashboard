@@ -13,6 +13,8 @@ import DateRangePicker from '@/components/ads/DateRangePicker'
 import { useDateRange } from '@/hooks/useDateRange'
 import { Info, BookOpen } from 'lucide-react'
 
+import { getClientCachedData, setClientCachedData } from '@/lib/client-cache'
+
 export default function LeadsByCoursePage() {
   const { preset, from, to, label: rangeLabel } = useDateRange()
 
@@ -24,10 +26,28 @@ export default function LeadsByCoursePage() {
   const [selectedCourse, setSelectedCourse] = useState('all')
 
   const fetchData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true)
-    else setLoading(true)
+    const cacheKey = `courses_${from}_${to}`
+
+    if (!isRefresh) {
+      const cached = getClientCachedData(cacheKey)
+      if (cached) {
+        setCourses(cached.courses)
+        setTrend(cached.trend)
+        setLoading(false)
+        // Background revalidation (non-blocking)
+        fetchFromNetwork(cacheKey, true)
+        return
+      }
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
     setError(null)
 
+    await fetchFromNetwork(cacheKey, false)
+  }, [from, to])
+
+  const fetchFromNetwork = async (cacheKey: string, isBackground = false) => {
     try {
       const headers: Record<string, string> = {}
       if (typeof window !== 'undefined') {
@@ -37,9 +57,8 @@ export default function LeadsByCoursePage() {
         if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
       }
 
-      const refreshParam = isRefresh ? '&refresh=true' : ''
-      const urlCourses = `/api/leads/courses?from=${from}&to=${to}${refreshParam}`
-      const urlTrend = `/api/leads/trend?months=6${refreshParam}`
+      const urlCourses = `/api/leads/courses?from=${from}&to=${to}`
+      const urlTrend = `/api/leads/trend?months=6`
 
       const [resCourses, resTrend] = await Promise.all([
         fetch(urlCourses, { headers }),
@@ -60,14 +79,19 @@ export default function LeadsByCoursePage() {
 
       setCourses(payloadCourses)
       setTrend(payloadTrend)
+      setClientCachedData(cacheKey, { courses: payloadCourses, trend: payloadTrend })
     } catch (err: any) {
       console.error(err)
-      setError(err?.message || 'Error loading course details')
+      if (!isBackground) {
+        setError(err?.message || 'Error loading course details')
+      }
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      if (!isBackground) {
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [from, to])
+  }
 
   useEffect(() => {
     fetchData()

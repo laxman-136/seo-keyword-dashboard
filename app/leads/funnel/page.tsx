@@ -14,6 +14,8 @@ import { useDateRange } from '@/hooks/useDateRange'
 import { Info, TrendingUp, TrendingDown, Minus, Target, Activity, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import { getClientCachedData, setClientCachedData } from '@/lib/client-cache'
+
 export default function LeadsFunnelPage() {
   const { preset, from, to, label: rangeLabel } = useDateRange()
 
@@ -24,10 +26,28 @@ export default function LeadsFunnelPage() {
   const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true)
-    else setLoading(true)
+    const cacheKey = `funnel_${from}_${to}`
+
+    if (!isRefresh) {
+      const cached = getClientCachedData(cacheKey)
+      if (cached) {
+        setFunnel(cached.current)
+        setPrevFunnel(cached.prev)
+        setLoading(false)
+        // Background revalidation (non-blocking)
+        fetchFromNetwork(cacheKey, true)
+        return
+      }
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
     setError(null)
 
+    await fetchFromNetwork(cacheKey, false)
+  }, [from, to])
+
+  const fetchFromNetwork = async (cacheKey: string, isBackground = false) => {
     try {
       const headers: Record<string, string> = {}
       if (typeof window !== 'undefined') {
@@ -41,9 +61,8 @@ export default function LeadsFunnelPage() {
       const prevFrom = new Date(new Date(from).getTime() - durationMs).toISOString().split('T')[0]
       const prevTo = new Date(new Date(to).getTime() - durationMs).toISOString().split('T')[0]
 
-      const refreshParam = isRefresh ? '&refresh=true' : ''
-      const urlCurrent = `/api/leads/funnel?from=${from}&to=${to}${refreshParam}`
-      const urlPrev = `/api/leads/funnel?from=${prevFrom}&to=${prevTo}${refreshParam}`
+      const urlCurrent = `/api/leads/funnel?from=${from}&to=${to}`
+      const urlPrev = `/api/leads/funnel?from=${prevFrom}&to=${prevTo}`
 
       const [resCurrent, resPrev] = await Promise.all([
         fetch(urlCurrent, { headers }),
@@ -64,14 +83,19 @@ export default function LeadsFunnelPage() {
 
       setFunnel(payloadCurrent)
       setPrevFunnel(payloadPrev)
+      setClientCachedData(cacheKey, { current: payloadCurrent, prev: payloadPrev })
     } catch (err: any) {
       console.error(err)
-      setError(err?.message || 'Error loading funnel details')
+      if (!isBackground) {
+        setError(err?.message || 'Error loading funnel details')
+      }
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      if (!isBackground) {
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [from, to])
+  }
 
   useEffect(() => {
     fetchData()

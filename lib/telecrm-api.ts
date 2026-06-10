@@ -367,7 +367,7 @@ export async function getCountByCategory(
   return categoryCounts
 }
 
-// Paginate through ALL leads for a date range
+// Paginate through ALL leads for a date range in parallel
 export async function getAllLeadsForPeriod(
   dateRange: { from: Date; to: Date },
   customToken?: string,
@@ -384,20 +384,36 @@ export async function getAllLeadsForPeriod(
     cacheKey,
     async () => {
       const leads: TeleCRMLead[] = []
-      let skip = 0
       const limit = 100
       const filters = {
         created_on: { from: fromMs, to: toMs }
       }
       
-      while (true) {
-        const apiRes = await searchLeads(filters, { limit, skip }, customToken, customEnterpriseId)
-        leads.push(...apiRes.data)
-        if (leads.length >= apiRes.total_count || apiRes.data.length < limit) {
-          break
+      // Fetch the first page to get total count
+      const firstPageRes = await searchLeads(filters, { limit, skip: 0 }, customToken, customEnterpriseId)
+      leads.push(...firstPageRes.data)
+      
+      const totalCount = firstPageRes.total_count
+      const fetchedCount = firstPageRes.data.length
+      
+      if (totalCount > fetchedCount && fetchedCount > 0) {
+        const remainingSkips: number[] = []
+        for (let skipOffset = limit; skipOffset < totalCount; skipOffset += limit) {
+          remainingSkips.push(skipOffset)
         }
-        skip += limit
+        
+        // Fetch all remaining pages in parallel
+        const remainingPages = await Promise.all(
+          remainingSkips.map(skipOffset => 
+            searchLeads(filters, { limit, skip: skipOffset }, customToken, customEnterpriseId)
+          )
+        )
+        
+        remainingPages.forEach(page => {
+          leads.push(...page.data)
+        })
       }
+      
       return leads
     },
     bypassCache,
@@ -500,79 +516,107 @@ export async function getMonthlyTrend(
     cacheKey,
     async () => {
       const trend: LeadsMonthlyTrend[] = []
-      const promises: Promise<void>[] = []
       
       const now = new Date()
+      const oldestMonthIdx = now.getMonth() - (months - 1)
+      const rangeStart = new Date(now.getFullYear(), oldestMonthIdx, 1)
+      const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+      
+      // Fetch all leads in a single bulk query
+      const allLeads = await getAllLeadsForPeriod({ from: rangeStart, to: rangeEnd }, customToken, customEnterpriseId, bypassCache)
+      
       for (let i = 0; i < months; i++) {
         const year = now.getFullYear()
         const monthIdx = now.getMonth() - i
         
         const monthStart = new Date(year, monthIdx, 1)
         const monthEnd = new Date(year, monthIdx + 1, 0, 23, 59, 59, 999)
-        const monthLabel = monthStart.toLocaleString('en-US', { month: 'short', year: 'numeric' }) // e.g. "May 2026"
+        const monthLabel = monthStart.toLocaleString('en-US', { month: 'short', year: 'numeric' })
         
-        promises.push(
-          (async () => {
-            const range = { from: monthStart, to: monthEnd }
-            
-            // Fetch funnel, channel and course breakdowns for this month
-            const [funnel, channels, courses] = await Promise.all([
-              getFunnelData(range, customToken, customEnterpriseId, false),
-              getChannelBreakdown(range, customToken, customEnterpriseId, false),
-              getCourseBreakdown(range, customToken, customEnterpriseId, false)
-            ])
-            
-            const channelMap: Record<LeadChannel, number> = {
-              'Organic': 0, 'Website': 0, 'Google Ads': 0, 'Meta Ads': 0, 'Referral': 0, 'SOT': 0, 'Other': 0
-            }
-            channels.forEach(ch => {
-              channelMap[ch.channel] = ch.total
-            })
+        // Filter leads belonging to this month in memory
+        const monthLeads = allLeads.filter(lead => {
+          const created = lead.fields?.created_on
+          return created && created >= monthStart.getTime() && created <= monthEnd.getTime()
+        })
+        
+        let total = 0
+        let enrolled = 0
+        let highPotential = 0
+        let mediumPotential = 0
+        let freshUnqualified = 0
+        let lowCold = 0
+        
+        const stageBreakdown: Record<string, number> = {}
+        monthLeads.forEach(lead => {
+          total++
+          const status = lead.status || 'Other'
+          stageBreakdown[status] = (stageBreakdown[status] || 0) + 1
+          
+          const cat = STATUS_TO_CATEGORY[status]
+          if (cat === 'Enrolled') enrolled++
+          else if (cat === 'High Potential') highPotential++
+          else if (cat === 'Medium Potential') mediumPotential++
+          else if (cat === 'Fresh/Unqualified') freshUnqualified++
+          else if (cat === 'Low/Cold') lowCold++
+        })
+        
+        const divisor = total || 1
+        const convRate = parseFloat(((enrolled / divisor) * 100).toFixed(1))
+        
+        const channelMap: Record<LeadChannel, number> = {
+          'Organic': 0, 'Website': 0, 'Google Ads': 0, 'Meta Ads': 0, 'Referral': 0, 'SOT': 0, 'Other': 0
+        }
+        
+        const courseMap: Record<string, number> = {}
+        const defaultGroups = Array.from(new Set(Object.values(COURSE_TO_GROUP)))
+        defaultGroups.forEach(group => {
+          courseMap[group] = 0
+        })
+        courseMap['Unknown Course'] = 0
+        
+        monthLeads.forEach(lead => {
+          const ch = detectLeadChannel(lead)
+          channelMap[ch] = (channelMap[ch] || 0) + 1
+          
+          const rawCourse = lead.fields?.course || ''
+          const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
+          courseMap[groupName] = (courseMap[groupName] || 0) + 1
+        })
+        
+        const scm = courseMap['Oracle Fusion SCM'] || 0
+        const hcm = courseMap['Oracle Fusion HCM'] || 0
+        const fin = courseMap['Oracle Fusion Financials'] || 0
+        const tech = courseMap['Oracle Fusion Technical'] || 0
+        const ppm = courseMap['Oracle Fusion PPM'] || 0
+        const totalCourses = Object.values(courseMap).reduce((sum, val) => sum + val, 0)
+        const sapEbsOthers = Math.max(0, totalCourses - (scm + hcm + fin + tech + ppm))
 
-            const courseMap: Record<string, number> = {}
-            courses.forEach(c => {
-              courseMap[c.courseName] = c.total
-            })
-            
-            const scm = courseMap['Oracle Fusion SCM'] || 0
-            const hcm = courseMap['Oracle Fusion HCM'] || 0
-            const fin = courseMap['Oracle Fusion Financials'] || 0
-            const tech = courseMap['Oracle Fusion Technical'] || 0
-            const ppm = courseMap['Oracle Fusion PPM'] || 0
-            const totalCourses = Object.values(courseMap).reduce((sum, val) => sum + val, 0)
-            const sapEbsOthers = Math.max(0, totalCourses - (scm + hcm + fin + tech + ppm))
+        trend.push({
+          month: monthLabel,
+          monthStart,
+          totalLeads: total,
+          enrolled,
+          highPotential,
+          mediumPotential,
+          freshUnqualified,
+          lowCold,
+          websiteLeads: channelMap['Website'] || 0,
+          organicLeads: channelMap['Organic'] || 0,
+          googleAdsLeads: channelMap['Google Ads'] || 0,
+          metaAdsLeads: channelMap['Meta Ads'] || 0,
+          referralLeads: channelMap['Referral'] || 0,
+          convRate,
+          
+          scmLeads: scm,
+          hcmLeads: hcm,
+          financialsLeads: fin,
+          techOicLeads: tech,
+          ppmLeads: ppm,
+          sapEbsOthersLeads: sapEbsOthers,
 
-            trend.push({
-              month: monthLabel,
-              monthStart,
-              totalLeads: funnel.total,
-              enrolled: funnel.enrolled,
-              highPotential: funnel.highPotential,
-              mediumPotential: funnel.mediumPotential,
-              freshUnqualified: funnel.freshUnqualified,
-              lowCold: funnel.lowCold,
-              websiteLeads: channelMap['Website'] || 0,
-              organicLeads: channelMap['Organic'] || 0,
-              googleAdsLeads: channelMap['Google Ads'] || 0,
-              metaAdsLeads: channelMap['Meta Ads'] || 0,
-              referralLeads: channelMap['Referral'] || 0,
-              convRate: funnel.convRate,
-              
-              // Course root fields for compatibility with LeadsMonthlyRow
-              scmLeads: scm,
-              hcmLeads: hcm,
-              financialsLeads: fin,
-              techOicLeads: tech,
-              ppmLeads: ppm,
-              sapEbsOthersLeads: sapEbsOthers,
-
-              courses: courseMap
-            })
-          })()
-        )
+          courses: courseMap
+        })
       }
-      
-      await Promise.all(promises)
       
       // Sort chronologically
       const sortedTrend = trend.sort((a, b) => a.monthStart.getTime() - b.monthStart.getTime())
