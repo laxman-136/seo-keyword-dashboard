@@ -1,4 +1,4 @@
-// scratch/test-meta-api.js
+// scratch/test-meta-future.js
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
@@ -29,29 +29,18 @@ async function run() {
     .select('*')
     .eq('is_active', true);
   
-  if (!configs || configs.length === 0) {
-    console.error('No active config in database');
-    return;
-  }
-
   const config = configs[0];
   const accountId = config.meta_ad_account_id;
   const token = config.meta_access_token;
 
-  if (!accountId || !token) {
-    console.error('Meta credentials missing in config');
-    return;
-  }
+  // This Year date range (extends to December 31, 2026)
+  const since = '2026-01-01';
+  const until = '2026-12-31';
 
-  // Use Today or Last 7 days
-  const todayStr = new Date().toISOString().split('T')[0];
-  // 7 days ago
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-  const timeRange = JSON.stringify({ since: sevenDaysAgo, until: todayStr });
+  const timeRange = JSON.stringify({ since, until });
   const url = `https://graph.facebook.com/v19.0/${accountId}/insights?fields=spend,impressions,clicks,ctr,cpm,cpc,reach,frequency,actions,action_values&time_range=${encodeURIComponent(timeRange)}&level=account`;
 
-  console.log('Fetching Meta Insights from URL:', url.substring(0, 100) + '...');
+  console.log('Fetching insights for future date range:', url.substring(0, 120) + '...');
   
   try {
     const res = await fetch(url, {
@@ -60,13 +49,7 @@ async function run() {
     
     console.log('Response status:', res.status);
     const json = await res.json();
-    
-    if (!res.ok) {
-      console.error('Meta API returned error:', json);
-    } else {
-      console.log('Successfully fetched Meta Insights!');
-      console.log(JSON.stringify(json.data, null, 2));
-    }
+    console.log('Response data:', JSON.stringify(json, null, 2));
   } catch (err) {
     console.error('Fetch error:', err);
   }

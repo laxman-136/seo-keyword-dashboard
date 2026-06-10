@@ -15,6 +15,7 @@ export interface AttributedLead {
   utmMedium: string | null
   utmCampaign: string | null
   utmContent: string | null
+  utmTerm: string | null
   fbclid: string | null
   gclid: string | null
   isEnrolled: boolean
@@ -122,6 +123,7 @@ export function attributeLead(lead: TeleCRMLead): AttributedLead {
   const utmMedium = fields.utmmedium?.toLowerCase() || null
   const utmCampaign = fields.utmcampaign || null
   const utmContent = fields.utmcontent || null
+  const utmTerm = fields.utmterm || null
   
   const fbclid = fields.fbclid || null
   const gclid = fields.google_gcl_id || null
@@ -161,6 +163,7 @@ export function attributeLead(lead: TeleCRMLead): AttributedLead {
     utmMedium: fields.utmmedium || null,
     utmCampaign,
     utmContent,
+    utmTerm,
     fbclid,
     gclid,
     isEnrolled,

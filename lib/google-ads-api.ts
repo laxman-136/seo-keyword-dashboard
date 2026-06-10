@@ -566,6 +566,54 @@ export async function fetchGoogleDeviceBreakdown(
   }
 }
 
+export async function fetchGooglePlacements(
+  dateRange: DateRange,
+  customDevToken?: string,
+  customClientId?: string,
+  customClientSecret?: string,
+  customRefreshToken?: string,
+  customCustomerId?: string,
+  customManagerId?: string
+): Promise<any[]> {
+  if (!hasGoogleCredentials(customDevToken, customClientId, customClientSecret, customRefreshToken, customCustomerId)) {
+    return [
+      { adNetworkType: 'SEARCH', spend: 90000, impressions: 15000, clicks: 4000, conversions: 182 }
+    ]
+  }
+
+  try {
+    const customer = await getGoogleAdsClient(customDevToken, customClientId, customClientSecret, customRefreshToken, customCustomerId, customManagerId)
+    
+    const query = `
+      SELECT
+        segments.ad_network_type,
+        metrics.cost_micros,
+        metrics.impressions,
+        metrics.clicks,
+        metrics.conversions
+      FROM customer
+      WHERE segments.date BETWEEN '${dateRange.from}' AND '${dateRange.to}'
+    `
+    const rows = await customer.query(query)
+    return rows.map((r: any) => {
+      const spend = microsToCurrency(r.metrics?.cost_micros || 0)
+      return {
+        adNetworkType: r.segments?.ad_network_type || 'UNKNOWN',
+        spend,
+        impressions: Number(r.metrics?.impressions || 0),
+        clicks: Number(r.metrics?.clicks || 0),
+        conversions: Number(r.metrics?.conversions || 0)
+      }
+    })
+  } catch (err) {
+    console.error('Failed to fetch Google Placements, using fallback:', err)
+    return [
+      { adNetworkType: 'SEARCH', spend: 0, impressions: 0, clicks: 0, conversions: 0 }
+    ]
+  }
+}
+
+
 export async function fetchGoogleGeoBreakdown(
   dateRange: DateRange,
   customDevToken?: string,
