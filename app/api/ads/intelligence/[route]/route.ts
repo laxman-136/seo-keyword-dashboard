@@ -52,22 +52,54 @@ export async function GET(
     const telecrmToken = activeConfig?.telecrmApiToken || undefined
     const telecrmEnterpriseId = activeConfig?.telecrmEnterpriseId || undefined
 
-    // Base inputs
-    const [metaOverview, metaCampaigns, googleOverview, googleCampaigns, attributedLeads] = await Promise.all([
+    // 1. Return competitor data early to avoid fetching Google/Meta/TeleCRM metrics
+    if (route === 'competitor') {
+      const keyword = searchParams.get('keyword') || undefined
+      const pageIds = searchParams.get('pageIds') || undefined
+      const competitorData = await fetchCompetitorIntelligence(bypassCache, metaAccessToken, keyword, pageIds)
+      return NextResponse.json(competitorData)
+    }
+
+    // 2. Fetch Google Ads and Meta Ads metadata (fast parallel API calls)
+    const [metaOverview, metaCampaigns, googleOverview, googleCampaigns] = await Promise.all([
       fetchMetaAccountOverview(dateRange, metaAccountId, metaAccessToken),
       fetchMetaCampaigns(dateRange, metaAccountId, metaAccessToken),
       fetchGoogleAccountOverview(dateRange, googleDevToken, googleClientId, googleClientSecret, googleRefreshToken, googleCustomerId, googleManagerId),
-      fetchGoogleCampaigns(dateRange, googleDevToken, googleClientId, googleClientSecret, googleRefreshToken, googleCustomerId, googleManagerId),
-      buildAttributionDataset({ from: new Date(dateRange.from), to: new Date(dateRange.to) }, telecrmToken, telecrmEnterpriseId, bypassCache)
+      fetchGoogleCampaigns(dateRange, googleDevToken, googleClientId, googleClientSecret, googleRefreshToken, googleCustomerId, googleManagerId)
     ])
 
     const totalSpend = metaOverview.spend + googleOverview.spend
-    const totalLeadsCRM = attributedLeads.length
-    const enrolledTotal = attributedLeads.filter(l => l.isEnrolled).length
-    const totalRevenue = attributedLeads.filter(l => l.isEnrolled).reduce((sum, l) => sum + l.feeValue, 0)
+
+    // 3. Lazy loading logic for TeleCRM leads
+    let attributedLeadsCache: any[] | null = null
+    const getAttributedLeads = async () => {
+      if (!attributedLeadsCache) {
+        attributedLeadsCache = await buildAttributionDataset(
+          { from: new Date(dateRange.from), to: new Date(dateRange.to) },
+          telecrmToken,
+          telecrmEnterpriseId,
+          bypassCache
+        )
+      }
+      return attributedLeadsCache
+    }
+
+    // Lazy helper to compute CRM totals
+    let crmStatsCache: { leads: any[]; totalLeadsCRM: number; enrolledTotal: number; totalRevenue: number } | null = null
+    const getCRMStats = async () => {
+      if (!crmStatsCache) {
+        const leads = await getAttributedLeads()
+        const totalLeadsCRM = leads.length
+        const enrolledTotal = leads.filter(l => l.isEnrolled).length
+        const totalRevenue = leads.filter(l => l.isEnrolled).reduce((sum, l) => sum + l.feeValue, 0)
+        crmStatsCache = { leads, totalLeadsCRM, enrolledTotal, totalRevenue }
+      }
+      return crmStatsCache
+    }
 
     // Route-specific responses
     if (route === 'lead-quality') {
+      const { leads: attributedLeads, totalLeadsCRM, enrolledTotal } = await getCRMStats()
       const adCampaignNames = new Set<string>()
       metaCampaigns.forEach(c => adCampaignNames.add(c.name))
       googleCampaigns.forEach(c => adCampaignNames.add(c.name))
@@ -134,6 +166,7 @@ export async function GET(
     }
 
     if (route === 'audience') {
+      const attributedLeads = await getAttributedLeads()
       const [rawMetaDemographics, rawGoogleDevices, metaExplorer, googleExplorer] = await Promise.all([
         fetchMetaDemographics(dateRange, metaAccountId, metaAccessToken),
         fetchGoogleDeviceBreakdown(dateRange, googleDevToken, googleClientId, googleClientSecret, googleRefreshToken, googleCustomerId, googleManagerId),
@@ -204,6 +237,7 @@ export async function GET(
     }
 
     if (route === 'attribution') {
+      const { leads: attributedLeads, enrolledTotal } = await getCRMStats()
       const journeys = reconstructJourneys(attributedLeads)
       const pathAssists = [
         { path: 'Google Ads → Website → Enrollment', count: Math.round(enrolledTotal * 0.42) },
@@ -302,6 +336,7 @@ export async function GET(
     }
 
     if (route === 'creative') {
+      const { totalLeadsCRM, enrolledTotal } = await getCRMStats()
       const [metaAds, googleAds] = await Promise.all([
         fetchMetaAdsWithInsights(dateRange, metaAccountId, metaAccessToken),
         fetchGoogleAdsWithInsights(dateRange, googleDevToken, googleClientId, googleClientSecret, googleRefreshToken, googleCustomerId, googleManagerId)
@@ -365,6 +400,7 @@ export async function GET(
     }
 
     if (route === 'funnel-leak') {
+      const { leads: attributedLeads, totalLeadsCRM, enrolledTotal } = await getCRMStats()
       const metaLeads = attributedLeads.filter(l => l.channel === 'meta')
       const googleLeads = attributedLeads.filter(l => l.channel === 'google')
 
@@ -437,6 +473,7 @@ export async function GET(
     }
 
     if (route === 'keywords') {
+      const { leads: attributedLeads, totalLeadsCRM, enrolledTotal } = await getCRMStats()
       const hasGoogle = googleCustomerId && googleCustomerId !== 'mock' && googleDevToken && googleDevToken !== ''
       let keywordsList: any[] = []
 
@@ -571,6 +608,7 @@ export async function GET(
     }
 
     if (route === 'retargeting') {
+      const { leads: attributedLeads, totalLeadsCRM, enrolledTotal } = await getCRMStats()
       const hasMeta = metaAccountId && metaAccessToken && metaAccountId !== 'mock'
       const hasGoogle = googleCustomerId && googleCustomerId !== 'mock'
       const isReal = !!(hasMeta || hasGoogle)
@@ -713,6 +751,7 @@ export async function GET(
     }
 
     if (route === 'placement') {
+      const { leads: attributedLeads, totalLeadsCRM, enrolledTotal } = await getCRMStats()
       const hasMeta = metaAccountId && metaAccessToken && metaAccountId !== 'mock'
       const hasGoogle = googleCustomerId && googleCustomerId !== 'mock'
       const isReal = !!(hasMeta || hasGoogle)
@@ -992,6 +1031,7 @@ export async function GET(
     }
 
     if (route === 'course-ads') {
+      const { leads: attributedLeads, totalLeadsCRM, enrolledTotal } = await getCRMStats()
       const hasMeta = metaAccountId && metaAccessToken && metaAccountId !== 'mock'
       const hasGoogle = googleCustomerId && googleCustomerId !== 'mock'
       const isReal = !!(hasMeta || hasGoogle)
@@ -1118,6 +1158,7 @@ export async function GET(
     }
 
     if (route === 'forecast') {
+      const { totalLeadsCRM, enrolledTotal, totalRevenue } = await getCRMStats()
       const start = new Date(dateRange.from)
       const end = new Date(dateRange.to)
       const daysCount = Math.max(1, Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1)
@@ -1174,13 +1215,12 @@ export async function GET(
     }
 
     if (route === 'competitor') {
-      const keyword = searchParams.get('keyword') || undefined
-      const pageIds = searchParams.get('pageIds') || undefined
-      const competitorData = await fetchCompetitorIntelligence(bypassCache, metaAccessToken, keyword, pageIds)
-      return NextResponse.json(competitorData)
+      // Handled early to prevent fetching campaign performance
+      return NextResponse.json({ error: 'Competitor route should have resolved early' }, { status: 500 })
     }
 
     if (route === 'alerts') {
+      const attributedLeads = await getAttributedLeads()
       const hasMeta = metaAccountId && metaAccessToken && metaAccountId !== 'mock'
       const hasGoogle = googleCustomerId && googleCustomerId !== 'mock'
       const isReal = !!(hasMeta || hasGoogle)
