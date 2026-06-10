@@ -286,7 +286,7 @@ export default function BudgetPacingPage() {
                     <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', fontSize: '11px', color: '#f8fafc' }}
-                      formatter={(val: any, name: string) => [`₹${Math.round(val).toLocaleString()}`, name]}
+                      formatter={(val: any, name: any) => [`₹${Math.round(val).toLocaleString()}`, name]}
                     />
                     <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
                     
