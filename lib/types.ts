@@ -903,6 +903,7 @@ export interface TeleCRMLead {
     referrer?: string
     fbclid?: string
     google_gcl_id?: string
+    gclid?: string
   }
   rating: number
   isArchived: boolean

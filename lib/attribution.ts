@@ -126,7 +126,7 @@ export function attributeLead(lead: TeleCRMLead): AttributedLead {
   const utmTerm = fields.utmterm || null
   
   const fbclid = fields.fbclid || null
-  const gclid = fields.google_gcl_id || null
+  const gclid = fields.gclid || fields.google_gcl_id || null
   const leadSource = fields.lead_source_1?.toLowerCase() || ''
 
   if (fbclid) {
@@ -139,6 +139,12 @@ export function attributeLead(lead: TeleCRMLead): AttributedLead {
     channel = 'meta'
     isPaid = true
   } else if (utmSource === 'google' || utmSource === 'gads' || utmMedium === 'cpc' || utmMedium === 'ppc') {
+    channel = 'google'
+    isPaid = true
+  } else if (leadSource.includes('facebook') || leadSource.includes('fb') || leadSource.includes('instagram') || leadSource.includes('meta')) {
+    channel = 'meta'
+    isPaid = true
+  } else if (leadSource.includes('gads') || leadSource.includes('google')) {
     channel = 'google'
     isPaid = true
   } else if (utmSource === 'organic' || leadSource.includes('organic')) {

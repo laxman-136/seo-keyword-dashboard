@@ -41,6 +41,12 @@ export const SOURCE_TO_CHANNEL: Record<string, LeadChannel> = {
   'Gads-Lead Form-Technical':   'Google Ads',
   'googletech':                 'Google Ads',
   'googlescm':                  'Google Ads',
+  'Facebook - SCM':             'Meta Ads',
+  'Facebook - HCM':             'Meta Ads',
+  'Facebook - Technical':       'Meta Ads',
+  'Facebook - Financials':      'Meta Ads',
+  'facebook':                   'Meta Ads',
+  'Website-fb':                 'Meta Ads',
   'SOT':                        'SOT',
 }
 
@@ -87,7 +93,7 @@ export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
   const fields = lead.fields || {}
   
   if (fields.fbclid) return 'Meta Ads'
-  if (fields.google_gcl_id) return 'Google Ads'
+  if (fields.google_gcl_id || fields.gclid) return 'Google Ads'
   if (fields.utmsource === 'google') return 'Google Ads'
   if (fields.utmsource === 'an') return 'Meta Ads'
   
@@ -96,6 +102,9 @@ export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
     const lower = sourceRaw.toLowerCase()
     if (lower.includes('gads') || lower.includes('google')) {
       return 'Google Ads'
+    }
+    if (lower.includes('facebook') || lower.includes('fb') || lower.includes('instagram') || lower.includes('meta')) {
+      return 'Meta Ads'
     }
     return SOURCE_TO_CHANNEL[sourceRaw] || 'Other'
   }
