@@ -150,13 +150,6 @@ git push -u origin main
 
 ---
 
-## 💻 Current Admin Accounts (Seeded in Database)
-
-| Email | Password | Role |
-|-------|----------|------|
-| laxmansubramanyam@gmail.com | Admin@123 | Superadmin (protected) |
-| veerasubramanyam.aki@techleadsit.com | Admin@123 | Admin |
-| akilakshman89@gmail.com | Admin@123 | User |
 
 **Change these passwords immediately after first login!**
 
