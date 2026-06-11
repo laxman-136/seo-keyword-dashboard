@@ -13,6 +13,7 @@ import LeadsYearSelector from '@/components/leads/LeadsYearSelector'
 import LeadsYearComparisonTable from '@/components/leads/LeadsYearComparisonTable'
 import LeadsYearlySummary from '@/components/leads/LeadsYearlySummary'
 import LeadsKPICard from '@/components/leads/LeadsKPICard'
+import CourseSelector from '@/components/leads/CourseSelector'
 import {
   getAvailableLeadsMonths,
   getLeadsQuarterlyDetails,
@@ -22,6 +23,8 @@ import { Info, BarChart3, TrendingUp, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function LeadsComparePage() {
+  const [selectedCourse, setSelectedCourse] = useState('all')
+
   const {
     monthly,
     loading,
@@ -31,7 +34,7 @@ export default function LeadsComparePage() {
     fallbackReason,
     lastUpdated,
     refresh
-  } = useLeadsData()
+  } = useLeadsData(selectedCourse)
 
   const [activeTab, setActiveTab] = useState<'mom' | 'quarterly' | 'yearly'>('mom')
   const [monthA, setMonthA] = useState('')
@@ -215,6 +218,9 @@ export default function LeadsComparePage() {
             Yearly Financials
           </button>
         </div>
+        <div className="pb-2 md:pb-0">
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
+        </div>
       </div>
 
       {/* ── TAB CONTENT ── */}
@@ -240,7 +246,7 @@ export default function LeadsComparePage() {
             {/* MoM KPI Grid */}
             {monthA && activeMonthRow && (
               <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <LeadsKPICard
                     title="Total Leads"
                     value={activeMonthRow.totalLeads}
@@ -264,6 +270,14 @@ export default function LeadsComparePage() {
                     icon="🔍"
                     variant="green"
                     subtitle="From search & referrals"
+                  />
+                  <LeadsKPICard
+                    title="LLM Leads"
+                    value={activeMonthRow.llmLeads || 0}
+                    prevValue={compMonthRow?.llmLeads ?? 0}
+                    icon="🤖"
+                    variant="pink"
+                    subtitle="ChatGPT & Perplexity"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -330,7 +344,7 @@ export default function LeadsComparePage() {
             {/* QoQ KPI Grid */}
             {quarterA && activeQuarterRow && (
               <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <LeadsKPICard
                     title="Total Leads"
                     value={activeQuarterRow.totalLeads}
@@ -354,6 +368,14 @@ export default function LeadsComparePage() {
                     icon="🔍"
                     variant="green"
                     subtitle="From search & referrals"
+                  />
+                  <LeadsKPICard
+                    title="LLM Leads"
+                    value={activeQuarterRow.llmLeads || 0}
+                    prevValue={compQuarterRow?.llmLeads ?? 0}
+                    icon="🤖"
+                    variant="pink"
+                    subtitle="ChatGPT & Perplexity"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -426,7 +448,7 @@ export default function LeadsComparePage() {
             {/* YoY KPI Grid */}
             {yearA && activeYearRow && (
               <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <LeadsKPICard
                     title="Total Leads"
                     value={activeYearRow.totalLeads}
@@ -450,6 +472,14 @@ export default function LeadsComparePage() {
                     icon="🔍"
                     variant="green"
                     subtitle="From search & referrals"
+                  />
+                  <LeadsKPICard
+                    title="LLM Leads"
+                    value={activeYearRow.llmLeads || 0}
+                    prevValue={compYearRow?.llmLeads ?? 0}
+                    icon="🤖"
+                    variant="pink"
+                    subtitle="ChatGPT & Perplexity"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -18,27 +18,42 @@ interface LeadsDataResult {
 }
 
 // Global cached state to avoid double-fetching across page switches
-let globalLeadsCache: {
+let globalLeadsCache: Record<string, {
   monthly: LeadsMonthlyRow[]
   detail: LeadsDetailRow[]
   isMock: boolean
   lastUpdated: string
-} | null = null
+}> = {}
 
-export function useLeadsData(): LeadsDataResult {
-  const [monthly, setMonthly] = useState<LeadsMonthlyRow[]>(globalLeadsCache?.monthly || [])
-  const [detail, setDetail] = useState<LeadsDetailRow[]>(globalLeadsCache?.detail || [])
-  const [isMock, setIsMock] = useState(globalLeadsCache?.isMock || false)
+export function useLeadsData(selectedCourse = 'all'): LeadsDataResult {
+  const [monthly, setMonthly] = useState<LeadsMonthlyRow[]>([])
+  const [detail, setDetail] = useState<LeadsDetailRow[]>([])
+  const [isMock, setIsMock] = useState(false)
   const [fallbackReason, setFallbackReason] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState(globalLeadsCache?.lastUpdated || '')
-  const [loading, setLoading] = useState(globalLeadsCache ? false : true)
+  const [lastUpdated, setLastUpdated] = useState('')
+  const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const cached = globalLeadsCache[selectedCourse]
+    if (cached) {
+      setMonthly(cached.monthly)
+      setDetail(cached.detail)
+      setIsMock(cached.isMock)
+      setLastUpdated(cached.lastUpdated)
+      setLoading(false)
+    } else {
+      setMonthly([])
+      setDetail([])
+      setLoading(true)
+    }
+  }, [selectedCourse])
 
   const loadData = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) {
       setRefreshing(true)
-    } else if (monthly.length === 0) {
+    } else if (!globalLeadsCache[selectedCourse]) {
       setLoading(true)
     }
     setError(null)
@@ -57,7 +72,8 @@ export function useLeadsData(): LeadsDataResult {
       const headers: Record<string, string> = {}
 
       if (isTelecrm) {
-        url = isManualRefresh ? '/api/leads/trend?months=12&refresh=true' : '/api/leads/trend?months=12'
+        const courseParam = selectedCourse !== 'all' ? `&course=${encodeURIComponent(selectedCourse)}` : ''
+        url = isManualRefresh ? `/api/leads/trend?months=12&refresh=true${courseParam}` : `/api/leads/trend?months=12${courseParam}`
         const clientToken = localStorage.getItem('client-telecrm-api-token')
         const clientEnterpriseId = localStorage.getItem('client-telecrm-enterprise-id')
         if (clientToken) headers['x-telecrm-api-token'] = clientToken
@@ -103,7 +119,7 @@ export function useLeadsData(): LeadsDataResult {
         updatedTime = payload.lastUpdated || ''
       }
 
-      globalLeadsCache = {
+      globalLeadsCache[selectedCourse] = {
         monthly: monthlyRows,
         detail: detailRows,
         isMock: mockStatus,
@@ -122,17 +138,17 @@ export function useLeadsData(): LeadsDataResult {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [monthly.length])
+  }, [selectedCourse])
 
   useEffect(() => {
-    if (monthly.length === 0) {
+    if (!globalLeadsCache[selectedCourse]) {
       loadData()
     }
-  }, [loadData, monthly.length])
+  }, [loadData, selectedCourse])
 
   useEffect(() => {
     const handleConfigChange = () => {
-      globalLeadsCache = null
+      globalLeadsCache = {}
       setMonthly([])
       setDetail([])
       setLoading(true)

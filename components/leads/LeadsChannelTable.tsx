@@ -32,19 +32,26 @@ export default function LeadsChannelTable({ split }: LeadsChannelTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-150">
-            {split.map(s => (
-              <tr key={s.channel} className="hover:bg-slate-50/70 transition-colors">
-                <td className="px-5 py-3.5 font-semibold text-slate-700 flex items-center gap-2">
-                  <span>{s.channel.includes('Website') ? '🌐' : '🔍'}</span>
-                  <span>{s.channel}</span>
-                </td>
+            {split.map(s => {
+              const getChannelIcon = (ch: string) => {
+                if (ch.includes('Website')) return '🌐'
+                if (ch === 'LLM') return '🤖'
+                return '🔍'
+              }
+              return (
+                <tr key={s.channel} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="px-5 py-3.5 font-semibold text-slate-700 flex items-center gap-2">
+                    <span>{getChannelIcon(s.channel)}</span>
+                    <span>{s.channel}</span>
+                  </td>
                 <td className="px-4 py-3.5 text-right font-mono text-slate-900">{s.leads.toLocaleString()}</td>
                 <td className="px-4 py-3.5 text-right font-semibold text-slate-600">{s.sharePercent.toFixed(1)}%</td>
                 <td className="px-4 py-3.5 text-right text-emerald-600 font-bold">{s.enrolled.toLocaleString()}</td>
                 <td className="px-4 py-3.5 text-right text-blue-600 font-semibold">{s.highPotential.toLocaleString()}</td>
                 <td className="px-5 py-3.5 text-right font-bold text-slate-800">{s.convRate.toFixed(1)}%</td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
           <tfoot>
             <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800">

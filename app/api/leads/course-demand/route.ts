@@ -40,6 +40,7 @@ export async function GET(request: Request) {
     const bypassCache = searchParams.get('refresh') === 'true'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     // Load past 6 months to evaluate active batch pipeline
     const now = new Date()
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
     const toDate = now
 
     const leads = await getAllLeads(
-      { dateRange: { from: fromDate, to: toDate } },
+      { dateRange: { from: fromDate, to: toDate }, course: selectedCourse },
       customToken,
       customEnterpriseId,
       bypassCache

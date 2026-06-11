@@ -22,6 +22,7 @@ export default function LeadsYearlySummary({ rows }: LeadsYearlySummaryProps) {
               <th className="px-4 py-3.5 text-right">Total Leads</th>
               <th className="px-4 py-3.5 text-right text-slate-400 font-semibold">Website Leads</th>
               <th className="px-4 py-3.5 text-right text-slate-400 font-semibold">Organic Leads</th>
+              <th className="px-4 py-3.5 text-right text-pink-400 font-semibold">LLM Leads</th>
               <th className="px-4 py-3.5 text-right text-emerald-400 font-bold">Enrolled</th>
               <th className="px-4 py-3.5 text-right text-blue-400 font-semibold">High Potential</th>
               <th className="px-6 py-3.5 text-right">Conv Rate</th>
@@ -34,6 +35,7 @@ export default function LeadsYearlySummary({ rows }: LeadsYearlySummaryProps) {
                 <td className="px-4 py-4 text-right font-mono font-bold text-slate-900">{y.totalLeads.toLocaleString()}</td>
                 <td className="px-4 py-4 text-right font-mono text-slate-500">{y.websiteLeads.toLocaleString()}</td>
                 <td className="px-4 py-4 text-right font-mono text-slate-500">{y.organicLeads.toLocaleString()}</td>
+                <td className="px-4 py-4 text-right font-mono text-pink-600 font-bold">{(y.llmLeads || 0).toLocaleString()}</td>
                 <td className="px-4 py-4 text-right font-mono text-emerald-600 font-bold">{y.enrolled.toLocaleString()}</td>
                 <td className="px-4 py-4 text-right font-mono text-blue-600 font-semibold">{y.highPotential.toLocaleString()}</td>
                 <td className="px-6 py-4 text-right font-mono font-bold text-slate-800">

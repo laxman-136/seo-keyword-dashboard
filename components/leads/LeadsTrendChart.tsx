@@ -24,7 +24,8 @@ export default function LeadsTrendChart({ rows }: LeadsTrendChartProps) {
     label: r.month,
     'Total Leads': r.totalLeads,
     'Website Leads': r.websiteLeads,
-    'Organic Leads': r.organicLeads
+    'Organic Leads': r.organicLeads,
+    'LLM Leads': r.llmLeads || 0
   }))
 
   return (
@@ -91,6 +92,12 @@ export default function LeadsTrendChart({ rows }: LeadsTrendChartProps) {
               name="Organic Leads" 
               dataKey="Organic Leads" 
               fill="#f97316" // Orange
+              radius={[4, 4, 0, 0]} 
+            />
+            <Bar 
+              name="LLM Leads" 
+              dataKey="LLM Leads" 
+              fill="#ec4899" // Pink
               radius={[4, 4, 0, 0]} 
             />
           </BarChart>

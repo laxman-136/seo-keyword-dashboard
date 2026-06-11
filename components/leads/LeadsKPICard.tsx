@@ -3,7 +3,7 @@ import React from 'react'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type LeadsKPICardVariant = 'blue' | 'indigo' | 'green' | 'emerald' | 'amber' | 'purple' | 'red' | 'gray'
+export type LeadsKPICardVariant = 'blue' | 'indigo' | 'green' | 'emerald' | 'amber' | 'purple' | 'red' | 'gray' | 'pink'
 
 interface LeadsKPICardProps {
   title: string
@@ -31,6 +31,7 @@ const STYLES: Record<LeadsKPICardVariant, {
   purple:  { gradient: 'from-violet-50 to-white',  iconBg: 'bg-violet-100',  accentBar: 'bg-violet-400',  valueText: 'text-violet-900', badgePos: 'bg-emerald-50 border-emerald-200 text-emerald-700', badgeNeg: 'bg-red-50 border-red-200 text-red-700' },
   red:     { gradient: 'from-red-50 to-white',     iconBg: 'bg-red-100',     accentBar: 'bg-red-400',     valueText: 'text-red-900',    badgePos: 'bg-emerald-50 border-emerald-200 text-emerald-700', badgeNeg: 'bg-red-50 border-red-200 text-red-700' },
   gray:    { gradient: 'from-slate-50 to-white',   iconBg: 'bg-slate-100',   accentBar: 'bg-slate-300',   valueText: 'text-slate-800',  badgePos: 'bg-emerald-50 border-emerald-200 text-emerald-700', badgeNeg: 'bg-red-50 border-red-200 text-red-700' },
+  pink:    { gradient: 'from-pink-50 to-white',    iconBg: 'bg-pink-100',    accentBar: 'bg-pink-400',    valueText: 'text-pink-900',   badgePos: 'bg-emerald-50 border-emerald-200 text-emerald-700', badgeNeg: 'bg-red-50 border-red-200 text-red-700' },
 }
 
 export default function LeadsKPICard({

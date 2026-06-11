@@ -12,6 +12,7 @@ import LeadsQuarterlySummary from '@/components/leads/LeadsQuarterlySummary'
 import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
 import DateRangePicker from '@/components/ads/DateRangePicker'
+import CourseSelector from '@/components/leads/CourseSelector'
 import { useDateRange } from '@/hooks/useDateRange'
 import { Info } from 'lucide-react'
 
@@ -24,6 +25,7 @@ export default function LeadsTrendsPage() {
   const [error, setError] = useState<string | null>(null)
   const [monthA, setMonthA] = useState('')
   const [monthB, setMonthB] = useState('')
+  const [selectedCourse, setSelectedCourse] = useState('all')
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -40,7 +42,8 @@ export default function LeadsTrendsPage() {
       }
 
       const refreshParam = isRefresh ? '&refresh=true' : ''
-      const urlTrend = `/api/leads/trend?months=12${refreshParam}`
+      const courseParam = selectedCourse !== 'all' ? `&course=${encodeURIComponent(selectedCourse)}` : ''
+      const urlTrend = `/api/leads/trend?months=12${refreshParam}${courseParam}`
 
       const resTrend = await fetch(urlTrend, { headers })
 
@@ -58,7 +61,7 @@ export default function LeadsTrendsPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [selectedCourse])
 
   useEffect(() => {
     fetchData()
@@ -199,6 +202,7 @@ export default function LeadsTrendsPage() {
             onChangeCompare={setMonthB}
             label="Month A"
           />
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
         </div>
       </div>
 

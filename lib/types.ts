@@ -225,6 +225,9 @@ export interface LeadsMonthlyRow {
   techOicLeads: number
   ppmLeads: number
   sapEbsOthersLeads: number
+  llmLeads?: number
+  chatgptLeads?: number
+  perplexityLeads?: number
   enrolled: number
   highPotential: number
   mediumPotential: number
@@ -278,6 +281,7 @@ export interface LeadsKPI {
   totalLeads: number
   websiteLeads: number
   organicLeads: number
+  llmLeads?: number
   enrolled: number
   highPotential: number
   convRate: number
@@ -285,6 +289,9 @@ export interface LeadsKPI {
   prevEnrolled: number
   prevConvRate: number
   prevHighPotential: number
+  prevWebsiteLeads?: number
+  prevOrganicLeads?: number
+  prevLLMLeads?: number
   currentMonth: string
   previousMonth: string
 }
@@ -495,6 +502,9 @@ export interface LeadsQuarterlyDetailRow {
   techOicLeads: number
   ppmLeads: number
   sapEbsOthersLeads: number
+  llmLeads?: number
+  chatgptLeads?: number
+  perplexityLeads?: number
   enrolled: number
   highPotential: number
   mediumPotential: number
@@ -514,6 +524,9 @@ export interface LeadsYearlyDetailRow {
   techOicLeads: number
   ppmLeads: number
   sapEbsOthersLeads: number
+  llmLeads?: number
+  chatgptLeads?: number
+  perplexityLeads?: number
   enrolled: number
   highPotential: number
   mediumPotential: number
@@ -873,6 +886,7 @@ export type LeadChannel =
   | 'Meta Ads'
   | 'Referral'
   | 'SOT'
+  | 'LLM'
   | 'Other'
 
 export interface TeleCRMLead {
@@ -931,6 +945,9 @@ export interface LeadsMonthlyTrend {
   techOicLeads?: number
   ppmLeads?: number
   sapEbsOthersLeads?: number
+  llmLeads?: number
+  chatgptLeads?: number
+  perplexityLeads?: number
   courses?: Record<string, number>
 }
 
@@ -988,6 +1005,7 @@ export interface LiveLeadsKPI {
   convRate: number
   websiteLeads: number
   organicLeads: number
+  llmLeads?: number
   googleAdsLeads: number
   metaAdsLeads: number
   // Previous period (for delta)
@@ -995,6 +1013,9 @@ export interface LiveLeadsKPI {
   prevEnrolled: number
   prevHighPotential: number
   prevConvRate: number
+  prevWebsiteLeads?: number
+  prevOrganicLeads?: number
+  prevLLMLeads?: number
   // Metadata
   periodLabel: string
   prevPeriodLabel: string

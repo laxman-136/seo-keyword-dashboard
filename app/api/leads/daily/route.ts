@@ -2,8 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, STATUS_TO_CATEGORY, getLeadAgeInDays, COURSE_TO_GROUP } from '@/lib/telecrm-api'
-import { COURSE_AVG_FEES } from '../pipeline-value/route'
+import { getAllLeads, STATUS_TO_CATEGORY, getLeadAgeInDays, COURSE_TO_GROUP, COURSE_AVG_FEES } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +28,7 @@ export async function GET(request: Request) {
     const bypassCache = searchParams.get('refresh') === 'true'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     // Load past 30 days leads to query active manager operations
     const now = new Date()
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const toDate = now
 
     const leads = await getAllLeads(
-      { dateRange: { from: fromDate, to: toDate } },
+      { dateRange: { from: fromDate, to: toDate }, course: selectedCourse },
       customToken,
       customEnterpriseId,
       bypassCache

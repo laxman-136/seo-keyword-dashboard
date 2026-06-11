@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     const bypassCache = searchParams.get('refresh') === 'true'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     // Load leads from the past 6 months to check for aging
     const now = new Date()
@@ -35,14 +36,15 @@ export async function GET(request: Request) {
     const toDate = now
 
     const leads = await getAllLeads(
-      { dateRange: { from: fromDate, to: toDate } },
+      { dateRange: { from: fromDate, to: toDate }, course: selectedCourse },
       customToken,
       customEnterpriseId,
       bypassCache
     )
 
-    // Filter to active pending leads for decay calculations (exclude Enrolled and Low/Cold)
+    // Filter to active pending leads for decay calculations (exclude Enrolled and Low/Cold, but include Junk Lead)
     const pendingLeads = leads.filter(lead => {
+      if (lead.status === 'Junk Lead') return true
       const cat = STATUS_TO_CATEGORY[lead.status] || 'Fresh/Unqualified'
       return cat !== 'Enrolled' && cat !== 'Low/Cold'
     })
@@ -58,6 +60,11 @@ export async function GET(request: Request) {
     ]
 
     pendingLeads.forEach(lead => {
+      if (lead.status === 'Junk Lead') {
+        // Force junk leads directly to the Dead bucket (index 4)
+        buckets[4].count++
+        return
+      }
       const age = getLeadAgeInDays(lead)
       for (const bucket of buckets) {
         if (age >= bucket.min && age < bucket.max) {
@@ -92,13 +99,17 @@ export async function GET(request: Request) {
       if (!statusAgeStats[status]) {
         statusAgeStats[status] = { Hot: 0, Warm: 0, Cooling: 0, Cold: 0, Dead: 0 }
       }
-      const age = getLeadAgeInDays(lead)
       const stats = statusAgeStats[status]
-      if (age < 7) stats.Hot++
-      else if (age < 30) stats.Warm++
-      else if (age < 90) stats.Cooling++
-      else if (age < 180) stats.Cold++
-      else stats.Dead++
+      if (lead.status === 'Junk Lead') {
+        stats.Dead++
+      } else {
+        const age = getLeadAgeInDays(lead)
+        if (age < 7) stats.Hot++
+        else if (age < 30) stats.Warm++
+        else if (age < 90) stats.Cooling++
+        else if (age < 180) stats.Cold++
+        else stats.Dead++
+      }
     })
 
     const chartData = Object.entries(statusAgeStats).map(([name, stats]) => ({
@@ -125,9 +136,13 @@ export async function GET(request: Request) {
       stats.totalPending++
       stats.totalAge += age
 
-      if (age < 7) stats.hotCount++
-      else if (age < 30) stats.warmCount++
-      else stats.coolingOrOlderCount++
+      if (lead.status === 'Junk Lead') {
+        stats.coolingOrOlderCount++
+      } else {
+        if (age < 7) stats.hotCount++
+        else if (age < 30) stats.warmCount++
+        else stats.coolingOrOlderCount++
+      }
     })
 
     const coursesAging = Object.entries(courseStats).map(([course, stats]) => {

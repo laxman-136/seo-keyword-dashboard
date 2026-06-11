@@ -10,6 +10,7 @@ import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
 import StageDrillDown from '@/components/leads/StageDrillDown'
 import DateRangePicker from '@/components/ads/DateRangePicker'
+import CourseSelector from '@/components/leads/CourseSelector'
 import { useDateRange } from '@/hooks/useDateRange'
 import { Info, TrendingUp, TrendingDown, Minus, Target, Activity, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -24,30 +25,9 @@ export default function LeadsFunnelPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState('all')
 
-  const fetchData = useCallback(async (isRefresh = false) => {
-    const cacheKey = `funnel_${from}_${to}`
-
-    if (!isRefresh) {
-      const cached = getClientCachedData(cacheKey)
-      if (cached) {
-        setFunnel(cached.current)
-        setPrevFunnel(cached.prev)
-        setLoading(false)
-        // Background revalidation (non-blocking)
-        fetchFromNetwork(cacheKey, true)
-        return
-      }
-      setLoading(true)
-    } else {
-      setRefreshing(true)
-    }
-    setError(null)
-
-    await fetchFromNetwork(cacheKey, false)
-  }, [from, to])
-
-  const fetchFromNetwork = async (cacheKey: string, isBackground = false) => {
+  const fetchFromNetwork = useCallback(async (cacheKey: string, isBackground = false) => {
     try {
       const headers: Record<string, string> = {}
       if (typeof window !== 'undefined') {
@@ -61,8 +41,9 @@ export default function LeadsFunnelPage() {
       const prevFrom = new Date(new Date(from).getTime() - durationMs).toISOString().split('T')[0]
       const prevTo = new Date(new Date(to).getTime() - durationMs).toISOString().split('T')[0]
 
-      const urlCurrent = `/api/leads/funnel?from=${from}&to=${to}`
-      const urlPrev = `/api/leads/funnel?from=${prevFrom}&to=${prevTo}`
+      const courseParam = selectedCourse !== 'all' ? `&course=${encodeURIComponent(selectedCourse)}` : ''
+      const urlCurrent = `/api/leads/funnel?from=${from}&to=${to}${courseParam}`
+      const urlPrev = `/api/leads/funnel?from=${prevFrom}&to=${prevTo}${courseParam}`
 
       const [resCurrent, resPrev] = await Promise.all([
         fetch(urlCurrent, { headers }),
@@ -95,7 +76,29 @@ export default function LeadsFunnelPage() {
         setRefreshing(false)
       }
     }
-  }
+  }, [from, to, selectedCourse])
+
+  const fetchData = useCallback(async (isRefresh = false) => {
+    const cacheKey = `funnel_${from}_${to}_${selectedCourse}`
+
+    if (!isRefresh) {
+      const cached = getClientCachedData(cacheKey)
+      if (cached) {
+        setFunnel(cached.current)
+        setPrevFunnel(cached.prev)
+        setLoading(false)
+        // Background revalidation (non-blocking)
+        fetchFromNetwork(cacheKey, true)
+        return
+      }
+      setLoading(true)
+    } else {
+      setRefreshing(true)
+    }
+    setError(null)
+
+    await fetchFromNetwork(cacheKey, false)
+  }, [from, to, selectedCourse, fetchFromNetwork])
 
   useEffect(() => {
     fetchData()
@@ -207,6 +210,7 @@ export default function LeadsFunnelPage() {
             onRefresh={() => fetchData(true)}
           />
           <DateRangePicker />
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
         </div>
       </div>
 

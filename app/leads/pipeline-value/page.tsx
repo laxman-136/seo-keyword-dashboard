@@ -5,6 +5,7 @@ import Header from '@/components/layout/Header'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
+import CourseSelector from '@/components/leads/CourseSelector'
 import {
   PipelineValueCards,
   PipelineCategoryTable,
@@ -17,6 +18,7 @@ export default function LeadPipelineValuePage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState('all')
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -30,7 +32,12 @@ export default function LeadPipelineValuePage() {
         if (t) headers['x-telecrm-api-token'] = t
         if (e) headers['x-telecrm-enterprise-id'] = e
       }
-      const res = await fetch(`/api/leads/pipeline-value${isRefresh ? '?refresh=true' : ''}`, { headers })
+      const refreshParam = isRefresh ? 'refresh=true' : ''
+      const courseParam = selectedCourse !== 'all' ? `course=${encodeURIComponent(selectedCourse)}` : ''
+      const queryParams = [refreshParam, courseParam].filter(Boolean).join('&')
+      const queryStr = queryParams ? `?${queryParams}` : ''
+
+      const res = await fetch(`/api/leads/pipeline-value${queryStr}`, { headers })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error || `Status ${res.status}`)
@@ -42,7 +49,7 @@ export default function LeadPipelineValuePage() {
       setLoading(false);
       setRefreshing(false)
     }
-  }, [])
+  }, [selectedCourse])
 
   useEffect(() => {
     fetchData()
@@ -84,7 +91,10 @@ export default function LeadPipelineValuePage() {
           <LiveDataBadge />
           <p className="text-xs text-slate-400">Forecasting 30-day enrollment revenue based on historical conversion likelihood and course fees</p>
         </div>
-        <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
+        </div>
       </div>
 
       <PipelineValueCards

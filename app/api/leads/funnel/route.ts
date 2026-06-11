@@ -27,11 +27,11 @@ export async function GET(request: Request) {
     if (!isAllowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-
     const { searchParams } = new URL(request.url)
     const bypassCache = searchParams.get('refresh') === 'true'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     const fromStr = searchParams.get('from')
     const toStr = searchParams.get('to')
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     const fromDate = new Date(fromStr)
     const toDate = new Date(toStr)
 
-    const funnel = await getFunnelData({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache)
+    const funnel = await getFunnelData({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache, selectedCourse)
 
     return NextResponse.json(funnel, {
       headers: {

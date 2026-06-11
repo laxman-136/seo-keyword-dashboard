@@ -673,6 +673,9 @@ export function parseLeadsMonthlyGrid(values: string[][]): LeadsMonthlyRow[] {
     totalLeads: headers.indexOf('total leads'),
     websiteLeads: headers.indexOf('website leads'),
     organicLeads: headers.indexOf('organic leads'),
+    llmLeads: headers.indexOf('llm leads'),
+    chatgptLeads: headers.indexOf('chatgpt leads'),
+    perplexityLeads: headers.indexOf('perplexity leads'),
     scmLeads: headers.indexOf('scm leads'),
     hcmLeads: headers.indexOf('hcm leads'),
     financialsLeads: headers.indexOf('financials leads'),
@@ -709,6 +712,9 @@ export function parseLeadsMonthlyGrid(values: string[][]): LeadsMonthlyRow[] {
       totalLeads,
       websiteLeads: parseInt(getCell(colIdx.websiteLeads), 10) || 0,
       organicLeads: parseInt(getCell(colIdx.organicLeads), 10) || 0,
+      llmLeads: parseInt(getCell(colIdx.llmLeads), 10) || 0,
+      chatgptLeads: parseInt(getCell(colIdx.chatgptLeads), 10) || 0,
+      perplexityLeads: parseInt(getCell(colIdx.perplexityLeads), 10) || 0,
       scmLeads: parseInt(getCell(colIdx.scmLeads), 10) || 0,
       hcmLeads: parseInt(getCell(colIdx.hcmLeads), 10) || 0,
       financialsLeads: parseInt(getCell(colIdx.financialsLeads), 10) || 0,
@@ -891,8 +897,9 @@ export async function fetchLeadsDetail(
 
 export function getLeadsKPI(rows: LeadsMonthlyRow[]): LeadsKPI {
   const defaultKPI: LeadsKPI = {
-    totalLeads: 0, websiteLeads: 0, organicLeads: 0, enrolled: 0, highPotential: 0, convRate: 0,
+    totalLeads: 0, websiteLeads: 0, organicLeads: 0, llmLeads: 0, enrolled: 0, highPotential: 0, convRate: 0,
     prevTotalLeads: 0, prevEnrolled: 0, prevConvRate: 0, prevHighPotential: 0,
+    prevWebsiteLeads: 0, prevOrganicLeads: 0, prevLLMLeads: 0,
     currentMonth: 'N/A', previousMonth: 'N/A'
   }
 
@@ -906,6 +913,7 @@ export function getLeadsKPI(rows: LeadsMonthlyRow[]): LeadsKPI {
     totalLeads: curr.totalLeads,
     websiteLeads: curr.websiteLeads,
     organicLeads: curr.organicLeads,
+    llmLeads: curr.llmLeads || 0,
     enrolled: curr.enrolled,
     highPotential: curr.highPotential,
     convRate: curr.convRate,
@@ -913,6 +921,9 @@ export function getLeadsKPI(rows: LeadsMonthlyRow[]): LeadsKPI {
     prevEnrolled: prev ? prev.enrolled : 0,
     prevConvRate: prev ? prev.convRate : 0,
     prevHighPotential: prev ? prev.highPotential : 0,
+    prevWebsiteLeads: prev ? prev.websiteLeads : 0,
+    prevOrganicLeads: prev ? prev.organicLeads : 0,
+    prevLLMLeads: prev ? (prev.llmLeads || 0) : 0,
     currentMonth: curr.month,
     previousMonth: prev ? prev.month : 'N/A'
   }
@@ -924,6 +935,9 @@ export function getLeadsTrend(rows: LeadsMonthlyRow[]): LeadsTrendPoint[] {
     totalLeads: r.totalLeads,
     websiteLeads: r.websiteLeads,
     organicLeads: r.organicLeads,
+    llmLeads: r.llmLeads || 0,
+    chatgptLeads: r.chatgptLeads || 0,
+    perplexityLeads: r.perplexityLeads || 0,
     enrolled: r.enrolled,
     highPotential: r.highPotential,
     convRate: r.convRate
@@ -2008,6 +2022,9 @@ export function getLeadsQuarterlyDetails(rows: LeadsMonthlyRow[]): LeadsQuarterl
     const totalLeads = list.reduce((sum, r) => sum + r.totalLeads, 0)
     const websiteLeads = list.reduce((sum, r) => sum + r.websiteLeads, 0)
     const organicLeads = list.reduce((sum, r) => sum + r.organicLeads, 0)
+    const llmLeads = list.reduce((sum, r) => sum + (r.llmLeads || 0), 0)
+    const chatgptLeads = list.reduce((sum, r) => sum + (r.chatgptLeads || 0), 0)
+    const perplexityLeads = list.reduce((sum, r) => sum + (r.perplexityLeads || 0), 0)
     const scmLeads = list.reduce((sum, r) => sum + r.scmLeads, 0)
     const hcmLeads = list.reduce((sum, r) => sum + r.hcmLeads, 0)
     const financialsLeads = list.reduce((sum, r) => sum + r.financialsLeads, 0)
@@ -2028,6 +2045,9 @@ export function getLeadsQuarterlyDetails(rows: LeadsMonthlyRow[]): LeadsQuarterl
       totalLeads,
       websiteLeads,
       organicLeads,
+      llmLeads,
+      chatgptLeads,
+      perplexityLeads,
       scmLeads,
       hcmLeads,
       financialsLeads,
@@ -2072,6 +2092,9 @@ export function getLeadsQuarterComparison(
     totalLeads: 0,
     websiteLeads: 0,
     organicLeads: 0,
+    llmLeads: 0,
+    chatgptLeads: 0,
+    perplexityLeads: 0,
     scmLeads: 0,
     hcmLeads: 0,
     financialsLeads: 0,
@@ -2093,6 +2116,9 @@ export function getLeadsQuarterComparison(
     totalLeads: a.totalLeads - b.totalLeads,
     websiteLeads: a.websiteLeads - b.websiteLeads,
     organicLeads: a.organicLeads - b.organicLeads,
+    llmLeads: (a.llmLeads || 0) - (b.llmLeads || 0),
+    chatgptLeads: (a.chatgptLeads || 0) - (b.chatgptLeads || 0),
+    perplexityLeads: (a.perplexityLeads || 0) - (b.perplexityLeads || 0),
     scmLeads: a.scmLeads - b.scmLeads,
     hcmLeads: a.hcmLeads - b.hcmLeads,
     financialsLeads: a.financialsLeads - b.financialsLeads,
@@ -2127,6 +2153,9 @@ export function getLeadsYearlyDetails(rows: LeadsMonthlyRow[]): LeadsYearlyDetai
     const totalLeads = list.reduce((sum, r) => sum + r.totalLeads, 0)
     const websiteLeads = list.reduce((sum, r) => sum + r.websiteLeads, 0)
     const organicLeads = list.reduce((sum, r) => sum + r.organicLeads, 0)
+    const llmLeads = list.reduce((sum, r) => sum + (r.llmLeads || 0), 0)
+    const chatgptLeads = list.reduce((sum, r) => sum + (r.chatgptLeads || 0), 0)
+    const perplexityLeads = list.reduce((sum, r) => sum + (r.perplexityLeads || 0), 0)
     const scmLeads = list.reduce((sum, r) => sum + r.scmLeads, 0)
     const hcmLeads = list.reduce((sum, r) => sum + r.hcmLeads, 0)
     const financialsLeads = list.reduce((sum, r) => sum + r.financialsLeads, 0)
@@ -2146,6 +2175,9 @@ export function getLeadsYearlyDetails(rows: LeadsMonthlyRow[]): LeadsYearlyDetai
       totalLeads,
       websiteLeads,
       organicLeads,
+      llmLeads,
+      chatgptLeads,
+      perplexityLeads,
       scmLeads,
       hcmLeads,
       financialsLeads,
@@ -2181,6 +2213,9 @@ export function getLeadsYearComparison(
     totalLeads: 0,
     websiteLeads: 0,
     organicLeads: 0,
+    llmLeads: 0,
+    chatgptLeads: 0,
+    perplexityLeads: 0,
     scmLeads: 0,
     hcmLeads: 0,
     financialsLeads: 0,
@@ -2202,6 +2237,9 @@ export function getLeadsYearComparison(
     totalLeads: a.totalLeads - b.totalLeads,
     websiteLeads: a.websiteLeads - b.websiteLeads,
     organicLeads: a.organicLeads - b.organicLeads,
+    llmLeads: (a.llmLeads || 0) - (b.llmLeads || 0),
+    chatgptLeads: (a.chatgptLeads || 0) - (b.chatgptLeads || 0),
+    perplexityLeads: (a.perplexityLeads || 0) - (b.perplexityLeads || 0),
     scmLeads: a.scmLeads - b.scmLeads,
     hcmLeads: a.hcmLeads - b.hcmLeads,
     financialsLeads: a.financialsLeads - b.financialsLeads,

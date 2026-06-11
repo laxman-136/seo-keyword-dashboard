@@ -5,6 +5,7 @@ import Header from '@/components/layout/Header'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
+import CourseSelector from '@/components/leads/CourseSelector'
 import { DailyKPICards, UrgentActionList, TeamPerformanceTable, LiveLeadFeed } from '@/components/leads/intelligence/DailyComponents'
 import { Info } from 'lucide-react'
 
@@ -14,6 +15,7 @@ export default function DailyOperationsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<string>(new Date().toISOString())
+  const [selectedCourse, setSelectedCourse] = useState('all')
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -27,7 +29,12 @@ export default function DailyOperationsPage() {
         if (t) headers['x-telecrm-api-token'] = t
         if (e) headers['x-telecrm-enterprise-id'] = e
       }
-      const res = await fetch(`/api/leads/daily${isRefresh ? '?refresh=true' : ''}`, { headers })
+      const refreshParam = isRefresh ? 'refresh=true' : ''
+      const courseParam = selectedCourse !== 'all' ? `course=${encodeURIComponent(selectedCourse)}` : ''
+      const queryParams = [refreshParam, courseParam].filter(Boolean).join('&')
+      const queryStr = queryParams ? `?${queryParams}` : ''
+
+      const res = await fetch(`/api/leads/daily${queryStr}`, { headers })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error || `Status ${res.status}`)
@@ -40,7 +47,7 @@ export default function DailyOperationsPage() {
       setLoading(false);
       setRefreshing(false)
     }
-  }, [])
+  }, [selectedCourse])
 
   useEffect(() => {
     fetchData()
@@ -147,7 +154,10 @@ export default function DailyOperationsPage() {
           <LiveDataBadge />
           <p className="text-xs text-slate-400">Operational hub showing daily lead metrics, urgent uncontacted queues, and real-time feed (auto-refreshing every 5 mins)</p>
         </div>
-        <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={lastUpdated} onRefresh={() => fetchData(true)} />
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={lastUpdated} onRefresh={() => fetchData(true)} />
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
+        </div>
       </div>
 
       <DailyKPICards

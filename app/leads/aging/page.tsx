@@ -5,6 +5,7 @@ import Header from '@/components/layout/Header'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
+import CourseSelector from '@/components/leads/CourseSelector'
 import { AgingBucketCards, AgingBarChart, CourseAgingTable, ActionPanel } from '@/components/leads/intelligence/AgingComponents'
 import { Info } from 'lucide-react'
 
@@ -13,6 +14,7 @@ export default function LeadAgingPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState('all')
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -26,12 +28,17 @@ export default function LeadAgingPage() {
         if (t) headers['x-telecrm-api-token'] = t
         if (e) headers['x-telecrm-enterprise-id'] = e
       }
-      const res = await fetch(`/api/leads/aging${isRefresh ? '?refresh=true' : ''}`, { headers })
+      const refreshParam = isRefresh ? 'refresh=true' : ''
+      const courseParam = selectedCourse !== 'all' ? `course=${encodeURIComponent(selectedCourse)}` : ''
+      const queryParams = [refreshParam, courseParam].filter(Boolean).join('&')
+      const queryStr = queryParams ? `?${queryParams}` : ''
+      
+      const res = await fetch(`/api/leads/aging${queryStr}`, { headers })
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `Status ${res.status}`) }
       setData(await res.json())
     } catch (err: any) { setError(err?.message || 'Error loading aging data') }
     finally { setLoading(false); setRefreshing(false) }
-  }, [])
+  }, [selectedCourse])
 
   useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => {
@@ -65,7 +72,10 @@ export default function LeadAgingPage() {
           <LiveDataBadge />
           <p className="text-xs text-slate-400">Showing all non-enrolled pending leads by decay timeline — older = more urgent</p>
         </div>
-        <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
+        </div>
       </div>
 
       {/* Summary KPIs */}

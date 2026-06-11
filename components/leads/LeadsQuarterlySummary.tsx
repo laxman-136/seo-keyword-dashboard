@@ -12,6 +12,7 @@ interface QuarterRow {
   totalLeads: number
   websiteLeads: number
   organicLeads: number
+  llmLeads: number
   enrolled: number
   highPotential: number
   convRate: number
@@ -51,6 +52,7 @@ export default function LeadsQuarterlySummary({ rows }: LeadsQuarterlySummaryPro
       const totalLeads = list.reduce((sum, r) => sum + r.totalLeads, 0)
       const websiteLeads = list.reduce((sum, r) => sum + r.websiteLeads, 0)
       const organicLeads = list.reduce((sum, r) => sum + r.organicLeads, 0)
+      const llmLeads = list.reduce((sum, r) => sum + (r.llmLeads || 0), 0)
       const enrolled = list.reduce((sum, r) => sum + r.enrolled, 0)
       const highPotential = list.reduce((sum, r) => sum + r.highPotential, 0)
       const convRate = totalLeads > 0 ? (enrolled / totalLeads) * 100 : 0
@@ -61,6 +63,7 @@ export default function LeadsQuarterlySummary({ rows }: LeadsQuarterlySummaryPro
         totalLeads,
         websiteLeads,
         organicLeads,
+        llmLeads,
         enrolled,
         highPotential,
         convRate
@@ -90,6 +93,7 @@ export default function LeadsQuarterlySummary({ rows }: LeadsQuarterlySummaryPro
               <th className="px-4 py-3.5 text-right">Total Leads</th>
               <th className="px-4 py-3.5 text-right text-slate-400 font-semibold">Website Leads</th>
               <th className="px-4 py-3.5 text-right text-slate-400 font-semibold">Organic Leads</th>
+              <th className="px-4 py-3.5 text-right text-pink-400 font-semibold">LLM Leads</th>
               <th className="px-4 py-3.5 text-right text-emerald-400 font-bold">Enrolled</th>
               <th className="px-4 py-3.5 text-right text-blue-400 font-semibold">High Potential</th>
               <th className="px-6 py-3.5 text-right">Conv Rate</th>
@@ -103,6 +107,7 @@ export default function LeadsQuarterlySummary({ rows }: LeadsQuarterlySummaryPro
                 <td className="px-4 py-4 text-right font-mono font-bold text-slate-900">{q.totalLeads.toLocaleString()}</td>
                 <td className="px-4 py-4 text-right font-mono text-slate-500">{q.websiteLeads.toLocaleString()}</td>
                 <td className="px-4 py-4 text-right font-mono text-slate-500">{q.organicLeads.toLocaleString()}</td>
+                <td className="px-4 py-4 text-right font-mono text-pink-600 font-bold">{q.llmLeads.toLocaleString()}</td>
                 <td className="px-4 py-4 text-right font-mono text-emerald-600 font-bold">{q.enrolled.toLocaleString()}</td>
                 <td className="px-4 py-4 text-right font-mono text-blue-600 font-semibold">{q.highPotential.toLocaleString()}</td>
                 <td className="px-6 py-4 text-right font-mono font-bold text-slate-800">

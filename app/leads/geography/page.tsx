@@ -5,6 +5,7 @@ import Header from '@/components/layout/Header'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
+import CourseSelector from '@/components/leads/CourseSelector'
 import { IndiaStateMap, StatComparisonTable, StateMetric } from '@/components/leads/intelligence/GeographyComponents'
 import { Info, MapPin } from 'lucide-react'
 
@@ -35,6 +36,7 @@ export default function GeographyPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [metric, setMetric] = useState<'leads' | 'convRate' | 'revenue'>('leads')
+  const [selectedCourse, setSelectedCourse] = useState('all')
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -48,7 +50,12 @@ export default function GeographyPage() {
         if (t) headers['x-telecrm-api-token'] = t
         if (e) headers['x-telecrm-enterprise-id'] = e
       }
-      const res = await fetch(`/api/leads/geography${isRefresh ? '?refresh=true' : ''}`, { headers })
+      const refreshParam = isRefresh ? 'refresh=true' : ''
+      const courseParam = selectedCourse !== 'all' ? `course=${encodeURIComponent(selectedCourse)}` : ''
+      const queryParams = [refreshParam, courseParam].filter(Boolean).join('&')
+      const queryStr = queryParams ? `?${queryParams}` : ''
+
+      const res = await fetch(`/api/leads/geography${queryStr}`, { headers })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error || `Status ${res.status}`)
@@ -60,7 +67,7 @@ export default function GeographyPage() {
       setLoading(false);
       setRefreshing(false)
     }
-  }, [])
+  }, [selectedCourse])
 
   useEffect(() => {
     fetchData()
@@ -109,7 +116,10 @@ export default function GeographyPage() {
           <LiveDataBadge />
           <p className="text-xs text-slate-400">Track lead distribution, enrollment metrics, and regional quality profiles across Indian states and cities</p>
         </div>
-        <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

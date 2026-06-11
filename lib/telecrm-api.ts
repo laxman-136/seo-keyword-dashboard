@@ -48,6 +48,13 @@ export const SOURCE_TO_CHANNEL: Record<string, LeadChannel> = {
   'facebook':                   'Meta Ads',
   'Website-fb':                 'Meta Ads',
   'SOT':                        'SOT',
+  'chatgpt':                    'LLM',
+  'perplexity':                 'LLM',
+  'openai':                     'LLM',
+  'claude':                     'LLM',
+  'chatgpt-chatbot':           'LLM',
+  'perplexity-ai':              'LLM',
+  'LLM':                        'LLM',
 }
 
 // ── COURSE TO GROUP MAPPING ───────────────────────────────
@@ -65,6 +72,26 @@ export const COURSE_TO_GROUP: Record<string, string> = {
   'Master SAP ABAP Training':                         'SAP',
   'Oracle Fusion Technical Training':                 'Oracle Fusion Technical',
   'Oracle Integration Cloud Online Training Course':  'Oracle Integration',
+}
+
+export const COURSE_AVG_FEES: Record<string, number> = {
+  'Oracle Fusion SCM':        27169,
+  'Oracle Fusion HCM':        19929,
+  'Oracle Fusion Financials':  21950,
+  'Oracle Fusion Technical':   22350,
+  'Oracle Fusion PPM':         27857,
+  'Oracle Fusion WMS':         25000,
+  'Oracle Integration':        22000,
+  'SAP':                       18000,
+  'default':                   23290,
+}
+
+export const CATEGORY_CONV_RATES = {
+  'Enrolled': 1.0,
+  'High Potential': 0.173,
+  'Medium Potential': 0.085,
+  'Fresh/Unqualified': 0.012,
+  'Low/Cold': 0.002
 }
 
 // ── CORE UTILS ───────────────────────────────────────────
@@ -105,6 +132,9 @@ export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
     }
     if (lower.includes('facebook') || lower.includes('fb') || lower.includes('instagram') || lower.includes('meta')) {
       return 'Meta Ads'
+    }
+    if (lower.includes('chatgpt') || lower.includes('chat gpt') || lower.includes('gpt') || lower.includes('perplexity') || lower.includes('openai') || lower.includes('claude') || lower.includes('llm')) {
+      return 'LLM'
     }
     return SOURCE_TO_CHANNEL[sourceRaw] || 'Other'
   }
@@ -148,6 +178,8 @@ function generateMockCRMLeads(fromMs: number, toMs: number): TeleCRMLead[] {
     { source: 'facebook', medium: 'cpc', campaign: 'HCM Lookalike Conversions', fbclid: 'fbclid_mock_222', channel: 'Meta Ads' },
     { source: 'instagram', medium: 'cpc', campaign: 'SCM Lead Gen Campaign', fbclid: 'fbclid_mock_333', channel: 'Meta Ads' },
     { source: 'instagram', medium: 'cpc', campaign: 'PPM Retargeting Funnel', fbclid: 'fbclid_mock_444', channel: 'Meta Ads' },
+    { source: 'chatgpt', medium: 'chatbot', campaign: 'ChatGPT Assistant', fbclid: null, gclid: null, channel: 'LLM' },
+    { source: 'perplexity', medium: 'search', campaign: 'Perplexity Answers', fbclid: null, gclid: null, channel: 'LLM' },
     { source: 'organic', medium: 'organic', campaign: null, fbclid: null, gclid: null, channel: 'Organic' },
     { source: 'direct', medium: 'direct', campaign: null, fbclid: null, gclid: null, channel: 'Website' }
   ]
@@ -321,10 +353,11 @@ export async function getCountByStatus(
   dateRange?: { from: Date; to: Date },
   customToken?: string,
   customEnterpriseId?: string,
-  bypassCache = false
+  bypassCache = false,
+  course?: string
 ): Promise<Record<string, number>> {
   const range = dateRange || getCurrentMonthRange()
-  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache)
+  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache, course)
   
   const counts: Record<string, number> = {}
   
@@ -372,55 +405,10 @@ export async function getAllLeadsForPeriod(
   dateRange: { from: Date; to: Date },
   customToken?: string,
   customEnterpriseId?: string,
-  bypassCache = false
+  bypassCache = false,
+  course?: string
 ): Promise<TeleCRMLead[]> {
-  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
-  const fromMs = getStartOfDay(dateRange.from).getTime()
-  const toMs = getEndOfDay(dateRange.to).getTime()
-  
-  const cacheKey = `telecrm_all_leads_${fromMs}_${toMs}_${enterpriseId}`
-  
-  const res = await getOrSetCache(
-    cacheKey,
-    async () => {
-      const leads: TeleCRMLead[] = []
-      const limit = 100
-      const filters = {
-        created_on: { from: fromMs, to: toMs }
-      }
-      
-      // Fetch the first page to get total count
-      const firstPageRes = await searchLeads(filters, { limit, skip: 0 }, customToken, customEnterpriseId)
-      leads.push(...firstPageRes.data)
-      
-      const totalCount = firstPageRes.total_count
-      const fetchedCount = firstPageRes.data.length
-      
-      if (totalCount > fetchedCount && fetchedCount > 0) {
-        const remainingSkips: number[] = []
-        for (let skipOffset = limit; skipOffset < totalCount; skipOffset += limit) {
-          remainingSkips.push(skipOffset)
-        }
-        
-        // Fetch all remaining pages in parallel
-        const remainingPages = await Promise.all(
-          remainingSkips.map(skipOffset => 
-            searchLeads(filters, { limit, skip: skipOffset }, customToken, customEnterpriseId)
-          )
-        )
-        
-        remainingPages.forEach(page => {
-          leads.push(...page.data)
-        })
-      }
-      
-      return leads
-    },
-    bypassCache,
-    900 * 1000
-  )
-  
-  return res.data
+  return getAllLeads({ dateRange, course }, customToken, customEnterpriseId, bypassCache)
 }
 
 // Get count by channel
@@ -440,6 +428,7 @@ export async function getCountByChannel(
     'Meta Ads': 0,
     'Referral': 0,
     'SOT': 0,
+    'LLM': 0,
     'Other': 0
   }
   
@@ -506,11 +495,12 @@ export async function getMonthlyTrend(
   months: number = 6,
   customToken?: string,
   customEnterpriseId?: string,
-  bypassCache = false
+  bypassCache = false,
+  course?: string
 ): Promise<LeadsMonthlyTrend[]> {
   const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
   
-  const cacheKey = `telecrm_monthly_trend_${months}_${enterpriseId}`
+  const cacheKey = `telecrm_monthly_trend_${months}_${course || 'all'}_${enterpriseId}`
   
   const res = await getOrSetCache(
     cacheKey,
@@ -523,7 +513,7 @@ export async function getMonthlyTrend(
       const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
       
       // Fetch all leads in a single bulk query
-      const allLeads = await getAllLeadsForPeriod({ from: rangeStart, to: rangeEnd }, customToken, customEnterpriseId, bypassCache)
+      const allLeads = await getAllLeadsForPeriod({ from: rangeStart, to: rangeEnd }, customToken, customEnterpriseId, bypassCache, course)
       
       for (let i = 0; i < months; i++) {
         const year = now.getFullYear()
@@ -564,7 +554,7 @@ export async function getMonthlyTrend(
         const convRate = parseFloat(((enrolled / divisor) * 100).toFixed(1))
         
         const channelMap: Record<LeadChannel, number> = {
-          'Organic': 0, 'Website': 0, 'Google Ads': 0, 'Meta Ads': 0, 'Referral': 0, 'SOT': 0, 'Other': 0
+          'Organic': 0, 'Website': 0, 'Google Ads': 0, 'Meta Ads': 0, 'Referral': 0, 'SOT': 0, 'LLM': 0, 'Other': 0
         }
         
         const courseMap: Record<string, number> = {}
@@ -574,9 +564,18 @@ export async function getMonthlyTrend(
         })
         courseMap['Unknown Course'] = 0
         
+        let chatgptCount = 0
+        let perplexityCount = 0
         monthLeads.forEach(lead => {
           const ch = detectLeadChannel(lead)
           channelMap[ch] = (channelMap[ch] || 0) + 1
+          
+          const rawSource = (lead.fields?.lead_source_1 || '').toLowerCase()
+          if (rawSource.includes('chatgpt') || rawSource.includes('chat gpt') || rawSource.includes('gpt')) {
+            chatgptCount++
+          } else if (rawSource.includes('perplexity')) {
+            perplexityCount++
+          }
           
           const rawCourse = lead.fields?.course || ''
           const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
@@ -605,6 +604,9 @@ export async function getMonthlyTrend(
           googleAdsLeads: channelMap['Google Ads'] || 0,
           metaAdsLeads: channelMap['Meta Ads'] || 0,
           referralLeads: channelMap['Referral'] || 0,
+          llmLeads: channelMap['LLM'] || 0,
+          chatgptLeads: chatgptCount,
+          perplexityLeads: perplexityCount,
           convRate,
           
           scmLeads: scm,
@@ -638,6 +640,9 @@ export async function getMonthlyTrend(
                 pt.lowCold = sheetRow.lowCold
                 pt.websiteLeads = sheetRow.websiteLeads
                 pt.organicLeads = sheetRow.organicLeads
+                pt.llmLeads = sheetRow.llmLeads || 0
+                pt.chatgptLeads = sheetRow.chatgptLeads || 0
+                pt.perplexityLeads = sheetRow.perplexityLeads || 0
                 pt.googleAdsLeads = Math.round(sheetRow.websiteLeads * 0.5) // Approximate GoogleAds/MetaAds split
                 pt.metaAdsLeads = Math.round(sheetRow.websiteLeads * 0.5)
                 pt.referralLeads = 0
@@ -679,9 +684,10 @@ export async function getFunnelData(
   dateRange?: { from: Date; to: Date },
   customToken?: string,
   customEnterpriseId?: string,
-  bypassCache = false
+  bypassCache = false,
+  course?: string
 ): Promise<LeadsFunnelData> {
-  const statusCounts = await getCountByStatus(dateRange, customToken, customEnterpriseId, bypassCache)
+  const statusCounts = await getCountByStatus(dateRange, customToken, customEnterpriseId, bypassCache, course)
   
   let total = 0
   let enrolled = 0
@@ -724,10 +730,11 @@ export async function getCourseBreakdown(
   dateRange?: { from: Date; to: Date },
   customToken?: string,
   customEnterpriseId?: string,
-  bypassCache = false
+  bypassCache = false,
+  course?: string
 ): Promise<LeadsCourseBreakdown[]> {
   const range = dateRange || getCurrentMonthRange()
-  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache)
+  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache, course)
   
   const coursesMap: Record<string, {
     total: number;
@@ -818,10 +825,11 @@ export async function getChannelBreakdown(
   dateRange?: { from: Date; to: Date },
   customToken?: string,
   customEnterpriseId?: string,
-  bypassCache = false
+  bypassCache = false,
+  course?: string
 ): Promise<LeadsChannelBreakdown[]> {
   const range = dateRange || getCurrentMonthRange()
-  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache)
+  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache, course)
   
   const channelsMap: Record<LeadChannel, {
     total: number;
@@ -834,6 +842,7 @@ export async function getChannelBreakdown(
     'Meta Ads': { total: 0, enrolled: 0, highPotential: 0 },
     'Referral': { total: 0, enrolled: 0, highPotential: 0 },
     'SOT': { total: 0, enrolled: 0, highPotential: 0 },
+    'LLM': { total: 0, enrolled: 0, highPotential: 0 },
     'Other': { total: 0, enrolled: 0, highPotential: 0 }
   }
   
@@ -865,7 +874,9 @@ export function getLeadsMonthComparison(
   monthB: string
 ): { a: LeadsMonthlyRow; b: LeadsMonthlyRow; deltas: Record<string, number> } {
   const emptyRow = (m: string): LeadsMonthlyRow => ({
-    month: m, totalLeads: 0, websiteLeads: 0, organicLeads: 0, scmLeads: 0, hcmLeads: 0, financialsLeads: 0,
+    month: m, totalLeads: 0, websiteLeads: 0, organicLeads: 0,
+    llmLeads: 0, chatgptLeads: 0, perplexityLeads: 0,
+    scmLeads: 0, hcmLeads: 0, financialsLeads: 0,
     techOicLeads: 0, ppmLeads: 0, sapEbsOthersLeads: 0, enrolled: 0, highPotential: 0, mediumPotential: 0,
     freshUnqualified: 0, lowCold: 0, convRate: 0
   })
@@ -877,6 +888,9 @@ export function getLeadsMonthComparison(
     totalLeads: a.totalLeads - b.totalLeads,
     websiteLeads: a.websiteLeads - b.websiteLeads,
     organicLeads: a.organicLeads - b.organicLeads,
+    llmLeads: (a.llmLeads || 0) - (b.llmLeads || 0),
+    chatgptLeads: (a.chatgptLeads || 0) - (b.chatgptLeads || 0),
+    perplexityLeads: (a.perplexityLeads || 0) - (b.perplexityLeads || 0),
     scmLeads: a.scmLeads - b.scmLeads,
     hcmLeads: a.hcmLeads - b.hcmLeads,
     financialsLeads: a.financialsLeads - b.financialsLeads,
@@ -928,31 +942,76 @@ export async function getAllLeads(
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      const leads: TeleCRMLead[] = []
-      let skip = 0
-      const limit = 100
-      
-      const searchFilters: any = {}
-      if (filters?.dateRange) {
-        searchFilters.created_on = { from: fromMs, to: toMs }
-      }
-      if (filters?.status) {
-        searchFilters.status = filters.status
-      }
-      if (filters?.lead_source_1) {
-        searchFilters.lead_source_1 = filters.lead_source_1
-      }
-      if (filters?.course) {
-        searchFilters.course = filters.course
+      // Partition the date range into 30-day chunks to prevent TeleCRM API timeouts (500)
+      let timeChunks = [{ from: fromMs, to: toMs }]
+      if (filters?.dateRange && (toMs - fromMs > 30 * 24 * 60 * 60 * 1000)) {
+        timeChunks = []
+        let currentStart = fromMs
+        const step = 30 * 24 * 60 * 60 * 1000
+        while (currentStart < toMs) {
+          const currentEnd = Math.min(currentStart + step, toMs)
+          timeChunks.push({ from: currentStart, to: currentEnd })
+          currentStart = currentEnd + 1
+        }
       }
 
-      while (true) {
-        const apiRes = await searchLeads(searchFilters, { limit, skip }, customToken, customEnterpriseId)
-        leads.push(...apiRes.data)
-        if (leads.length >= apiRes.total_count || apiRes.data.length < limit) {
-          break
-        }
-        skip += limit
+      const leads: TeleCRMLead[] = []
+      const concurrencyLimit = 3
+      
+      for (let i = 0; i < timeChunks.length; i += concurrencyLimit) {
+        const batch = timeChunks.slice(i, i + concurrencyLimit)
+        
+        const batchPromises = batch.map(async (chunk, batchIdx) => {
+          const chunkId = i + batchIdx
+          const chunkLeads: TeleCRMLead[] = []
+          let skip = 0
+          const limit = 100
+          
+          const searchFilters: any = {}
+          if (filters?.dateRange) {
+            searchFilters.created_on = { from: chunk.from, to: chunk.to }
+          }
+          if (filters?.status) {
+            searchFilters.status = filters.status
+          }
+          if (filters?.lead_source_1) {
+            searchFilters.lead_source_1 = filters.lead_source_1
+          }
+          // Note: We perform in-memory filtering by course group below to avoid exact string mismatches with TeleCRM.
+
+          // Fetch chunk with retry logic
+          let success = false
+          let retries = 3
+          while (retries > 0 && !success) {
+            try {
+              console.log(`[TeleCRM API] Fetching chunk ${chunkId + 1}/${timeChunks.length} range: ${new Date(chunk.from).toLocaleDateString()} to ${new Date(chunk.to).toLocaleDateString()} (skip=${skip}, limit=${limit})`)
+              const apiRes = await searchLeads(searchFilters, { limit, skip }, customToken, customEnterpriseId)
+              chunkLeads.push(...apiRes.data)
+              
+              let currentSkip = skip + limit
+              while (chunkLeads.length < apiRes.total_count && apiRes.data.length === limit) {
+                console.log(`[TeleCRM API] Paginating chunk ${chunkId + 1}/${timeChunks.length} (skip=${currentSkip}, limit=${limit})`)
+                const nextPageRes = await searchLeads(searchFilters, { limit, skip: currentSkip }, customToken, customEnterpriseId)
+                chunkLeads.push(...nextPageRes.data)
+                if (nextPageRes.data.length < limit) break
+                currentSkip += limit
+              }
+              success = true
+            } catch (err: any) {
+              retries--
+              console.warn(`[TeleCRM API] Failed to fetch chunk ${chunkId + 1} (retries remaining: ${retries}):`, err?.message || err)
+              if (retries === 0) {
+                throw err // rethrow after 3 failures
+              }
+              // wait 1000ms before retrying to let the rate limit reset
+              await new Promise(resolve => setTimeout(resolve, 1000))
+            }
+          }
+          return chunkLeads
+        })
+        
+        const batchResults = await Promise.all(batchPromises)
+        batchResults.forEach(res => leads.push(...res))
       }
       return leads
     },
@@ -960,7 +1019,17 @@ export async function getAllLeads(
     900 * 1000 // 15 mins cache TTL
   )
 
-  return res.data
+  let results = res.data
+  if (filters?.course && filters.course !== 'all') {
+    const targetCourseGroup = filters.course
+    results = results.filter(lead => {
+      const rawCourse = lead.fields?.course || ''
+      const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
+      return groupName === targetCourseGroup
+    })
+  }
+
+  return results
 }
 
 /**

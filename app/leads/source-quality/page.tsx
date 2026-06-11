@@ -5,6 +5,7 @@ import Header from '@/components/layout/Header'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
+import CourseSelector from '@/components/leads/CourseSelector'
 import { SourceQualityRanking, QualityVolumeScatter } from '@/components/leads/intelligence/SourceQualityComponents'
 import { Info } from 'lucide-react'
 
@@ -13,6 +14,7 @@ export default function SourceQualityPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState('all')
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -26,7 +28,12 @@ export default function SourceQualityPage() {
         if (t) headers['x-telecrm-api-token'] = t
         if (e) headers['x-telecrm-enterprise-id'] = e
       }
-      const res = await fetch(`/api/leads/source-quality${isRefresh ? '?refresh=true' : ''}`, { headers })
+      const refreshParam = isRefresh ? 'refresh=true' : ''
+      const courseParam = selectedCourse !== 'all' ? `course=${encodeURIComponent(selectedCourse)}` : ''
+      const queryParams = [refreshParam, courseParam].filter(Boolean).join('&')
+      const queryStr = queryParams ? `?${queryParams}` : ''
+
+      const res = await fetch(`/api/leads/source-quality${queryStr}`, { headers })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error || `Status ${res.status}`)
@@ -38,7 +45,7 @@ export default function SourceQualityPage() {
       setLoading(false);
       setRefreshing(false)
     }
-  }, [])
+  }, [selectedCourse])
 
   useEffect(() => {
     fetchData()
@@ -77,7 +84,10 @@ export default function SourceQualityPage() {
           <LiveDataBadge />
           <p className="text-xs text-slate-400">Scorecard rankings of marketing channels based on volume, speed, high-potential proportion, and conversions</p>
         </div>
-        <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

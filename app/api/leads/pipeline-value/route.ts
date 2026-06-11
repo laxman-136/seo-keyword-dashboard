@@ -2,29 +2,9 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, STATUS_TO_CATEGORY, COURSE_TO_GROUP } from '@/lib/telecrm-api'
+import { getAllLeads, STATUS_TO_CATEGORY, COURSE_TO_GROUP, COURSE_AVG_FEES, CATEGORY_CONV_RATES } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
-
-export const COURSE_AVG_FEES: Record<string, number> = {
-  'Oracle Fusion SCM':        27169,
-  'Oracle Fusion HCM':        19929,
-  'Oracle Fusion Financials':  21950,
-  'Oracle Fusion Technical':   22350,
-  'Oracle Fusion PPM':         27857,
-  'Oracle Fusion WMS':         25000,
-  'Oracle Integration':        22000,
-  'SAP':                       18000,
-  'default':                   23290,
-}
-
-export const CATEGORY_CONV_RATES = {
-  'Enrolled': 1.0,
-  'High Potential': 0.173,
-  'Medium Potential': 0.085,
-  'Fresh/Unqualified': 0.012,
-  'Low/Cold': 0.002
-}
 
 export async function GET(request: Request) {
   try {
@@ -48,6 +28,7 @@ export async function GET(request: Request) {
     const bypassCache = searchParams.get('refresh') === 'true'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     // Query past 6 months pipeline
     const now = new Date()
@@ -55,7 +36,7 @@ export async function GET(request: Request) {
     const toDate = now
 
     const leads = await getAllLeads(
-      { dateRange: { from: fromDate, to: toDate } },
+      { dateRange: { from: fromDate, to: toDate }, course: selectedCourse },
       customToken,
       customEnterpriseId,
       bypassCache

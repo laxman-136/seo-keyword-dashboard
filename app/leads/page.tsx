@@ -14,6 +14,7 @@ import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
 import StageDrillDown from '@/components/leads/StageDrillDown'
 import DateRangePicker from '@/components/ads/DateRangePicker'
+import CourseSelector from '@/components/leads/CourseSelector'
 import { useDateRange } from '@/hooks/useDateRange'
 import { Info } from 'lucide-react'
 
@@ -26,6 +27,7 @@ export default function LeadsOverviewPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState('all')
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -42,9 +44,10 @@ export default function LeadsOverviewPage() {
       }
 
       const refreshParam = isRefresh ? '&refresh=true' : ''
-      const urlMain = `/api/leads?from=${from}&to=${to}${refreshParam}`
-      const urlCourses = `/api/leads/courses?from=${from}&to=${to}${refreshParam}`
-      const urlTrend = `/api/leads/trend?months=6${refreshParam}`
+      const courseParam = selectedCourse !== 'all' ? `&course=${encodeURIComponent(selectedCourse)}` : ''
+      const urlMain = `/api/leads?from=${from}&to=${to}${refreshParam}${courseParam}`
+      const urlCourses = `/api/leads/courses?from=${from}&to=${to}${refreshParam}${courseParam}`
+      const urlTrend = `/api/leads/trend?months=6${refreshParam}${courseParam}`
 
       const [resMain, resCourses, resTrend] = await Promise.all([
         fetch(urlMain, { headers }),
@@ -79,7 +82,7 @@ export default function LeadsOverviewPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [from, to])
+  }, [from, to, selectedCourse])
 
   useEffect(() => {
     fetchData()
@@ -166,13 +169,14 @@ export default function LeadsOverviewPage() {
             onRefresh={() => fetchData(true)}
           />
           <DateRangePicker />
+          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
         </div>
       </div>
 
       {/* ── SECTION A: KPI GRID ── */}
       <div className="space-y-3">
         {/* Row 1 — Volume Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <LeadsKPICard
             title="Total Leads"
             value={kpi.totalLeads}
@@ -196,6 +200,14 @@ export default function LeadsOverviewPage() {
             icon="🔍"
             variant="green"
             subtitle="From search & referrals"
+          />
+          <LeadsKPICard
+            title="LLM Leads"
+            value={kpi.llmLeads || 0}
+            prevValue={kpi.prevLLMLeads || 0}
+            icon="🤖"
+            variant="pink"
+            subtitle="ChatGPT & Perplexity"
           />
         </div>
 

@@ -24,6 +24,7 @@ export function SourceQualityRanking({ leaderboard }: SourceQualityRankingProps)
     'Meta Ads': '#f59e0b',
     'Website': '#8b5cf6',
     'SOT': '#06b6d4',
+    'LLM': '#ec4899',
     'Other': '#94a3b8',
   }
 

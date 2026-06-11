@@ -2,8 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, detectLeadChannel, calculateSourceQualityScore, STATUS_TO_CATEGORY } from '@/lib/telecrm-api'
-import { COURSE_AVG_FEES } from '../pipeline-value/route'
+import { getAllLeads, detectLeadChannel, calculateSourceQualityScore, STATUS_TO_CATEGORY, COURSE_AVG_FEES } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +28,7 @@ export async function GET(request: Request) {
     const bypassCache = searchParams.get('refresh') === 'true'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     // Load past 6 months to evaluate lead source quality
     const now = new Date()
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const toDate = now
 
     const leads = await getAllLeads(
-      { dateRange: { from: fromDate, to: toDate } },
+      { dateRange: { from: fromDate, to: toDate }, course: selectedCourse },
       customToken,
       customEnterpriseId,
       bypassCache
@@ -88,6 +88,7 @@ export async function GET(request: Request) {
       if (channel === 'Referral') responseHours = 0.5
       else if (channel === 'SOT') responseHours = 0.8
       else if (channel === 'Google Ads') responseHours = 1.5
+      else if (channel === 'LLM') responseHours = 1.2
       else if (channel === 'Organic') responseHours = 2.4
       else if (channel === 'Meta Ads') responseHours = 4.2
       else responseHours = 3.0

@@ -57,6 +57,7 @@ export async function GET(request: Request) {
 
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     const fromStr = searchParams.get('from')
     const toStr = searchParams.get('to')
@@ -79,13 +80,13 @@ export async function GET(request: Request) {
     const prevToDate = new Date(toDate.getTime() - durationMs)
 
     const [currentFunnel, currentChannels, prevFunnel, prevChannels] = await Promise.all([
-      getFunnelData({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache),
-      getChannelBreakdown({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache),
-      getFunnelData({ from: prevFromDate, to: prevToDate }, customToken, customEnterpriseId, bypassCache),
-      getChannelBreakdown({ from: prevFromDate, to: prevToDate }, customToken, customEnterpriseId, bypassCache)
+      getFunnelData({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache, selectedCourse),
+      getChannelBreakdown({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache, selectedCourse),
+      getFunnelData({ from: prevFromDate, to: prevToDate }, customToken, customEnterpriseId, bypassCache, selectedCourse),
+      getChannelBreakdown({ from: prevFromDate, to: prevToDate }, customToken, customEnterpriseId, bypassCache, selectedCourse)
     ])
 
-    // Calculate website vs organic
+    // Calculate website vs organic vs llm
     const getWebsiteCount = (channels: any[]) => {
       const web = channels.find((c: any) => c.channel === 'Website')?.total || 0
       const gads = channels.find((c: any) => c.channel === 'Google Ads')?.total || 0
@@ -94,16 +95,19 @@ export async function GET(request: Request) {
     }
 
     const currentWebsite = getWebsiteCount(currentChannels)
-    const currentOrganic = currentFunnel.total - currentWebsite
+    const currentLLM = currentChannels.find((c: any) => c.channel === 'LLM')?.total || 0
+    const currentOrganic = currentFunnel.total - currentWebsite - currentLLM
 
     const prevWebsite = getWebsiteCount(prevChannels)
-    const prevOrganic = prevFunnel.total - prevWebsite
+    const prevLLM = prevChannels.find((c: any) => c.channel === 'LLM')?.total || 0
+    const prevOrganic = prevFunnel.total - prevWebsite - prevLLM
 
     return NextResponse.json({
       kpi: {
         totalLeads: currentFunnel.total,
         websiteLeads: currentWebsite,
         organicLeads: currentOrganic,
+        llmLeads: currentLLM,
         enrolled: currentFunnel.enrolled,
         highPotential: currentFunnel.highPotential,
         mediumPotential: currentFunnel.mediumPotential,
@@ -114,6 +118,7 @@ export async function GET(request: Request) {
         prevTotalLeads: prevFunnel.total,
         prevWebsiteLeads: prevWebsite,
         prevOrganicLeads: prevOrganic,
+        prevLLMLeads: prevLLM,
         prevEnrolled: prevFunnel.enrolled,
         prevHighPotential: prevFunnel.highPotential,
         prevConvRate: prevFunnel.convRate

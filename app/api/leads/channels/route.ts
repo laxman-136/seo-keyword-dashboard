@@ -32,6 +32,7 @@ export async function GET(request: Request) {
     const bypassCache = searchParams.get('refresh') === 'true'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     const fromStr = searchParams.get('from')
     const toStr = searchParams.get('to')
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     const fromDate = new Date(fromStr)
     const toDate = new Date(toStr)
 
-    const channels = await getChannelBreakdown({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache)
+    const channels = await getChannelBreakdown({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache, selectedCourse)
 
     return NextResponse.json(channels, {
       headers: {

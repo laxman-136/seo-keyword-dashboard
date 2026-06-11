@@ -14,7 +14,10 @@ import {
   Zap, 
   Snowflake, 
   Trash2, 
-  Target 
+  Target,
+  Bot,
+  MessageSquare,
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -70,6 +73,30 @@ export default function LeadsYearComparisonTable({ rows, yearA, yearB }: LeadsYe
       valB: b.organicLeads, 
       delta: deltas.organicLeads,
       color: 'emerald'
+    },
+    { 
+      title: 'LLM Leads', 
+      icon: <Bot className="w-4 h-4 text-pink-500" />, 
+      valA: a.llmLeads || 0, 
+      valB: b.llmLeads || 0, 
+      delta: deltas.llmLeads || 0,
+      color: 'pink'
+    },
+    { 
+      title: 'ChatGPT Leads', 
+      icon: <MessageSquare className="w-4 h-4 text-teal-550" />, 
+      valA: a.chatgptLeads || 0, 
+      valB: b.chatgptLeads || 0, 
+      delta: deltas.chatgptLeads || 0,
+      color: 'teal'
+    },
+    { 
+      title: 'Perplexity Leads', 
+      icon: <Sparkles className="w-4 h-4 text-orange-500" />, 
+      valA: a.perplexityLeads || 0, 
+      valB: b.perplexityLeads || 0, 
+      delta: deltas.perplexityLeads || 0,
+      color: 'orange'
     }
   ]
 

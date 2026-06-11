@@ -32,11 +32,12 @@ export async function GET(request: Request) {
     const bypassCache = searchParams.get('refresh') === 'true'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
+    const selectedCourse = searchParams.get('course') || undefined
 
     const monthsStr = searchParams.get('months')
     const months = monthsStr ? parseInt(monthsStr) : 6
 
-    const trend = await getMonthlyTrend(months, customToken, customEnterpriseId, bypassCache)
+    const trend = await getMonthlyTrend(months, customToken, customEnterpriseId, bypassCache, selectedCourse)
 
     return NextResponse.json(trend, {
       headers: {
