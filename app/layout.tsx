@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import AuthShell from '@/components/layout/AuthShell'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -36,6 +37,7 @@ export default function RootLayout({
         <AuthShell>
           {children}
           <SpeedInsights />
+          <Analytics />
         </AuthShell>
       </body>
     </html>
