@@ -30,8 +30,10 @@ export default function LeadsCourseTable({ courses }: LeadsCourseTableProps) {
               <th className="px-6 py-3.5">#</th>
               <th className="px-4 py-3.5">Course Name</th>
               <th className="px-4 py-3.5 text-right">Total Leads</th>
-              <th className="px-4 py-3.5 text-right text-slate-400 font-semibold">Organic</th>
+              <th className="px-4 py-3.5 text-right text-indigo-400 font-semibold">Paid Ads</th>
               <th className="px-4 py-3.5 text-right text-slate-400 font-semibold">Website</th>
+              <th className="px-4 py-3.5 text-right text-slate-400 font-semibold">Organic</th>
+              <th className="px-4 py-3.5 text-right text-pink-400 font-semibold">LLM</th>
               <th className="px-4 py-3.5 text-right text-emerald-400 font-bold">Enrolled</th>
               <th className="px-4 py-3.5 text-right text-blue-400 font-semibold">High Pot</th>
               <th className="px-4 py-3.5 text-right text-amber-400">Med Pot</th>
@@ -50,8 +52,10 @@ export default function LeadsCourseTable({ courses }: LeadsCourseTableProps) {
                   <td className="px-6 py-4 font-bold text-slate-400">{rank}</td>
                   <td className="px-4 py-4 font-semibold text-slate-800">{c.courseName}</td>
                   <td className="px-4 py-4 text-right font-mono font-bold text-slate-900">{c.total.toLocaleString()}</td>
-                  <td className="px-4 py-4 text-right font-mono text-slate-500">{c.organic.toLocaleString()}</td>
+                  <td className="px-4 py-4 text-right font-mono text-indigo-650 font-semibold">{c.ads.toLocaleString()}</td>
                   <td className="px-4 py-4 text-right font-mono text-slate-500">{c.website.toLocaleString()}</td>
+                  <td className="px-4 py-4 text-right font-mono text-slate-500">{c.organic.toLocaleString()}</td>
+                  <td className="px-4 py-4 text-right font-mono text-pink-600 font-medium">{c.llm.toLocaleString()}</td>
                   <td className="px-4 py-4 text-right font-mono text-emerald-600 font-bold">{c.enrolled.toLocaleString()}</td>
                   <td className="px-4 py-4 text-right font-mono text-blue-600 font-semibold">{c.highPotential.toLocaleString()}</td>
                   <td className="px-4 py-4 text-right font-mono text-amber-600">{c.mediumPotential.toLocaleString()}</td>
@@ -67,7 +71,7 @@ export default function LeadsCourseTable({ courses }: LeadsCourseTableProps) {
             })}
             {courses.length === 0 && (
               <tr>
-                <td colSpan={11} className="text-center py-10 text-slate-400 font-medium">No course detail data found.</td>
+                <td colSpan={13} className="text-center py-10 text-slate-400 font-medium">No course detail data found.</td>
               </tr>
             )}
           </tbody>

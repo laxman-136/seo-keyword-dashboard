@@ -115,14 +115,40 @@ function getCurrentMonthRange() {
   return { from, to }
 }
 
-// Channel detection helper
 export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
   const fields = lead.fields || {}
   
+  const utmSourceRaw = fields.utmsource
+  const utmMediumRaw = fields.utmmedium
+  const lowerUtm = utmSourceRaw?.toLowerCase() || ''
+  const lowerMedium = utmMediumRaw?.toLowerCase() || ''
+  
+  if (lowerUtm) {
+    if (lowerUtm.includes('chatgpt') || lowerUtm.includes('chat gpt') || lowerUtm.includes('gpt') || lowerUtm.includes('perplexity') || lowerUtm.includes('openai') || lowerUtm.includes('claude') || lowerUtm.includes('llm')) {
+      return 'LLM'
+    }
+  }
+
+  // 1. Check explicit click IDs
   if (fields.fbclid) return 'Meta Ads'
   if (fields.google_gcl_id || fields.gclid) return 'Google Ads'
-  if (fields.utmsource === 'google') return 'Google Ads'
-  if (fields.utmsource === 'an') return 'Meta Ads'
+  
+  // 2. Check UTM source for Ads platforms
+  if (lowerUtm === 'google' || lowerUtm === 'gads') {
+    return 'Google Ads'
+  }
+  if (lowerUtm === 'an' || lowerUtm === 'fb' || lowerUtm === 'ig' || lowerUtm.includes('facebook') || lowerUtm.includes('instagram') || lowerUtm.includes('meta')) {
+    return 'Meta Ads'
+  }
+  
+  // 3. Check UTM medium for CPC/PPC/Paid
+  if (lowerMedium === 'cpc' || lowerMedium === 'ppc' || lowerMedium === 'paid' || lowerMedium === 'paid_social') {
+    // If it's a paid medium but no explicit Google/Meta source, default to Google Ads unless it is clearly social
+    if (lowerUtm.includes('facebook') || lowerUtm.includes('instagram') || lowerUtm === 'fb' || lowerUtm === 'ig' || lowerUtm === 'an') {
+      return 'Meta Ads'
+    }
+    return 'Google Ads'
+  }
   
   const sourceRaw = fields.lead_source_1
   if (sourceRaw) {
@@ -135,6 +161,16 @@ export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
     }
     if (lower.includes('chatgpt') || lower.includes('chat gpt') || lower.includes('gpt') || lower.includes('perplexity') || lower.includes('openai') || lower.includes('claude') || lower.includes('llm')) {
       return 'LLM'
+    }
+    if (lower === 'website') {
+      const hasMarketingParams = !!(
+        fields.utmsource || fields.utmmedium || fields.utmcampaign || 
+        fields.utmcontent || fields.utmterm || fields.gclid || 
+        fields.google_gcl_id || fields.fbclid
+      )
+      if (!hasMarketingParams) {
+        return 'Organic'
+      }
     }
     return SOURCE_TO_CHANNEL[sourceRaw] || 'Other'
   }
@@ -359,6 +395,9 @@ export async function getCountByStatus(
   const range = dateRange || getCurrentMonthRange()
   const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache, course)
   
+  const fromTime = getStartOfDay(range.from).getTime()
+  const toTime = getEndOfDay(range.to).getTime()
+
   const counts: Record<string, number> = {}
   
   // Pre-initialize all mapped statuses to 0 to ensure they are returned
@@ -368,8 +407,26 @@ export async function getCountByStatus(
   })
   
   leads.forEach(lead => {
-    const status = lead.status || 'Other'
-    counts[status] = (counts[status] || 0) + 1
+    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+    const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
+    
+    const isEnrolled = lead.status === 'Enrolled'
+    const enrollDateVal = lead.fields?.course_enrollment_date
+    const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
+    
+    if (isEnrolled) {
+      if (isEnrolledInPeriod) {
+        counts['Enrolled'] = (counts['Enrolled'] || 0) + 1
+      } else if (isLeadInPeriod) {
+        // Future enrollment, count as a High Potential fallback status in this period
+        counts['Interested to join the Demo'] = (counts['Interested to join the Demo'] || 0) + 1
+      }
+    } else {
+      if (isLeadInPeriod) {
+        const status = lead.status || 'Other'
+        counts[status] = (counts[status] || 0) + 1
+      }
+    }
   })
   
   return counts
@@ -525,8 +582,14 @@ export async function getMonthlyTrend(
         
         // Filter leads belonging to this month in memory
         const monthLeads = allLeads.filter(lead => {
-          const created = lead.fields?.created_on
-          return created && created >= monthStart.getTime() && created <= monthEnd.getTime()
+          const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+          const isLeadInMonth = !!(leadDateVal && leadDateVal >= monthStart.getTime() && leadDateVal <= monthEnd.getTime())
+          
+          const isEnrolled = lead.status === 'Enrolled'
+          const enrollDateVal = lead.fields?.course_enrollment_date
+          const isEnrolledInMonth = !!(isEnrolled && enrollDateVal && enrollDateVal >= monthStart.getTime() && enrollDateVal <= monthEnd.getTime())
+          
+          return isLeadInMonth || isEnrolledInMonth
         })
         
         let total = 0
@@ -535,23 +598,6 @@ export async function getMonthlyTrend(
         let mediumPotential = 0
         let freshUnqualified = 0
         let lowCold = 0
-        
-        const stageBreakdown: Record<string, number> = {}
-        monthLeads.forEach(lead => {
-          total++
-          const status = lead.status || 'Other'
-          stageBreakdown[status] = (stageBreakdown[status] || 0) + 1
-          
-          const cat = STATUS_TO_CATEGORY[status]
-          if (cat === 'Enrolled') enrolled++
-          else if (cat === 'High Potential') highPotential++
-          else if (cat === 'Medium Potential') mediumPotential++
-          else if (cat === 'Fresh/Unqualified') freshUnqualified++
-          else if (cat === 'Low/Cold') lowCold++
-        })
-        
-        const divisor = total || 1
-        const convRate = parseFloat(((enrolled / divisor) * 100).toFixed(1))
         
         const channelMap: Record<LeadChannel, number> = {
           'Organic': 0, 'Website': 0, 'Google Ads': 0, 'Meta Ads': 0, 'Referral': 0, 'SOT': 0, 'LLM': 0, 'Other': 0
@@ -566,22 +612,55 @@ export async function getMonthlyTrend(
         
         let chatgptCount = 0
         let perplexityCount = 0
+        
         monthLeads.forEach(lead => {
-          const ch = detectLeadChannel(lead)
-          channelMap[ch] = (channelMap[ch] || 0) + 1
+          const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+          const isLeadInMonth = !!(leadDateVal && leadDateVal >= monthStart.getTime() && leadDateVal <= monthEnd.getTime())
           
-          const rawSource = (lead.fields?.lead_source_1 || '').toLowerCase()
-          if (rawSource.includes('chatgpt') || rawSource.includes('chat gpt') || rawSource.includes('gpt')) {
-            chatgptCount++
-          } else if (rawSource.includes('perplexity')) {
-            perplexityCount++
+          const isEnrolled = lead.status === 'Enrolled'
+          const enrollDateVal = lead.fields?.course_enrollment_date
+          const isEnrolledInMonth = !!(isEnrolled && enrollDateVal && enrollDateVal >= monthStart.getTime() && enrollDateVal <= monthEnd.getTime())
+          
+          if (isLeadInMonth) {
+            total++
+            
+            if (isEnrolled) {
+              if (isEnrolledInMonth) {
+                enrolled++
+              } else {
+                // Future enrollment, count as a High Potential fallback status in this period
+                highPotential++
+              }
+            } else {
+              const cat = STATUS_TO_CATEGORY[lead.status]
+              if (cat === 'High Potential') highPotential++
+              else if (cat === 'Medium Potential') mediumPotential++
+              else if (cat === 'Fresh/Unqualified') freshUnqualified++
+              else if (cat === 'Low/Cold') lowCold++
+            }
+            
+            const ch = detectLeadChannel(lead)
+            channelMap[ch] = (channelMap[ch] || 0) + 1
+            
+            const rawSource = (lead.fields?.lead_source_1 || '').toLowerCase()
+            if (rawSource.includes('chatgpt') || rawSource.includes('chat gpt') || rawSource.includes('gpt')) {
+              chatgptCount++
+            } else if (rawSource.includes('perplexity')) {
+              perplexityCount++
+            }
+            
+            const rawCourse = lead.fields?.course || ''
+            const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
+            courseMap[groupName] = (courseMap[groupName] || 0) + 1
+          } else if (isEnrolledInMonth) {
+            // Prior lead enrolling in this period
+            enrolled++
           }
-          
-          const rawCourse = lead.fields?.course || ''
-          const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
-          courseMap[groupName] = (courseMap[groupName] || 0) + 1
         })
         
+        const divisor = total || 1
+        const convRate = parseFloat(((enrolled / divisor) * 100).toFixed(1))
+
         const scm = courseMap['Oracle Fusion SCM'] || 0
         const hcm = courseMap['Oracle Fusion HCM'] || 0
         const fin = courseMap['Oracle Fusion Financials'] || 0
@@ -687,9 +766,21 @@ export async function getFunnelData(
   bypassCache = false,
   course?: string
 ): Promise<LeadsFunnelData> {
-  const statusCounts = await getCountByStatus(dateRange, customToken, customEnterpriseId, bypassCache, course)
+  const range = dateRange || getCurrentMonthRange()
+  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache, course)
+  const statusCounts = await getCountByStatus(range, customToken, customEnterpriseId, bypassCache, course)
   
+  const fromTime = getStartOfDay(range.from).getTime()
+  const toTime = getEndOfDay(range.to).getTime()
+
   let total = 0
+  leads.forEach(lead => {
+    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+    if (leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime) {
+      total++
+    }
+  })
+  
   let enrolled = 0
   let highPotential = 0
   let mediumPotential = 0
@@ -697,7 +788,6 @@ export async function getFunnelData(
   let lowCold = 0
   
   for (const [status, count] of Object.entries(statusCounts)) {
-    total += count
     const cat = STATUS_TO_CATEGORY[status]
     if (cat === 'Enrolled') enrolled += count
     else if (cat === 'High Potential') highPotential += count
@@ -747,6 +837,7 @@ export async function getCourseBreakdown(
     organicLeads: number;
     googleAdsLeads: number;
     metaAdsLeads: number;
+    llmLeads: number;
     rawCourses: Set<string>;
   }> = {}
   
@@ -755,7 +846,7 @@ export async function getCourseBreakdown(
   defaultGroups.forEach(group => {
     coursesMap[group] = {
       total: 0, enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0,
-      websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0,
+      websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0, llmLeads: 0,
       rawCourses: new Set<string>()
     }
   })
@@ -763,10 +854,13 @@ export async function getCourseBreakdown(
   // Add Unknown Course bucket
   coursesMap['Unknown Course'] = {
     total: 0, enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0,
-    websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0,
+    websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0, llmLeads: 0,
     rawCourses: new Set<string>()
   }
   
+  const fromTime = getStartOfDay(range.from).getTime()
+  const toTime = getEndOfDay(range.to).getTime()
+
   leads.forEach(lead => {
     const rawCourse = lead.fields?.course || ''
     const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
@@ -774,7 +868,7 @@ export async function getCourseBreakdown(
     if (!coursesMap[groupName]) {
       coursesMap[groupName] = {
         total: 0, enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0,
-        websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0,
+        websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0, llmLeads: 0,
         rawCourses: new Set<string>()
       }
     }
@@ -784,23 +878,50 @@ export async function getCourseBreakdown(
       group.rawCourses.add(rawCourse)
     }
     
-    group.total++
+    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+    const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
     
-    const cat = STATUS_TO_CATEGORY[lead.status]
-    if (cat === 'Enrolled') group.enrolled++
-    else if (cat === 'High Potential') group.highPotential++
-    else if (cat === 'Medium Potential') group.mediumPotential++
-    else if (cat === 'Fresh/Unqualified') group.freshUnqualified++
-    else if (cat === 'Low/Cold') group.lowCold++
+    const isEnrolled = lead.status === 'Enrolled'
+    const enrollDateVal = lead.fields?.course_enrollment_date
+    const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
     
-    const channel = detectLeadChannel(lead)
-    if (channel === 'Website') group.websiteLeads++
-    else if (channel === 'Organic') group.organicLeads++
-    else if (channel === 'Google Ads') group.googleAdsLeads++
-    else if (channel === 'Meta Ads') group.metaAdsLeads++
+    if (isLeadInPeriod) {
+      group.total++
+      
+      if (isEnrolled) {
+        if (isEnrolledInPeriod) {
+          group.enrolled++
+        } else {
+          // Future enrollment, count as a High Potential fallback status in this period
+          group.highPotential++
+        }
+      } else {
+        const cat = STATUS_TO_CATEGORY[lead.status]
+        if (cat === 'High Potential') group.highPotential++
+        else if (cat === 'Medium Potential') group.mediumPotential++
+        else if (cat === 'Fresh/Unqualified') group.freshUnqualified++
+        else if (cat === 'Low/Cold') group.lowCold++
+      }
+      
+      const channel = detectLeadChannel(lead)
+      if (channel === 'Website') {
+        group.websiteLeads++
+      } else if (channel === 'Google Ads') {
+        group.googleAdsLeads++
+      } else if (channel === 'Meta Ads') {
+        group.metaAdsLeads++
+      } else if (channel === 'LLM') {
+        group.llmLeads++
+      } else {
+        group.organicLeads++
+      }
+    } else if (isEnrolledInPeriod) {
+      // Prior lead enrolling in this period
+      group.enrolled++
+    }
   })
   
-  const totalAllCourses = leads.length || 1
+  const totalAllCourses = Object.values(coursesMap).reduce((sum, d) => sum + d.total, 0) || 1
   
   return Object.entries(coursesMap).map(([courseName, data]) => ({
     courseName,
@@ -815,6 +936,8 @@ export async function getCourseBreakdown(
     organicLeads: data.organicLeads,
     googleAdsLeads: data.googleAdsLeads,
     metaAdsLeads: data.metaAdsLeads,
+    adsLeads: data.googleAdsLeads + data.metaAdsLeads,
+    llmLeads: data.llmLeads,
     convRate: parseFloat((data.total > 0 ? (data.enrolled / data.total) * 100 : 0).toFixed(1)),
     sharePercent: parseFloat(((data.total / totalAllCourses) * 100).toFixed(1))
   })).sort((a, b) => b.total - a.total)
@@ -846,17 +969,41 @@ export async function getChannelBreakdown(
     'Other': { total: 0, enrolled: 0, highPotential: 0 }
   }
   
+  const fromTime = getStartOfDay(range.from).getTime()
+  const toTime = getEndOfDay(range.to).getTime()
+
   leads.forEach(lead => {
     const channel = detectLeadChannel(lead)
     const data = channelsMap[channel]
-    data.total++
     
-    const cat = STATUS_TO_CATEGORY[lead.status]
-    if (cat === 'Enrolled') data.enrolled++
-    else if (cat === 'High Potential') data.highPotential++
+    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+    const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
+    
+    const isEnrolled = lead.status === 'Enrolled'
+    const enrollDateVal = lead.fields?.course_enrollment_date
+    const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
+    
+    if (isLeadInPeriod) {
+      data.total++
+      
+      if (isEnrolled) {
+        if (isEnrolledInPeriod) {
+          data.enrolled++
+        } else {
+          // Future enrollment, count as a High Potential fallback status in this period
+          data.highPotential++
+        }
+      } else {
+        const cat = STATUS_TO_CATEGORY[lead.status]
+        if (cat === 'High Potential') data.highPotential++
+      }
+    } else if (isEnrolledInPeriod) {
+      // Prior lead enrolling in this period
+      data.enrolled++
+    }
   })
   
-  const totalAllChannels = leads.length || 1
+  const totalAllChannels = Object.values(channelsMap).reduce((sum, d) => sum + d.total, 0) || 1
   
   return Object.entries(channelsMap).map(([channel, data]) => ({
     channel: channel as LeadChannel,
@@ -914,6 +1061,51 @@ export function getLeadsMonthComparison(
  * Fetches ALL leads for a date range using skip/limit pagination and generic filters
  * Cache TTL: 15 minutes
  */
+/**
+ * Helper to fetch and paginate leads for a specific filter configuration with retry logic
+ */
+async function fetchLeadsForFilter(
+  searchFilters: any,
+  chunkId: number,
+  chunkTotal: number,
+  chunkFrom: number,
+  chunkTo: number,
+  customToken?: string,
+  customEnterpriseId?: string
+): Promise<TeleCRMLead[]> {
+  const chunkLeads: TeleCRMLead[] = []
+  let skip = 0
+  const limit = 100
+  let success = false
+  let retries = 3
+  while (retries > 0 && !success) {
+    try {
+      console.log(`[TeleCRM API] Fetching chunk ${chunkId + 1}/${chunkTotal} range: ${new Date(chunkFrom).toLocaleDateString()} to ${new Date(chunkTo).toLocaleDateString()} with filters ${JSON.stringify(searchFilters)} (skip=${skip}, limit=${limit})`)
+      const apiRes = await searchLeads(searchFilters, { limit, skip }, customToken, customEnterpriseId)
+      chunkLeads.push(...apiRes.data)
+      
+      let currentSkip = skip + limit
+      while (chunkLeads.length < apiRes.total_count && apiRes.data.length === limit) {
+        console.log(`[TeleCRM API] Paginating chunk ${chunkId + 1}/${chunkTotal} (skip=${currentSkip}, limit=${limit})`)
+        const nextPageRes = await searchLeads(searchFilters, { limit, skip: currentSkip }, customToken, customEnterpriseId)
+        chunkLeads.push(...nextPageRes.data)
+        if (nextPageRes.data.length < limit) break
+        currentSkip += limit
+      }
+      success = true
+    } catch (err: any) {
+      retries--
+      console.warn(`[TeleCRM API] Failed to fetch chunk ${chunkId + 1} (retries remaining: ${retries}):`, err?.message || err)
+      if (retries === 0) {
+        throw err // rethrow after 3 failures
+      }
+      // wait 1000ms before retrying to let the rate limit reset
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
+  return chunkLeads
+}
+
 export async function getAllLeads(
   filters?: {
     dateRange?: { from: Date; to: Date }
@@ -963,63 +1155,88 @@ export async function getAllLeads(
         
         const batchPromises = batch.map(async (chunk, batchIdx) => {
           const chunkId = i + batchIdx
-          const chunkLeads: TeleCRMLead[] = []
-          let skip = 0
-          const limit = 100
           
-          const searchFilters: any = {}
+          const searchFiltersLeadDate: any = {}
+          const searchFiltersCreatedOn: any = {}
+          const searchFiltersEnrollmentDate: any = {}
+          let skipEnrollmentSearch = false
+          
           if (filters?.dateRange) {
-            searchFilters.created_on = { from: chunk.from, to: chunk.to }
+            searchFiltersLeadDate.lead_date = { from: chunk.from, to: chunk.to }
+            searchFiltersCreatedOn.created_on = { from: chunk.from, to: chunk.to }
+            searchFiltersEnrollmentDate.course_enrollment_date = { from: chunk.from, to: chunk.to }
+            searchFiltersEnrollmentDate.status = 'Enrolled'
           }
           if (filters?.status) {
-            searchFilters.status = filters.status
-          }
-          if (filters?.lead_source_1) {
-            searchFilters.lead_source_1 = filters.lead_source_1
-          }
-          // Note: We perform in-memory filtering by course group below to avoid exact string mismatches with TeleCRM.
-
-          // Fetch chunk with retry logic
-          let success = false
-          let retries = 3
-          while (retries > 0 && !success) {
-            try {
-              console.log(`[TeleCRM API] Fetching chunk ${chunkId + 1}/${timeChunks.length} range: ${new Date(chunk.from).toLocaleDateString()} to ${new Date(chunk.to).toLocaleDateString()} (skip=${skip}, limit=${limit})`)
-              const apiRes = await searchLeads(searchFilters, { limit, skip }, customToken, customEnterpriseId)
-              chunkLeads.push(...apiRes.data)
-              
-              let currentSkip = skip + limit
-              while (chunkLeads.length < apiRes.total_count && apiRes.data.length === limit) {
-                console.log(`[TeleCRM API] Paginating chunk ${chunkId + 1}/${timeChunks.length} (skip=${currentSkip}, limit=${limit})`)
-                const nextPageRes = await searchLeads(searchFilters, { limit, skip: currentSkip }, customToken, customEnterpriseId)
-                chunkLeads.push(...nextPageRes.data)
-                if (nextPageRes.data.length < limit) break
-                currentSkip += limit
-              }
-              success = true
-            } catch (err: any) {
-              retries--
-              console.warn(`[TeleCRM API] Failed to fetch chunk ${chunkId + 1} (retries remaining: ${retries}):`, err?.message || err)
-              if (retries === 0) {
-                throw err // rethrow after 3 failures
-              }
-              // wait 1000ms before retrying to let the rate limit reset
-              await new Promise(resolve => setTimeout(resolve, 1000))
+            searchFiltersLeadDate.status = filters.status
+            searchFiltersCreatedOn.status = filters.status
+            const statuses = Array.isArray(filters.status) ? filters.status : [filters.status]
+            if (statuses.includes('Enrolled')) {
+              searchFiltersEnrollmentDate.status = 'Enrolled'
+            } else {
+              skipEnrollmentSearch = true
             }
           }
-          return chunkLeads
+          if (filters?.lead_source_1) {
+            searchFiltersLeadDate.lead_source_1 = filters.lead_source_1
+            searchFiltersCreatedOn.lead_source_1 = filters.lead_source_1
+            searchFiltersEnrollmentDate.lead_source_1 = filters.lead_source_1
+          }
+
+          // Fetch in parallel
+          const fetchPromises = [
+            fetchLeadsForFilter(searchFiltersLeadDate, chunkId, timeChunks.length, chunk.from, chunk.to, customToken, customEnterpriseId),
+            fetchLeadsForFilter(searchFiltersCreatedOn, chunkId, timeChunks.length, chunk.from, chunk.to, customToken, customEnterpriseId)
+          ]
+          if (filters?.dateRange && !skipEnrollmentSearch) {
+            fetchPromises.push(fetchLeadsForFilter(searchFiltersEnrollmentDate, chunkId, timeChunks.length, chunk.from, chunk.to, customToken, customEnterpriseId))
+          }
+
+          const resultsList = await Promise.all(fetchPromises)
+          const leadsByLeadDate = resultsList[0]
+          const leadsByCreatedOn = resultsList[1]
+          const leadsByEnrollmentDate = resultsList[2] || []
+
+          // Merge by id
+          const chunkMap = new Map<string, TeleCRMLead>()
+          leadsByLeadDate.forEach(l => chunkMap.set(l.id, l))
+          leadsByCreatedOn.forEach(l => chunkMap.set(l.id, l))
+          leadsByEnrollmentDate.forEach(l => chunkMap.set(l.id, l))
+          
+          return Array.from(chunkMap.values())
         })
         
         const batchResults = await Promise.all(batchPromises)
         batchResults.forEach(res => leads.push(...res))
       }
-      return leads
+      
+      // De-duplicate any leads across different chunks (should not happen, but good practice)
+      const uniqueLeadsMap = new Map<string, TeleCRMLead>()
+      leads.forEach(l => uniqueLeadsMap.set(l.id, l))
+      return Array.from(uniqueLeadsMap.values())
     },
     bypassCache,
     900 * 1000 // 15 mins cache TTL
   )
 
   let results = res.data
+
+  // Apply date filtering based on lead_date (falling back to created_on) and course_enrollment_date
+  if (filters?.dateRange) {
+    const fromTime = getStartOfDay(filters.dateRange.from).getTime()
+    const toTime = getEndOfDay(filters.dateRange.to).getTime()
+    results = results.filter(lead => {
+      const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+      const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
+      
+      const isEnrolled = lead.status === 'Enrolled'
+      const enrollDateVal = lead.fields?.course_enrollment_date
+      const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
+      
+      return isLeadInPeriod || isEnrolledInPeriod
+    })
+  }
+
   if (filters?.course && filters.course !== 'all') {
     const targetCourseGroup = filters.course
     results = results.filter(lead => {
@@ -1196,7 +1413,7 @@ export async function getLeadActions(
  * Returns lead age in days
  */
 export function getLeadAgeInDays(lead: TeleCRMLead): number {
-  const created = lead.fields?.created_on || Date.now()
+  const created = lead.fields?.lead_date || lead.fields?.created_on || Date.now()
   return (Date.now() - created) / (1000 * 60 * 60 * 24)
 }
 

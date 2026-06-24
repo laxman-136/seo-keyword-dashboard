@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     const sampleLimit = 25
     const processedData = await Promise.all(
       activeLeads.map(async (lead, index) => {
-        const createdOn = lead.fields?.created_on || Date.now()
+        const createdOn = lead.fields?.lead_date || lead.fields?.created_on || Date.now()
         const channel = detectLeadChannel(lead)
         const isEnrolled = lead.status === 'Enrolled'
         const assignedAgent = lead.employeeid || 'agent@techleadsit.com'

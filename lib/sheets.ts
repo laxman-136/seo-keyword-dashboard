@@ -1008,6 +1008,8 @@ export function getLeadsCourseBreakdown(
     total: r.total,
     organic: r.organic,
     website: r.website,
+    ads: 0,
+    llm: 0,
     sharePercent: parseFloat(((r.total / totalSum) * 100).toFixed(1)),
     convRate: parseFloat((r.total > 0 ? (r.enrolled / r.total) * 100 : 0).toFixed(1))
   }))

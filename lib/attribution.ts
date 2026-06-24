@@ -129,17 +129,23 @@ export function attributeLead(lead: TeleCRMLead): AttributedLead {
   const gclid = fields.gclid || fields.google_gcl_id || null
   const leadSource = fields.lead_source_1?.toLowerCase() || ''
 
-  if (fbclid) {
+  if (utmSource && (utmSource.includes('chatgpt') || utmSource.includes('chat gpt') || utmSource.includes('gpt') || utmSource.includes('perplexity') || utmSource.includes('openai') || utmSource.includes('claude') || utmSource.includes('llm'))) {
+    channel = 'organic'
+  } else if (fbclid) {
     channel = 'meta'
     isPaid = true
   } else if (gclid) {
     channel = 'google'
     isPaid = true
-  } else if (utmSource === 'an' || utmSource?.includes('facebook') || utmSource?.includes('instagram') || utmSource?.includes('meta')) {
+  } else if (utmSource === 'an' || utmSource === 'ig' || utmSource?.includes('facebook') || utmSource?.includes('instagram') || utmSource?.includes('meta')) {
     channel = 'meta'
     isPaid = true
-  } else if (utmSource === 'google' || utmSource === 'gads' || utmMedium === 'cpc' || utmMedium === 'ppc') {
-    channel = 'google'
+  } else if (utmSource === 'google' || utmSource === 'gads' || utmMedium === 'cpc' || utmMedium === 'ppc' || utmMedium === 'paid' || utmMedium === 'paid_social') {
+    if (utmSource && (utmSource.includes('facebook') || utmSource.includes('instagram') || utmSource === 'fb' || utmSource === 'ig' || utmSource === 'an')) {
+      channel = 'meta'
+    } else {
+      channel = 'google'
+    }
     isPaid = true
   } else if (leadSource.includes('facebook') || leadSource.includes('fb') || leadSource.includes('instagram') || leadSource.includes('meta')) {
     channel = 'meta'
@@ -152,7 +158,10 @@ export function attributeLead(lead: TeleCRMLead): AttributedLead {
   } else if (utmSource === 'referral' || leadSource.includes('referral')) {
     channel = 'referral'
   } else if (leadSource.includes('website')) {
-    channel = 'direct'
+    const hasMarketingParams = !!(
+      utmSource || utmMedium || utmCampaign || utmContent || utmTerm || gclid || fbclid
+    )
+    channel = hasMarketingParams ? 'direct' : 'organic'
   }
 
   const isEnrolled = category === 'Enrolled'
@@ -162,7 +171,9 @@ export function attributeLead(lead: TeleCRMLead): AttributedLead {
     status,
     category,
     courseName,
-    createdOn: fields.created_on || Date.now(),
+    createdOn: (category === 'Enrolled' && fields.course_enrollment_date)
+      ? fields.course_enrollment_date
+      : (fields.lead_date || fields.created_on || Date.now()),
     channel,
     campaignName: utmCampaign || (channel === 'meta' ? 'Meta Paid Campaign' : channel === 'google' ? 'Google Paid Campaign' : 'Organic Traffic'),
     utmSource: fields.utmsource || null,

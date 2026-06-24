@@ -139,7 +139,9 @@ export default function LeadsOverviewPage() {
   const mappedCourses = courses.map((c: any) => ({
     ...c,
     organic: c.organicLeads,
-    website: c.websiteLeads
+    website: c.websiteLeads,
+    ads: c.adsLeads,
+    llm: c.llmLeads
   }))
 
   return (
@@ -176,7 +178,7 @@ export default function LeadsOverviewPage() {
       {/* ── SECTION A: KPI GRID ── */}
       <div className="space-y-3">
         {/* Row 1 — Volume Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <LeadsKPICard
             title="Total Leads"
             value={kpi.totalLeads}
@@ -186,12 +188,20 @@ export default function LeadsOverviewPage() {
             subtitle="All channels combined"
           />
           <LeadsKPICard
+            title="Paid Ads Leads"
+            value={kpi.adsLeads}
+            prevValue={kpi.prevAdsLeads}
+            icon="💰"
+            variant="indigo"
+            subtitle="Google Ads & Meta Ads"
+          />
+          <LeadsKPICard
             title="Website Leads"
             value={kpi.websiteLeads}
             prevValue={kpi.prevWebsiteLeads}
             icon="🌐"
-            variant="indigo"
-            subtitle="From website & paid ads"
+            variant="gray"
+            subtitle="Direct website inquiries"
           />
           <LeadsKPICard
             title="Organic Leads"

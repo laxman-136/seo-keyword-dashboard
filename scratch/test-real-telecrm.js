@@ -78,6 +78,7 @@ async function run() {
       utmcampaign: l.fields?.utmcampaign,
       lead_source_1: l.fields?.lead_source_1
     })));
+    console.log(`Complete First Lead Object:`, JSON.stringify(data.data[0], null, 2));
 
   } catch (err) {
     console.error('❌ Exception:', err);

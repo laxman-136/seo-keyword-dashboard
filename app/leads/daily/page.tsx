@@ -6,7 +6,7 @@ import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
 import CourseSelector from '@/components/leads/CourseSelector'
-import { DailyKPICards, UrgentActionList, TeamPerformanceTable, LiveLeadFeed } from '@/components/leads/intelligence/DailyComponents'
+import { DailyKPICards, UrgentActionList, TeamPerformanceTable, LiveLeadFeed, DailyInsightsPanel } from '@/components/leads/intelligence/DailyComponents'
 import { Info } from 'lucide-react'
 
 export default function DailyOperationsPage() {
@@ -91,7 +91,8 @@ export default function DailyOperationsPage() {
     leadsAssigned: a.assignedToday,
     callsToday: a.called,
     enrolled: a.enrolled,
-    contactRate: a.responseRate
+    contactRate: a.responseRate,
+    pendingBacklog: a.pendingBacklog || 0
   }))
 
   // Map liveLeadFeed to leads props
@@ -168,6 +169,8 @@ export default function DailyOperationsPage() {
         urgentUncontacted={(urgentActions?.neverContacted24h || 0) + (urgentActions?.highPotNoCall3d || 0)}
         todayEnrolled={kpis?.enrolledToday || 0}
       />
+
+      <DailyInsightsPanel insights={data?.insights || []} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <UrgentActionList actions={mappedActions} />

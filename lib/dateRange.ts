@@ -97,6 +97,7 @@ export function resolveDateRange(preset: DatePreset, customFrom?: string, custom
 
     case 'last_3_months':
       fromDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+      toDate = new Date(today.getFullYear(), today.getMonth(), 0)
       break
 
     case 'this_quarter': {

@@ -228,10 +228,10 @@ export default function AuthShell({ children }: Props) {
   // ── Dashboard: show spinner while verifying session ──────────────────────
   if (!checked) {
     return (
-      <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Verifying session...</p>
+          <p className="text-slate-500 text-sm font-medium">Verifying session...</p>
         </div>
       </div>
     )
@@ -246,7 +246,7 @@ export default function AuthShell({ children }: Props) {
           type="button"
           onPointerDown={onMenuPointerDown}
           style={menuButtonPos ?? { right: 24, top: 24, touchAction: 'none' }}
-          className="lg:hidden fixed z-40 inline-flex items-center justify-center rounded-2xl border border-slate-700 bg-slate-950/95 p-3 text-slate-200 shadow-lg shadow-black/20 transition hover:bg-slate-900 touch-none"
+          className="lg:hidden fixed z-40 inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-3 text-slate-700 shadow-lg shadow-slate-100/50 transition hover:bg-slate-50 touch-none"
           aria-label="Open sidebar"
         >
           <Menu className="w-5 h-5" />

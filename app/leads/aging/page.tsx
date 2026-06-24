@@ -6,7 +6,8 @@ import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LiveDataBadge from '@/components/leads/LiveDataBadge'
 import RefreshBar from '@/components/leads/RefreshBar'
 import CourseSelector from '@/components/leads/CourseSelector'
-import { AgingBucketCards, AgingBarChart, CourseAgingTable, ActionPanel } from '@/components/leads/intelligence/AgingComponents'
+import TimeframeSelector from '@/components/leads/TimeframeSelector'
+import { AgingBucketCards, AgingBarChart, CourseAgingTable, ActionPanel, StatusMappingGuide } from '@/components/leads/intelligence/AgingComponents'
 import { Info } from 'lucide-react'
 
 export default function LeadAgingPage() {
@@ -15,6 +16,7 @@ export default function LeadAgingPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedCourse, setSelectedCourse] = useState('all')
+  const [selectedTimeframe, setSelectedTimeframe] = useState<number>(6)
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -30,7 +32,8 @@ export default function LeadAgingPage() {
       }
       const refreshParam = isRefresh ? 'refresh=true' : ''
       const courseParam = selectedCourse !== 'all' ? `course=${encodeURIComponent(selectedCourse)}` : ''
-      const queryParams = [refreshParam, courseParam].filter(Boolean).join('&')
+      const timeframeParam = `timeframe=${selectedTimeframe}`
+      const queryParams = [refreshParam, courseParam, timeframeParam].filter(Boolean).join('&')
       const queryStr = queryParams ? `?${queryParams}` : ''
       
       const res = await fetch(`/api/leads/aging${queryStr}`, { headers })
@@ -38,7 +41,7 @@ export default function LeadAgingPage() {
       setData(await res.json())
     } catch (err: any) { setError(err?.message || 'Error loading aging data') }
     finally { setLoading(false); setRefreshing(false) }
-  }, [selectedCourse])
+  }, [selectedCourse, selectedTimeframe])
 
   useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => {
@@ -68,12 +71,20 @@ export default function LeadAgingPage() {
       <Header title="📉 Lead Decay & Aging" currentMonth="Live Pipeline" onRefresh={() => fetchData(true)} isRefreshing={refreshing} />
 
       <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <LiveDataBadge />
-          <p className="text-xs text-slate-400">Showing all non-enrolled pending leads by decay timeline — older = more urgent</p>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-3">
+            <LiveDataBadge />
+            <p className="text-xs text-slate-500 font-bold">
+              Showing all non-enrolled pending leads from the last {selectedTimeframe === 3 ? '3 months (Quarterly)' : selectedTimeframe === 12 ? '12 months (Yearly)' : '6 months'} by decay timeline — older = more urgent
+            </p>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-relaxed sm:pl-7">
+            <span className="font-bold text-slate-500">Tracked TeleCRM Statuses:</span> Fresh, Potential Lead 100, 60-80 Potential, Demo Attended, Interested to join the Demo, Looking for Next batch, 50 % Potential, below 50 % Potential, Call not answered and Shared the Data, Number is not working and sent an email, Junk Lead.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <RefreshBar loading={loading} refreshing={refreshing} lastUpdated={new Date().toISOString()} onRefresh={() => fetchData(true)} />
+          <TimeframeSelector selectedTimeframe={selectedTimeframe} onChange={setSelectedTimeframe} />
           <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
         </div>
       </div>
@@ -106,6 +117,7 @@ export default function LeadAgingPage() {
         coldCount={summary?.coldCount || 0}
         deadCount={summary?.deadCount || 0}
       />
+      <StatusMappingGuide />
     </div>
   )
 }

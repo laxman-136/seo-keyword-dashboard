@@ -30,9 +30,15 @@ export async function GET(request: Request) {
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
     const selectedCourse = searchParams.get('course') || undefined
 
-    // Load leads from the past 6 months to check for aging
+    const timeframeParam = searchParams.get('timeframe') || '6'
+    let timeframeMonths = parseInt(timeframeParam, 10)
+    if (isNaN(timeframeMonths) || ![3, 6, 12].includes(timeframeMonths)) {
+      timeframeMonths = 6
+    }
+
+    // Load leads from the past X months to check for aging
     const now = new Date()
-    const fromDate = new Date(now.getFullYear(), now.getMonth() - 6, 1)
+    const fromDate = new Date(now.getFullYear(), now.getMonth() - timeframeMonths, 1)
     const toDate = now
 
     const leads = await getAllLeads(

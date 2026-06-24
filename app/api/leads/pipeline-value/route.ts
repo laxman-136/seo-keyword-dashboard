@@ -121,7 +121,7 @@ export async function GET(request: Request) {
     // Pipeline trend chart
     const monthlyTrend: Record<string, { month: string; monthStart: Date; createdValue: number; realizedValue: number }> = {}
     activePipelineLeads.forEach(lead => {
-      const createdOn = lead.fields?.created_on || Date.now()
+      const createdOn = lead.fields?.lead_date || lead.fields?.created_on || Date.now()
       const date = new Date(createdOn)
       const monthLabel = date.toLocaleString('en-US', { month: 'short', year: 'numeric' })
       const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)

@@ -55,7 +55,7 @@ export function AgingBucketCards({ buckets }: AgingBucketCardsProps) {
           <div className="space-y-1">
             <h3 className="text-3xl font-extrabold text-slate-800">{b.count.toLocaleString()}</h3>
             <p className="text-xs text-slate-400 font-medium">
-              {b.percent.toFixed(1)}% of Fresh leads
+              {b.percent.toFixed(1)}% of pending leads
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100/50 flex items-center justify-between">
@@ -89,11 +89,11 @@ export function AgingBarChart({ chartData, pieData }: AgingBarChartProps) {
             <BarChart
               data={chartData}
               layout="vertical"
-              margin={{ top: 10, right: 30, left: 100, bottom: 5 }}
+              margin={{ top: 10, right: 30, left: 10, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} stroke="#f1f5f9" />
               <XAxis type="number" stroke="#94a3b8" fontSize={11} />
-              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} width={90} />
+              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} width={185} tickLine={false} />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 labelClassName="font-bold text-slate-800"
@@ -304,3 +304,135 @@ export function ActionPanel({ hotCount, warmCount, coolingCount, coldCount, dead
     </div>
   )
 }
+
+export function StatusMappingGuide() {
+  const categories = [
+    {
+      title: 'High Potential',
+      description: 'Active leads showing high interest/engagement. Tracked in aging buckets.',
+      badge: '⏱️ Aging Calculated',
+      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
+      icon: <Flame className="w-4 h-4 text-emerald-500" />,
+      borderColor: 'border-emerald-100 hover:border-emerald-300 bg-emerald-50/10 hover:bg-emerald-50/20',
+      tagColor: 'bg-white text-emerald-700 border-emerald-100/60 hover:bg-emerald-50/30',
+      statuses: [
+        'Interested to join the Demo',
+        'Potential Lead 100',
+        'Demo Attended',
+        '60-80 Potential'
+      ]
+    },
+    {
+      title: 'Medium Potential',
+      description: 'Active leads with moderate intent or waiting for next batch. Tracked in aging buckets.',
+      badge: '⏱️ Aging Calculated',
+      badgeColor: 'bg-blue-50 text-blue-700 border-blue-200/60',
+      icon: <Zap className="w-4 h-4 text-blue-500" />,
+      borderColor: 'border-blue-100 hover:border-blue-300 bg-blue-50/10 hover:bg-blue-50/20',
+      tagColor: 'bg-white text-blue-700 border-blue-100/60 hover:bg-blue-50/30',
+      statuses: [
+        'Looking for Next batch',
+        '50 % Potential',
+        'below 50 % Potential'
+      ]
+    },
+    {
+      title: 'Fresh / Unqualified',
+      description: 'New or non-responsive leads requiring active contact. Tracked in aging buckets.',
+      badge: '⏱️ Aging Calculated',
+      badgeColor: 'bg-yellow-50 text-yellow-700 border-yellow-200/60',
+      icon: <Clock className="w-4 h-4 text-yellow-600" />,
+      borderColor: 'border-yellow-100 hover:border-yellow-300 bg-yellow-50/10 hover:bg-yellow-50/20',
+      tagColor: 'bg-white text-yellow-700 border-yellow-100/60 hover:bg-yellow-50/30',
+      statuses: [
+        'Fresh',
+        'Call not answered and Shared the Data',
+        'Number is not working and sent an email'
+      ]
+    },
+    {
+      title: 'Dead / Junk',
+      description: 'Disqualified or junk leads that remain open. Sits in aging pool but bypasses aging timers.',
+      badge: '🚨 Forced to Dead Bucket',
+      badgeColor: 'bg-red-50 text-red-700 border-red-200/60',
+      icon: <AlertTriangle className="w-4 h-4 text-red-500" />,
+      borderColor: 'border-red-100 hover:border-red-300 bg-red-50/10 hover:bg-red-50/20',
+      tagColor: 'bg-white text-red-700 border-red-100/60 hover:bg-red-50/30',
+      statuses: [
+        'Junk Lead'
+      ]
+    },
+    {
+      title: 'Excluded Statuses',
+      description: 'Enrolled (won) or permanently closed leads. Excluded entirely from the decay & aging analysis.',
+      badge: '🚫 Excluded from Aging',
+      badgeColor: 'bg-slate-100 text-slate-600 border-slate-200',
+      icon: <Archive className="w-4 h-4 text-slate-500" />,
+      borderColor: 'border-slate-200/60 hover:border-slate-350 bg-slate-50/40 hover:bg-slate-50/60',
+      tagColor: 'bg-white text-slate-500 border-slate-200/60 hover:bg-slate-100/30',
+      statuses: [
+        'Enrolled',
+        'Not Interested',
+        'Different Course',
+        'Wrong Number &Number Not working',
+        'Lost'
+      ]
+    }
+  ]
+
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+      <div>
+        <h4 className="text-base font-bold text-slate-800 flex items-center gap-2">
+          <span>🔍 TeleCRM Status Mapping Guide</span>
+        </h4>
+        <p className="text-xs text-slate-400 mt-0.5">
+          Reference list of how status labels from TeleCRM are categorized to build the Lead Aging pipeline.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {categories.map((c, idx) => (
+          <div 
+            key={idx} 
+            className={`p-4 rounded-xl border transition-all flex flex-col justify-between space-y-4 ${c.borderColor}`}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                  {c.icon}
+                  {c.title}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                {c.description}
+              </p>
+              <div className="pt-1">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border ${c.badgeColor}`}>
+                  {c.badge}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 block">
+                Mapped Statuses ({c.statuses.length})
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {c.statuses.map((s, sIdx) => (
+                  <span 
+                    key={sIdx} 
+                    className={`inline-block px-2 py-1 rounded text-[10px] font-bold border transition-colors shadow-sm ${c.tagColor}`}
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+

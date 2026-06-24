@@ -86,25 +86,27 @@ export async function GET(request: Request) {
       getChannelBreakdown({ from: prevFromDate, to: prevToDate }, customToken, customEnterpriseId, bypassCache, selectedCourse)
     ])
 
-    // Calculate website vs organic vs llm
-    const getWebsiteCount = (channels: any[]) => {
-      const web = channels.find((c: any) => c.channel === 'Website')?.total || 0
+    // Calculate ads vs website vs organic vs llm
+    const getAdsCount = (channels: any[]) => {
       const gads = channels.find((c: any) => c.channel === 'Google Ads')?.total || 0
       const fb = channels.find((c: any) => c.channel === 'Meta Ads')?.total || 0
-      return web + gads + fb
+      return gads + fb
     }
 
-    const currentWebsite = getWebsiteCount(currentChannels)
+    const currentAds = getAdsCount(currentChannels)
+    const currentWebsite = currentChannels.find((c: any) => c.channel === 'Website')?.total || 0
     const currentLLM = currentChannels.find((c: any) => c.channel === 'LLM')?.total || 0
-    const currentOrganic = currentFunnel.total - currentWebsite - currentLLM
+    const currentOrganic = currentFunnel.total - currentAds - currentWebsite - currentLLM
 
-    const prevWebsite = getWebsiteCount(prevChannels)
+    const prevAds = getAdsCount(prevChannels)
+    const prevWebsite = prevChannels.find((c: any) => c.channel === 'Website')?.total || 0
     const prevLLM = prevChannels.find((c: any) => c.channel === 'LLM')?.total || 0
-    const prevOrganic = prevFunnel.total - prevWebsite - prevLLM
+    const prevOrganic = prevFunnel.total - prevAds - prevWebsite - prevLLM
 
     return NextResponse.json({
       kpi: {
         totalLeads: currentFunnel.total,
+        adsLeads: currentAds,
         websiteLeads: currentWebsite,
         organicLeads: currentOrganic,
         llmLeads: currentLLM,
@@ -116,6 +118,7 @@ export async function GET(request: Request) {
         convRate: currentFunnel.convRate,
         
         prevTotalLeads: prevFunnel.total,
+        prevAdsLeads: prevAds,
         prevWebsiteLeads: prevWebsite,
         prevOrganicLeads: prevOrganic,
         prevLLMLeads: prevLLM,

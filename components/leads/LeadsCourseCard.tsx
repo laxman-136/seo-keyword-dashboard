@@ -103,16 +103,20 @@ export default function LeadsCourseCard({ course, rank }: LeadsCourseCardProps) 
       </div>
 
       {/* Breakdown Details */}
-      <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-100 pt-4 text-xs font-medium text-slate-500">
+      <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-slate-100 pt-4 text-xs font-medium text-slate-500">
         <div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acquisition</p>
-          <p className="mt-1 text-slate-700">🌐 Web: <span className="font-bold font-mono">{course.website}</span></p>
-          <p className="text-slate-700">🔍 Org: <span className="font-bold font-mono">{course.organic}</span></p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Acquisition</p>
+          <p className="text-slate-700">💰 Ads: <span className="font-bold font-mono text-indigo-650">{course.ads}</span></p>
+          <p className="mt-0.5 text-slate-700">🌐 Web: <span className="font-bold font-mono">{course.website}</span></p>
+          <p className="mt-0.5 text-slate-700">🔍 Org: <span className="font-bold font-mono">{course.organic}</span></p>
+          <p className="mt-0.5 text-slate-700">🤖 LLM: <span className="font-bold font-mono text-pink-600">{course.llm}</span></p>
         </div>
         <div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quality status</p>
-          <p className="mt-1 text-slate-700">🏆 Enr: <span className="font-bold font-mono text-emerald-600">{course.enrolled}</span></p>
-          <p className="text-slate-700">🔥 High: <span className="font-bold font-mono text-blue-600">{course.highPotential}</span></p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Quality status</p>
+          <p className="text-slate-700">🏆 Enr: <span className="font-bold font-mono text-emerald-600">{course.enrolled}</span></p>
+          <p className="mt-0.5 text-slate-700">🔥 High: <span className="font-bold font-mono text-blue-600">{course.highPotential}</span></p>
+          <p className="mt-0.5 text-slate-700">⚡ Med: <span className="font-bold font-mono text-amber-600">{course.mediumPotential}</span></p>
+          <p className="mt-0.5 text-slate-700">❄️ Cold: <span className="font-bold font-mono text-red-500">{course.lowCold}</span></p>
         </div>
       </div>
     </div>

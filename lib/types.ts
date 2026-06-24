@@ -259,6 +259,8 @@ export interface LeadsCourseAggregate {
   total: number
   organic: number
   website: number
+  ads: number
+  llm: number
   sharePercent: number
   convRate: number
 }
@@ -918,6 +920,7 @@ export interface TeleCRMLead {
     fbclid?: string
     google_gcl_id?: string
     gclid?: string
+    course_enrollment_date?: number
   }
   rating: number
   isArchived: boolean
@@ -981,6 +984,8 @@ export interface LeadsCourseBreakdown {
   organicLeads: number
   googleAdsLeads: number
   metaAdsLeads: number
+  adsLeads: number
+  llmLeads: number
   convRate: number
   sharePercent: number
 }

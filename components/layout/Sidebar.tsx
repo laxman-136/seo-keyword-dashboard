@@ -111,24 +111,24 @@ function ActiveConfigBadge() {
   if (!activeLabel) return null
   
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20 transition-all w-full relative">
-      <Building2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-50 border border-violet-100 hover:bg-violet-100/50 transition-all w-full relative">
+      <Building2 className="w-3.5 h-3.5 text-violet-600 shrink-0" />
       <div className="flex-1 overflow-hidden">
-        <p className="text-[10px] text-violet-300 uppercase tracking-wider font-bold">Active Source</p>
+        <p className="text-[10px] text-violet-500 uppercase tracking-wider font-bold">Active Source</p>
         {options.length > 1 ? (
           <select
             value={activeLabel}
             onChange={handleSelect}
-            className="w-full text-xs text-violet-200 font-semibold bg-transparent border-none outline-none cursor-pointer pr-4 truncate"
+            className="w-full text-xs text-violet-700 font-semibold bg-transparent border-none outline-none cursor-pointer pr-4 truncate"
           >
             {options.map(o => (
-              <option key={o.label} value={o.label} className="bg-slate-900 text-slate-200">
+              <option key={o.label} value={o.label} className="bg-white text-slate-800">
                 {o.label}
               </option>
             ))}
           </select>
         ) : (
-          <p className="text-xs text-violet-200 font-semibold truncate">{activeLabel}</p>
+          <p className="text-xs text-violet-700 font-semibold truncate">{activeLabel}</p>
         )}
       </div>
     </div>
@@ -218,13 +218,13 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
       {/* User card — click to open menu */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-800/40 hover:bg-slate-800/70 border border-slate-800 transition-all text-left"
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-250 transition-all text-left"
       >
         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
           {user.name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 overflow-hidden">
-          <p className="text-xs font-semibold text-slate-200 truncate leading-tight">{user.name}</p>
+          <p className="text-xs font-semibold text-slate-700 truncate leading-tight">{user.name}</p>
           <div className={cn('flex items-center gap-1 text-[10px] font-semibold mt-0.5', roleBg)}>
             <RoleIcon className="w-3 h-3" /> {user.role}
           </div>
@@ -234,10 +234,10 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
 
       {/* Dropdown menu */}
       {open && !changePw && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50">
-          <div className="px-4 py-3 border-b border-slate-700">
-            <p className="text-xs font-bold text-white truncate">{user.name}</p>
-            <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>
+        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-50">
+          <div className="px-4 py-3 border-b border-slate-200">
+            <p className="text-xs font-bold text-slate-800 truncate">{user.name}</p>
+            <p className="text-[10px] text-slate-500 truncate mt-0.5">{user.email}</p>
           </div>
 
           {/* Admin panel link */}
@@ -245,27 +245,27 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
             <Link
               href="/admin/users"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-slate-600 hover:bg-slate-55 hover:text-slate-900 transition-colors"
             >
-              <Users className="w-3.5 h-3.5 text-blue-400" />
+              <Users className="w-3.5 h-3.5 text-blue-500" />
               User Management
               {user.role === 'superadmin' && (
-                <span className="ml-auto text-[9px] font-bold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">SUPER</span>
+                <span className="ml-auto text-[9px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded">SUPER</span>
               )}
             </Link>
           )}
 
           <button
             onClick={() => { setChangePw(true); setOpen(false) }}
-            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-slate-600 hover:bg-slate-55 hover:text-slate-900 transition-colors"
           >
-            <KeyRound className="w-3.5 h-3.5 text-emerald-400" /> Change Password
+            <KeyRound className="w-3.5 h-3.5 text-emerald-500" /> Change Password
           </button>
 
-          <div className="border-t border-slate-700">
+          <div className="border-t border-slate-200">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" /> Sign Out
             </button>
@@ -275,12 +275,12 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
 
       {/* Change Password inline panel */}
       {changePw && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-4 z-50">
+        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-xl shadow-2xl p-4 z-50">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold text-white flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5 text-emerald-400" /> Change Password
+            <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5 text-emerald-500" /> Change Password
             </p>
-            <button onClick={() => { setChangePw(false); setPwMsg(null) }} className="text-slate-500 hover:text-slate-300 text-xs">✕</button>
+            <button onClick={() => { setChangePw(false); setPwMsg(null) }} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
           </div>
           <form onSubmit={handleChangePw} className="space-y-2">
             <div className="relative">
@@ -290,9 +290,9 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
                 onChange={e => setCurPw(e.target.value)}
                 placeholder="Current password"
                 required
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none focus:border-violet-500 pr-8"
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-violet-500 pr-8"
               />
-              <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500">
+              <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400">
                 {showPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
             </div>
@@ -302,7 +302,7 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
               onChange={e => setNewPw(e.target.value)}
               placeholder="New password (min 8 chars)"
               required
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none focus:border-violet-500"
+              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-violet-500"
             />
             {pwMsg && (
               <p className={cn('text-[10px] font-medium', pwMsg.ok ? 'text-emerald-400' : 'text-red-400')}>
@@ -534,8 +534,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             className={cn(
               "p-3 rounded-xl transition-all duration-150 relative",
               hasActiveItem
-                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 border border-transparent"
+                ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                : "hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-transparent"
             )}
             title={`${section.title} (Click to expand)`}
           >
@@ -558,12 +558,12 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           className={cn(
             "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-150 select-none group text-left",
             hasActiveItem
-              ? "text-slate-200 bg-slate-800/30"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+              ? "text-slate-800 bg-slate-100"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           )}
         >
           <div className="flex items-center gap-2.5">
-            <SectionIcon className={cn("w-4 h-4 transition-colors", hasActiveItem ? "text-emerald-400" : "text-slate-400 group-hover:text-slate-300")} />
+            <SectionIcon className={cn("w-4 h-4 transition-colors", hasActiveItem ? "text-emerald-600" : "text-slate-400 group-hover:text-slate-600")} />
             <span className="truncate">{section.title}</span>
             {section.id === 'ads' && budgetAlertCount > 0 && (
               <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-extrabold bg-rose-500 text-white rounded-full leading-none animate-pulse">
@@ -578,7 +578,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         </button>
 
         {isOpen && (
-          <div className="pl-3.5 ml-4 border-l border-slate-800 space-y-1 mt-1 transition-all duration-200 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="pl-3.5 ml-4 border-l border-slate-200 space-y-1 mt-1 transition-all duration-200 animate-in fade-in slide-in-from-top-1 duration-150">
             {section.items.map(item => {
               if ((item as any).isHeader) {
                 return (
@@ -599,11 +599,11 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 relative group/item",
                     isActive
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold"
-                      : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 border border-transparent"
+                      ? "bg-emerald-50 text-emerald-600 border border-emerald-250 font-semibold"
+                      : "hover:bg-slate-50 text-slate-500 hover:text-slate-900 border border-transparent"
                   )}
                 >
-                  <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-emerald-400" : "text-slate-400 group-hover/item:text-slate-300")} />
+                  <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-emerald-600" : "text-slate-400 group-hover/item:text-slate-600")} />
                   <span className="truncate">{item.label}</span>
                   {isActive && (
                     <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -629,8 +629,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             className={cn(
               "p-3 rounded-xl transition-all duration-150 relative",
               isActive
-                ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
-                : "hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent"
+                ? "bg-violet-50 text-violet-600 border border-violet-100"
+                : "hover:bg-slate-50 text-slate-500 hover:text-slate-900 border border-transparent"
             )}
             title="Data Sources Settings"
           >
@@ -649,8 +649,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         className={cn(
           "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 text-left",
           isActive
-            ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
-            : "hover:bg-slate-800/40 text-slate-400 hover:text-slate-200 border border-transparent"
+            ? "bg-violet-50 text-violet-600 border border-violet-100"
+            : "hover:bg-slate-50 text-slate-500 hover:text-slate-900 border border-transparent"
         )}
       >
         <Settings className={cn("w-4 h-4 shrink-0", isActive ? "text-violet-400" : "text-slate-400")} />
@@ -683,11 +683,11 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       )}
 
       <aside className={cn(
-        "bg-slate-900 border-r border-slate-800 shadow-[5px_0_25px_-5px_rgba(0,0,0,0.4)] text-slate-400 flex flex-col min-h-screen shrink-0 no-print transition-all duration-300 ease-in-out overflow-x-hidden z-20 relative",
+        "bg-white border-r border-slate-200 shadow-[5px_0_25px_-5px_rgba(0,0,0,0.05)] text-slate-500 flex flex-col min-h-screen shrink-0 no-print transition-all duration-300 ease-in-out overflow-x-hidden z-20 relative",
         desktopSidebarClass
       )}>
         <div className={cn(
-          "relative p-6 border-b border-slate-800 flex items-center justify-between",
+          "relative p-6 border-b border-slate-200 flex items-center justify-between",
           isMounted && isCollapsed && "justify-center p-4"
         )}>
           <Link
@@ -706,8 +706,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             </div>
             {(!isMounted || !isCollapsed) && (
               <div className="flex flex-col">
-                <h1 className="text-white font-bold leading-none tracking-wide text-base whitespace-nowrap">SEO INTELLIGENCE</h1>
-                <span className="text-[10px] text-emerald-400 font-semibold tracking-widest uppercase mt-0.5">IT Training Hub</span>
+                <h1 className="text-slate-800 font-bold leading-none tracking-wide text-base whitespace-nowrap">SEO INTELLIGENCE</h1>
+                <span className="text-[10px] text-emerald-600 font-semibold tracking-widest uppercase mt-0.5">IT Training Hub</span>
               </div>
             )}
           </Link>
@@ -715,7 +715,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           {(!isMounted || !isCollapsed) && !mobileOpen && (
             <button
               onClick={handleToggle}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-slate-600 text-slate-300 hover:text-emerald-400 shadow-sm transition-all shrink-0 z-30"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-500 hover:text-emerald-500 shadow-sm transition-all shrink-0 z-30"
               title="Collapse Sidebar"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -725,7 +725,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           {mobileOpen && onClose && (
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/95 text-slate-300 hover:text-white hover:bg-slate-800 transition"
+              className="absolute top-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition"
               aria-label="Close sidebar"
             >
               <X className="w-4 h-4" />
@@ -738,21 +738,21 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           
           {showSettings && (
             <>
-              <div className="border-t border-slate-800/40 my-3 mx-1" />
+              <div className="border-t border-slate-200 my-3 mx-1" />
               {renderSettingsLink()}
             </>
           )}
         </nav>
 
-        <div className={cn("p-4 border-t border-slate-800 text-xs space-y-3", isMounted && isCollapsed && "p-2")}>
+        <div className={cn("p-4 border-t border-slate-200 text-xs space-y-3", isMounted && isCollapsed && "p-2")}>
           {(!isMounted || !isCollapsed) && (
             <>
               <ActiveConfigBadge />
-              <div className="glass-panel-dark px-3 py-2.5 rounded-lg flex items-center gap-2 border border-slate-800/80">
+              <div className="bg-slate-50 px-3 py-2.5 rounded-lg flex items-center gap-2 border border-slate-200">
                 <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                 <div className="overflow-hidden">
-                  <p className="text-slate-300 font-medium truncate">Secure Access</p>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">TechLeads IT Dashboard</p>
+                  <p className="text-slate-700 font-medium truncate">Secure Access</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">TechLeads IT Dashboard</p>
                 </div>
               </div>
             </>
@@ -765,8 +765,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             className={cn(
               "w-full flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border transition-all duration-150",
               isMounted && isCollapsed
-                ? "justify-center text-slate-400 hover:text-slate-200 bg-slate-800/40 border-slate-800/80 hover:bg-slate-800"
-                : "text-slate-400 hover:text-slate-200 bg-slate-800/20 border-slate-800/40 hover:bg-slate-800/60"
+                ? "justify-center text-slate-600 hover:text-slate-900 bg-slate-50 border-slate-200 hover:bg-slate-100"
+                : "text-slate-600 hover:text-slate-900 bg-slate-50/50 border-slate-200/60 hover:bg-slate-100"
             )}
             title={isMounted && isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
@@ -792,23 +792,23 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         )}
       >
         <div className="h-full overflow-y-auto">
-          <div className="bg-slate-900 border-r border-slate-800 text-slate-400 flex flex-col min-h-screen">
+          <div className="bg-white border-r border-slate-200 text-slate-500 flex flex-col min-h-screen">
             {/* re-use header/nav/content from desktop */}
-            <div className="relative p-6 border-b border-slate-800 flex items-center justify-between">
+            <div className="relative p-6 border-b border-slate-200 flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3 group shrink-0">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/10 transition-transform group-hover:scale-105 shrink-0">
                   <Sparkles className="w-5 h-5 fill-current text-white" />
                 </div>
                 <div className="flex flex-col">
-                  <h1 className="text-white font-bold leading-none tracking-wide text-base whitespace-nowrap">SEO INTELLIGENCE</h1>
-                  <span className="text-[10px] text-emerald-400 font-semibold tracking-widest uppercase mt-0.5">IT Training Hub</span>
+                  <h1 className="text-slate-800 font-bold leading-none tracking-wide text-base whitespace-nowrap">SEO INTELLIGENCE</h1>
+                  <span className="text-[10px] text-emerald-600 font-semibold tracking-widest uppercase mt-0.5">IT Training Hub</span>
                 </div>
               </Link>
 
               {mobileOpen && onClose && (
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/95 text-slate-300 hover:text-white hover:bg-slate-800 transition"
+                  className="absolute top-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition"
                   aria-label="Close sidebar"
                 >
                   <X className="w-4 h-4" />
@@ -827,13 +827,13 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
               )}
             </nav>
 
-            <div className="p-4 border-t border-slate-800 text-xs space-y-3">
+            <div className="p-4 border-t border-slate-200 text-xs space-y-3">
               <ActiveConfigBadge />
-              <div className="glass-panel-dark px-3 py-2.5 rounded-lg flex items-center gap-2 border border-slate-800/80">
+              <div className="bg-slate-50 px-3 py-2.5 rounded-lg flex items-center gap-2 border border-slate-200">
                 <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                 <div className="overflow-hidden">
-                  <p className="text-slate-300 font-medium truncate">Secure Access</p>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">TechLeads IT Dashboard</p>
+                  <p className="text-slate-700 font-medium truncate">Secure Access</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">TechLeads IT Dashboard</p>
                 </div>
               </div>
 

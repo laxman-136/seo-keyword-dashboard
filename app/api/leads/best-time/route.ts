@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     }
 
     leads.forEach(lead => {
-      const createdOn = lead.fields?.created_on || Date.now()
+      const createdOn = lead.fields?.lead_date || lead.fields?.created_on || Date.now()
       const isEnrolled = lead.status === 'Enrolled'
 
       // Convert UTC timestamp to IST Date

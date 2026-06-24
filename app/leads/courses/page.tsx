@@ -120,7 +120,9 @@ export default function LeadsByCoursePage() {
     return courses.map(c => ({
       ...c,
       organic: c.organicLeads,
-      website: c.websiteLeads
+      website: c.websiteLeads,
+      ads: c.adsLeads,
+      llm: c.llmLeads
     }))
   }, [courses])
 

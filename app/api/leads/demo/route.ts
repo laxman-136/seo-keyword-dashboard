@@ -124,7 +124,7 @@ export async function GET(request: Request) {
     // Monthly demo attend vs enrolled trend chart (last 6 months)
     const monthlyTrend: Record<string, { month: string; monthStart: Date; attended: number; enrolled: number }> = {}
     leads.forEach(lead => {
-      const createdOn = lead.fields?.created_on || Date.now()
+      const createdOn = lead.fields?.lead_date || lead.fields?.created_on || Date.now()
       const date = new Date(createdOn)
       const monthLabel = date.toLocaleString('en-US', { month: 'short', year: 'numeric' })
       const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
