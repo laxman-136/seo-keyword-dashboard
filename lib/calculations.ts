@@ -42,23 +42,34 @@ export function getVsLastMonthLabel(
 }
 
 export function detectMonths(headers: string[]): string[] {
-  // Find all headers matching "Mon-YY Page" pattern
-  const monthPattern = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2} Page$/
-  return headers
-    .filter(h => monthPattern.test(h))
-    .map(h => h.replace(' Page', ''))
-    .sort((a, b) => {
-      // Sort chronologically
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-      const [aMonth, aYear] = a.split('-')
-      const [bMonth, bYear] = b.split('-')
-      
-      const yearA = parseInt(aYear)
-      const yearB = parseInt(bYear)
-      
-      if (yearA !== yearB) return yearA - yearB
-      return months.indexOf(aMonth) - months.indexOf(bMonth)
-    })
+  const monthMap = new Set<string>()
+  // Support Jan-26, June-26, March-26, etc. followed by optionally " Page", " Position", " Positior" etc.
+  const monthPattern = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)-\d{2}/i
+  
+  headers.forEach(h => {
+    const match = h.match(monthPattern)
+    if (match) {
+      // Add the matched prefix (e.g. "June-26" or "May-26")
+      monthMap.add(match[0])
+    }
+  })
+
+  return Array.from(monthMap).sort((a, b) => {
+    // Sort chronologically
+    const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+    const [aMonth, aYear] = a.split('-')
+    const [bMonth, bYear] = b.split('-')
+    
+    const yearA = parseInt(aYear, 10) || 0
+    const yearB = parseInt(bYear, 10) || 0
+    
+    if (yearA !== yearB) return yearA - yearB
+    
+    const aIndex = months.findIndex(m => aMonth.toLowerCase().startsWith(m))
+    const bIndex = months.findIndex(m => bMonth.toLowerCase().startsWith(m))
+    
+    return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex)
+  })
 }
 
 /**

@@ -45,10 +45,21 @@ async function checkConfig() {
       configs.forEach(config => {
         console.log(`\n--- Config: ${config.label} ---`);
         console.log(`Active: ${config.is_active}`);
+        console.log(`SEO Sheet ID: ${config.seo_sheet_id}`);
+        console.log(`Leads Sheet ID: ${config.leads_sheet_id}`);
+        console.log(`Revenue Sheet ID: ${config.revenue_sheet_id}`);
         console.log(`Meta Account ID: ${config.meta_ad_account_id}`);
         console.log(`Meta Access Token (first 10 chars): ${config.meta_access_token ? config.meta_access_token.substring(0, 10) + '...' : 'None'}`);
         console.log(`Google Customer ID: ${config.google_customer_id}`);
         console.log(`Google Refresh Token (first 10 chars): ${config.google_refresh_token ? config.google_refresh_token.substring(0, 10) + '...' : 'None'}`);
+        console.log(`GA4 Property ID: ${config.ga_property_id}`);
+        console.log(`GA4 Client Email: ${config.ga_client_email}`);
+        console.log(`GA4 Private Key (length): ${config.ga_private_key ? config.ga_private_key.length : 0}`);
+        if (config.ga_private_key) {
+          console.log(`GA4 Private Key Starts With: ${config.ga_private_key.substring(0, 30)}...`);
+        }
+        console.log(`TeleCRM API Token: ${config.telecrm_api_token ? config.telecrm_api_token.substring(0, 10) + '...' : 'None'}`);
+        console.log(`TeleCRM Enterprise ID: ${config.telecrm_enterprise_id}`);
       });
     } else {
       console.log('No configurations found.');

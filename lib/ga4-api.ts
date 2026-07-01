@@ -1,33 +1,60 @@
 // lib/ga4-api.ts
 import { DateRange } from './dateRange'
 import { getOrSetCache } from './cache'
+import { getActiveConfiguration } from './configurations-store'
 import {
   GA4Overview, GA4TrafficSource, GA4LandingPage, GA4PagePath,
   GA4DeviceData, GA4GeoData, GA4DailyPoint, GA4ConversionData,
   GA4SourceLandingRow, GA4ReturningData
 } from './types'
 
-// Dynamic check for credentials
-function hasGA4Credentials(): boolean {
-  const propertyId = process.env.GA4_PROPERTY_ID
-  const jsonStr = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
-  
-  if (!propertyId || !jsonStr) return false
-  if (propertyId === 'your_ga4_property_id' || jsonStr.includes('your_oauth2_client_id')) return false
-  
-  try {
-    JSON.parse(jsonStr)
-    return true
-  } catch {
-    return false
-  }
+interface GA4Credentials {
+  propertyId: string
+  clientEmail: string
+  privateKey: string
 }
 
-// Lazy load the API package so it doesn't throw if imports fail in build phase
-async function getGA4Client() {
-  const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
-  const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON!)
-  return new BetaAnalyticsDataClient({ credentials })
+async function getGA4Credentials(): Promise<GA4Credentials | null> {
+  // 1. Check environment variables first
+  let propertyId = process.env.GA4_PROPERTY_ID
+  let clientEmail = null
+  let privateKey = null
+
+  const envJsonStr = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  if (propertyId && envJsonStr) {
+    try {
+      const parsed = JSON.parse(envJsonStr)
+      clientEmail = parsed.client_email
+      privateKey = parsed.private_key
+    } catch (e) {
+      console.warn('Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:', e)
+    }
+  }
+
+  // 2. Fall back to active configuration from database
+  if (!propertyId || !privateKey || !clientEmail) {
+    try {
+      const activeConfig = await getActiveConfiguration()
+      if (activeConfig && activeConfig.gaPropertyId && activeConfig.gaClientEmail && activeConfig.gaPrivateKey) {
+        propertyId = activeConfig.gaPropertyId
+        clientEmail = activeConfig.gaClientEmail
+        privateKey = activeConfig.gaPrivateKey
+      }
+    } catch (err) {
+      console.warn('Failed to fetch active GA4 configuration from Supabase:', err)
+    }
+  }
+
+  if (propertyId && clientEmail && privateKey) {
+    const formattedProperty = propertyId.startsWith('properties/') ? propertyId : `properties/${propertyId}`
+    return {
+      propertyId: formattedProperty,
+      clientEmail: clientEmail.trim(),
+      privateKey: privateKey.replace(/\\n/g, '\n').trim()
+    }
+  }
+
+  return null
 }
 
 // ── ACCOUNT OVERVIEW ──────────────────────────────────────
@@ -38,14 +65,21 @@ export async function fetchGA4Overview(dateRange: DateRange, bypassCache = false
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4Overview(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           metrics: [
             { name: 'sessions' },
@@ -64,7 +98,7 @@ export async function fetchGA4Overview(dateRange: DateRange, bypassCache = false
         const prevTo = new Date(new Date(dateRange.from).getTime() - (24 * 60 * 60 * 1000)).toISOString().split('T')[0]
 
         const [prevResponse] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: prevFrom, endDate: prevTo }],
           metrics: [
             { name: 'sessions' },
@@ -122,14 +156,21 @@ export async function fetchGA4TrafficSources(dateRange: DateRange, bypassCache =
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4TrafficSources(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [
             { name: 'sessionDefaultChannelGroup' },
@@ -195,14 +236,21 @@ export async function fetchGA4LandingPages(dateRange: DateRange, bypassCache = f
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4LandingPages(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [
             { name: 'landingPage' },
@@ -270,14 +318,21 @@ export async function fetchGA4PagePaths(dateRange: DateRange, bypassCache = fals
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4PagePaths(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [
             { name: 'pagePath' },
@@ -332,14 +387,21 @@ export async function fetchGA4Devices(dateRange: DateRange, bypassCache = false)
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4Devices(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [{ name: 'deviceCategory' }],
           metrics: [
@@ -390,14 +452,21 @@ export async function fetchGA4Geography(dateRange: DateRange, bypassCache = fals
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4Geography(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [
             { name: 'city' },
@@ -447,14 +516,21 @@ export async function fetchGA4Conversions(dateRange: DateRange, bypassCache = fa
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4Conversions(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [
             { name: 'eventName' },
@@ -510,14 +586,21 @@ export async function fetchGA4DailyTrend(dateRange: DateRange, bypassCache = fal
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4DailyTrend(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [{ name: 'date' }],
           metrics: [
@@ -567,14 +650,21 @@ export async function fetchGA4SourceLandingMatrix(dateRange: DateRange, bypassCa
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4SourceLandingMatrix(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [
             { name: 'sessionDefaultChannelGroup' },
@@ -623,14 +713,21 @@ export async function fetchGA4ReturningUsers(dateRange: DateRange, bypassCache =
   const res = await getOrSetCache(
     cacheKey,
     async () => {
-      if (!hasGA4Credentials()) {
+      const creds = await getGA4Credentials()
+      if (!creds) {
         return generateMockGA4ReturningUsers(dateRange)
       }
 
       try {
-        const client = await getGA4Client()
+        const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
+        const client = new BetaAnalyticsDataClient({
+          credentials: {
+            client_email: creds.clientEmail,
+            private_key: creds.privateKey
+          }
+        })
         const [response] = await client.runReport({
-          property: process.env.GA4_PROPERTY_ID!,
+          property: creds.propertyId,
           dateRanges: [{ startDate: dateRange.from, endDate: dateRange.to }],
           dimensions: [
             { name: 'newVsReturning' },

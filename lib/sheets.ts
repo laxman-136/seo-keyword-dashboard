@@ -63,14 +63,46 @@ export function parseSheetGrid(values: string[][]): {
     const priority = getCell(priorityIdx, 'Low')
     const notes = getCell(notesIdx, '')
 
-    // Extract monthly data
+    // Extract monthly data defensively based on column order and name hints
     const monthlyData: Record<string, MonthData> = {}
     months.forEach(month => {
-      const pageHeader = `${month} Page`
-      const posHeader = `${month} Position`
+      // Find all column indices that start with the month prefix
+      const matchingCols = headers
+        .map((h, idx) => ({ header: h.toLowerCase(), idx }))
+        .filter(c => c.header.startsWith(month.toLowerCase()))
 
-      const pageColIdx = headers.findIndex(h => h === pageHeader)
-      const posColIdx = headers.findIndex(h => h === posHeader)
+      let pageColIdx = -1
+      let posColIdx = -1
+
+      if (matchingCols.length >= 2) {
+        // Attempt to find based on keywords "page" and "pos" / "position"
+        const pageCol = matchingCols.find(c => c.header.includes('page'))
+        const posCol = matchingCols.find(c => c.header.includes('pos'))
+
+        if (pageCol) pageColIdx = pageCol.idx
+        if (posCol) posColIdx = posCol.idx
+
+        // Fallback: in sheets, the first column of the pair is always Page, the second is Position
+        if (pageColIdx === -1 && posColIdx === -1) {
+          pageColIdx = matchingCols[0].idx
+          posColIdx = matchingCols[1].idx
+        } else if (pageColIdx === -1) {
+          // If we resolved position, page is the other one
+          const other = matchingCols.find(c => c.idx !== posColIdx)
+          pageColIdx = other ? other.idx : matchingCols[0].idx
+        } else if (posColIdx === -1) {
+          // If we resolved page, position is the other one
+          const other = matchingCols.find(c => c.idx !== pageColIdx)
+          posColIdx = other ? other.idx : matchingCols[1].idx
+        }
+      } else if (matchingCols.length === 1) {
+        // Fallback for single column
+        if (matchingCols[0].header.includes('page')) {
+          pageColIdx = matchingCols[0].idx
+        } else {
+          posColIdx = matchingCols[0].idx
+        }
+      }
 
       const pageStr = getCell(pageColIdx, '0')
       const posStr = getCell(posColIdx, '0')

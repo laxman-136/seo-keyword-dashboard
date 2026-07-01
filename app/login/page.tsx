@@ -92,10 +92,12 @@ function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <label htmlFor="email" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Email Address
               </label>
               <input
+                id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -108,11 +110,13 @@ function LoginForm() {
 
             {/* Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <label htmlFor="password" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Password
               </label>
               <div className="relative">
                 <input
+                  id="password"
+                  name="password"
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}

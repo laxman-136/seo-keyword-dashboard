@@ -105,8 +105,10 @@ export default function RegisterPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Name */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Full Name</label>
+                  <label htmlFor="name" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Full Name</label>
                   <input
+                    id="name"
+                    name="name"
                     type="text"
                     value={name}
                     onChange={e => setName(e.target.value)}
@@ -118,8 +120,10 @@ export default function RegisterPage() {
 
                 {/* Email */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Work Email</label>
+                  <label htmlFor="email" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Work Email</label>
                   <input
+                    id="email"
+                    name="email"
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -131,9 +135,11 @@ export default function RegisterPage() {
 
                 {/* Password */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Password</label>
+                  <label htmlFor="password" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Password</label>
                   <div className="relative">
                     <input
+                      id="password"
+                      name="password"
                       type={showPw ? 'text' : 'password'}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
@@ -149,8 +155,10 @@ export default function RegisterPage() {
 
                 {/* Confirm */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Confirm Password</label>
+                  <label htmlFor="confirm" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Confirm Password</label>
                   <input
+                    id="confirm"
+                    name="confirm"
                     type={showPw ? 'text' : 'password'}
                     value={confirm}
                     onChange={e => setConfirm(e.target.value)}

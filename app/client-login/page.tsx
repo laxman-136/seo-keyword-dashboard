@@ -60,8 +60,10 @@ export default function ClientLoginPage() {
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/60 rounded-2xl p-6 shadow-2xl shadow-black/40">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</label>
+              <label htmlFor="email" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</label>
               <input
+                id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
