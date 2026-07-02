@@ -406,31 +406,64 @@ export default function SiteStatusPage() {
                   {/* Period Cards Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                     {metricsOrder.map(metric => {
+                      // Determine the period before comparePeriod for 3-month comparison
+                      const currentList = timeframe === 'monthly' ? chronologicalMonthsList :
+                                          timeframe === 'quarterly' ? quartersList : yearsList
+                      
+                      const compareIdx = currentList.indexOf(comparePeriod)
+                      const prevComparePeriod = compareIdx > 0 ? currentList[compareIdx - 1] : null
+                      
+                      const prevCompareData = prevComparePeriod ? getPeriodData(row, prevComparePeriod) : null
+                      
+                      const prevCompareVal = prevCompareData ? (prevCompareData as any)?.[metric] : null
                       const prevVal = (prevData as any)?.[metric]
                       const currVal = (currData as any)?.[metric]
-                      const change = calculateChange(currVal, prevVal)
+                      
+                      const changeLatest = calculateChange(currVal, prevVal)
+                      const changeOverall = (prevCompareVal !== null && prevCompareVal !== undefined) ? calculateChange(currVal, prevCompareVal) : null
+
+                      // Extract short month name (e.g. "Apr" from "April-2026")
+                      const getShortLabel = (lbl: string) => {
+                        if (!lbl) return ''
+                        const parts = lbl.split('-')
+                        return parts[0].slice(0, 3) + (parts[1] ? `-${parts[1]}` : '')
+                      }
 
                       return (
-                        <div key={metric} className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-3 flex flex-col justify-between">
+                        <div key={metric} className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-3.5 flex flex-col justify-between hover:border-slate-300 transition-colors">
                           <div>
                             <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{metricLabel[metric]}</p>
                             
-                            <div className="mt-3 space-y-1.5">
+                            <div className="mt-3.5 space-y-2">
+                              {prevComparePeriod && (
+                                <div className="flex justify-between items-baseline text-[10px] sm:text-xs">
+                                  <span className="text-slate-400 font-semibold">{prevComparePeriod}</span>
+                                  <span className="font-semibold text-slate-500">{fmt(prevCompareVal)}</span>
+                                </div>
+                              )}
                               <div className="flex justify-between items-baseline text-[10px] sm:text-xs">
-                                <span className="text-slate-400 font-medium">{comparePeriod}</span>
-                                <span className="font-bold text-slate-500">{fmt(prevVal)}</span>
+                                <span className="text-slate-400 font-semibold">{comparePeriod}</span>
+                                <span className="font-semibold text-slate-500">{fmt(prevVal)}</span>
                               </div>
-                              <div className="flex justify-between items-baseline text-[10px] sm:text-xs">
-                                <span className="text-slate-400 font-medium">{currentPeriod}</span>
-                                <span className="text-base sm:text-lg font-extrabold text-slate-800">{fmt(currVal)}</span>
+                              <div className="flex justify-between items-baseline text-[10px] sm:text-xs border-t border-slate-100/50 pt-1.5 mt-1.5">
+                                <span className="text-indigo-600 font-bold">{currentPeriod}</span>
+                                <span className="text-sm sm:text-base font-black text-indigo-600">{fmt(currVal)}</span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Delta metric is absolute increase/decrease score */}
-                          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                            <span className="text-[10px] text-slate-400 font-semibold">Net Increase:</span>
-                            {renderChangeIndicator(change)}
+                          {/* Delta metrics showing MoM and overall changes */}
+                          <div className="pt-3 border-t border-slate-100/60 space-y-2">
+                            {prevComparePeriod && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{getShortLabel(prevComparePeriod)} ➔ {getShortLabel(currentPeriod)}:</span>
+                                {renderChangeIndicator(changeOverall)}
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{getShortLabel(comparePeriod)} ➔ {getShortLabel(currentPeriod)}:</span>
+                              {renderChangeIndicator(changeLatest)}
+                            </div>
                           </div>
                         </div>
                       )
