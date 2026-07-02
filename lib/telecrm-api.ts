@@ -97,15 +97,29 @@ export const CATEGORY_CONV_RATES = {
 // ── CORE UTILS ───────────────────────────────────────────
 
 function getStartOfDay(date: Date): Date {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  return d
+  const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' } as const
+  const formatter = new Intl.DateTimeFormat('en-US', options)
+  const parts = formatter.formatToParts(date)
+  
+  const year = parts.find(p => p.type === 'year')?.value || '2026'
+  const month = parts.find(p => p.type === 'month')?.value || '06'
+  const day = parts.find(p => p.type === 'day')?.value || '01'
+  
+  const isoStr = `${year}-${month}-${day}T00:00:00.000+05:30`
+  return new Date(isoStr)
 }
 
 function getEndOfDay(date: Date): Date {
-  const d = new Date(date)
-  d.setHours(23, 59, 59, 999)
-  return d
+  const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' } as const
+  const formatter = new Intl.DateTimeFormat('en-US', options)
+  const parts = formatter.formatToParts(date)
+  
+  const year = parts.find(p => p.type === 'year')?.value || '2026'
+  const month = parts.find(p => p.type === 'month')?.value || '06'
+  const day = parts.find(p => p.type === 'day')?.value || '30'
+  
+  const isoStr = `${year}-${month}-${day}T23:59:59.999+05:30`
+  return new Date(isoStr)
 }
 
 function getCurrentMonthRange() {
