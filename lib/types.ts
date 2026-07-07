@@ -7,6 +7,10 @@ export interface KeywordRow {
   status: string
   priority: string
   notes: string
+  searchVolume?: number
+  competition?: string
+  competitionIndex?: number
+  monthlySearchVolumes?: { month: string; year: number; volume: number }[]
 }
 
 export interface MonthData {
@@ -716,6 +720,10 @@ export interface GoogleAccountOverview {
   lastRefreshedAt?: string
   nextRefreshAt?: string
   isCached?: boolean
+  prepaidBalance?: number
+  totalDeposits?: number
+  spendSinceStart?: number
+  startDepositDate?: string | null
 }
 
 export interface GoogleCampaign {
@@ -870,6 +878,10 @@ export interface AdsCombinedOverview {
   budgetAlerts: AdsBudgetAlert[]
   lastRefreshedAt: string
   nextRefreshAt: string
+  googlePrepaidBalance?: number
+  googleTotalDeposits?: number
+  googleSpendSinceStart?: number
+  googleStartDepositDate?: string | null
 }
 
 // ── TELECRM TYPES ─────────────────────────────────────────

@@ -72,6 +72,18 @@ export function useGoogleOverview() {
     loadData()
   }, [loadData])
 
+  useEffect(() => {
+    const handleUpdate = () => {
+      loadData(true)
+    }
+    window.addEventListener('google-deposits-updated', handleUpdate)
+    window.addEventListener('active-config-updated', handleUpdate)
+    return () => {
+      window.removeEventListener('google-deposits-updated', handleUpdate)
+      window.removeEventListener('active-config-updated', handleUpdate)
+    }
+  }, [loadData])
+
   return { data, loading, refreshing, error, refresh: () => loadData(true) }
 }
 

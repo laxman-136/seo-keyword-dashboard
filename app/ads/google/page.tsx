@@ -103,8 +103,8 @@ export default function GoogleAdsPage() {
       {overview && (
         <PrepaidBalanceCard
           platform="google"
-          spend={overview.spend}
-          prepaidBalance={activeConfig?.googlePrepaidBalance}
+          spend={overview.spendSinceStart !== undefined && overview.spendSinceStart > 0 ? overview.spendSinceStart : overview.spend}
+          prepaidBalance={overview.totalDeposits !== undefined && overview.totalDeposits > 0 ? overview.totalDeposits : activeConfig?.googlePrepaidBalance}
         />
       )}
 

@@ -55,6 +55,7 @@ let globalDailyKeywordCache: {
   rawRows: DailyKeywordRow[]
   isMock: boolean
   lastUpdated: string
+  searchVolumes?: Record<string, any>
 } | null = null
 
 function parseDailyKeywordValues(values: string[][]): DailyKeywordRow[] {
@@ -86,6 +87,7 @@ function parseDailyKeywordValues(values: string[][]): DailyKeywordRow[] {
 
 export function useDailyKeywordData(): DailyKeywordResult {
   const [rawRows, setRawRows] = useState<DailyKeywordRow[]>(globalDailyKeywordCache?.rawRows || [])
+  const [searchVolumes, setSearchVolumes] = useState<Record<string, any>>(globalDailyKeywordCache?.searchVolumes || {})
   const [isMock, setIsMock] = useState(globalDailyKeywordCache?.isMock || false)
   const [fallbackReason, setFallbackReason] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState(globalDailyKeywordCache?.lastUpdated || '')
@@ -129,10 +131,12 @@ export function useDailyKeywordData(): DailyKeywordResult {
       globalDailyKeywordCache = {
         rawRows: parsedRows,
         isMock: payload.isMock,
-        lastUpdated: payload.lastUpdated || ''
+        lastUpdated: payload.lastUpdated || '',
+        searchVolumes: payload.searchVolumes || {}
       }
 
       setRawRows(parsedRows)
+      setSearchVolumes(payload.searchVolumes || {})
       setIsMock(payload.isMock)
       setFallbackReason(payload.fallbackReason ?? null)
       setLastUpdated(payload.lastUpdated || '')
@@ -155,6 +159,7 @@ export function useDailyKeywordData(): DailyKeywordResult {
     const handleConfigChange = () => {
       globalDailyKeywordCache = null
       setRawRows([])
+      setSearchVolumes({})
       setLoading(true)
     }
 
@@ -302,6 +307,8 @@ export function useDailyKeywordData(): DailyKeywordResult {
           ? 'Needs Work' 
           : 'Not Ranking'
 
+      const svData = searchVolumes?.[k.keyword] || {}
+
       return {
         keyword: k.keyword,
         group: k.group,
@@ -317,7 +324,11 @@ export function useDailyKeywordData(): DailyKeywordResult {
         prevPosition,
         pageBand,
         movement,
-        vsLastMonthLabel
+        vsLastMonthLabel,
+        searchVolume: svData.searchVolume,
+        competition: svData.competition,
+        competitionIndex: svData.competitionIndex,
+        monthlySearchVolumes: svData.monthlySearchVolumes
       }
     })
 
@@ -328,7 +339,7 @@ export function useDailyKeywordData(): DailyKeywordResult {
       keywords,
       stats
     }
-  }, [rawRows])
+  }, [rawRows, searchVolumes])
 
   return {
     rawRows,

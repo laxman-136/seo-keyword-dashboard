@@ -6,8 +6,13 @@ import { getOrSetCache } from '@/lib/cache'
 import { resolveDateRange, DatePreset } from '@/lib/dateRange'
 import { fetchGoogleAccountOverview, fetchGoogleCampaigns } from '@/lib/google-ads-api'
 import { AdsBudgetAlert } from '@/lib/types'
+import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
+
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
 
 export async function GET(request: Request) {
   try {
@@ -94,11 +99,60 @@ export async function GET(request: Request) {
       bypassCache
     )
 
+    // Calculate Prepaid Balance dynamically based on Supabase deposits list
+    let prepaidBalance = 0
+    let totalDeposits = 0
+    let spendSinceStart = 0
+    let startDepositDate: string | null = null
+
+    if (supabase) {
+      try {
+        const { data: deposits } = await supabase
+          .from('google_ads_deposits')
+          .select('*')
+          .order('deposit_date', { ascending: true })
+
+        if (deposits && deposits.length > 0) {
+          const earliest = deposits[0]
+          startDepositDate = earliest.deposit_date
+          totalDeposits = deposits.reduce((sum, d) => sum + Number(d.amount), 0)
+
+          if (startDepositDate) {
+            const todayStr = new Date().toISOString().split('T')[0]
+            const customRange = {
+              from: startDepositDate,
+              to: todayStr,
+              preset: 'custom' as const,
+              label: 'Custom Range'
+            }
+
+            const rangeOverview = await fetchGoogleAccountOverview(
+              customRange,
+              googleDevToken,
+              googleClientId,
+              googleClientSecret,
+              googleRefreshToken,
+              googleCustomerId,
+              googleManagerId
+            )
+            spendSinceStart = rangeOverview.spend || 0
+            prepaidBalance = Math.max(0, totalDeposits - spendSinceStart)
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to calculate live prepaid balance:', err)
+      }
+    }
+
     return NextResponse.json({
       ...cacheResult.data,
       lastRefreshedAt: cacheResult.cachedAt,
       nextRefreshAt: cacheResult.expiresAt,
-      isCached: cacheResult.isCached
+      isCached: cacheResult.isCached,
+      prepaidBalance,
+      totalDeposits,
+      spendSinceStart,
+      startDepositDate
     }, {
       headers: {
         'Cache-Control': bypassCache 

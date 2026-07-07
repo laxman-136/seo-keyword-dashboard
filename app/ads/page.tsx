@@ -70,9 +70,9 @@ export default function AdsOverviewPage() {
           platform="combined"
           spend={overview.totalSpend}
           metaPrepaid={activeConfig?.metaPrepaidBalance}
-          googlePrepaid={activeConfig?.googlePrepaidBalance}
+          googlePrepaid={overview.googleTotalDeposits !== undefined && overview.googleTotalDeposits > 0 ? overview.googleTotalDeposits : activeConfig?.googlePrepaidBalance}
           metaSpend={overview.metaSpend}
-          googleSpend={overview.googleSpend}
+          googleSpend={overview.googleSpendSinceStart !== undefined && overview.googleSpendSinceStart > 0 ? overview.googleSpendSinceStart : overview.googleSpend}
         />
       )}
 

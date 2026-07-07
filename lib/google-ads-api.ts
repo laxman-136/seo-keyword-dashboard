@@ -1254,3 +1254,150 @@ export async function fetchGoogleAdsWithInsights(
     return []
   }
 }
+
+// ── KEYWORD PLANNER SERVICE INTEGRATION ───────────────────
+
+function generateMockKeywordMetrics(keyword: string) {
+  let hash = 0
+  for (let i = 0; i < keyword.length; i++) {
+    hash = keyword.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  hash = Math.abs(hash)
+  
+  const priorities = ['HIGH', 'MEDIUM', 'LOW']
+  const competition = priorities[hash % 3]
+  const avgMonthlySearches = (hash % 15) * 100 + 50 // 50 to 1450
+  
+  const monthlySearchVolumes: { month: string; year: number; volume: number }[] = []
+  const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
+  
+  const now = new Date()
+  for (let i = 12; i > 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const mName = months[d.getMonth()]
+    const yr = d.getFullYear()
+    const factor = 1 + Math.sin(d.getMonth()) * 0.3
+    monthlySearchVolumes.push({
+      month: mName,
+      year: yr,
+      volume: Math.round(avgMonthlySearches * factor)
+    })
+  }
+
+  return {
+    avgMonthlySearches,
+    competition,
+    competitionIndex: Math.round(hash % 100),
+    monthlySearchVolumes
+  }
+}
+
+export async function fetchKeywordSearchVolumes(
+  keywords: string[],
+  customDevToken?: string,
+  customClientId?: string,
+  customClientSecret?: string,
+  customRefreshToken?: string,
+  customCustomerId?: string,
+  customManagerId?: string
+): Promise<Record<string, {
+  avgMonthlySearches: number
+  competition: string
+  competitionIndex: number
+  monthlySearchVolumes: { month: string; year: number; volume: number }[]
+}>> {
+  const results: Record<string, any> = {}
+  
+  if (!keywords || keywords.length === 0) {
+    return results
+  }
+
+  const chunks: string[][] = []
+  for (let i = 0; i < keywords.length; i += 20) {
+    chunks.push(keywords.slice(i, i + 20))
+  }
+
+  if (!hasGoogleCredentials(customDevToken, customClientId, customClientSecret, customRefreshToken, customCustomerId)) {
+    keywords.forEach(kw => {
+      results[kw] = generateMockKeywordMetrics(kw)
+    })
+    return results
+  }
+
+  try {
+    const customer = await getGoogleAdsClient(
+      customDevToken,
+      customClientId,
+      customClientSecret,
+      customRefreshToken,
+      customCustomerId,
+      customManagerId
+    )
+
+    for (const chunk of chunks) {
+      try {
+        const response = await customer.keywordPlanIdeas.generateKeywordIdeas({
+          customer_id: (customCustomerId || process.env.GOOGLE_ADS_CUSTOMER_ID || '').replace(/-/g, ''),
+          language: 'languageConstants/1000',
+          geo_target_constants: [
+            'geoTargetConstants/2356'
+          ],
+          include_adult_keywords: false,
+          keyword_seed: {
+            keywords: chunk
+          },
+          keyword_plan_network: 'GOOGLE_SEARCH'
+        } as any)
+
+        if (Array.isArray(response)) {
+          response.forEach((idea: any) => {
+            const text = idea.text
+            if (!text) return
+            
+            const metrics = idea.keyword_idea_metrics
+            const avgSearch = Number(metrics?.avg_monthly_searches || 0)
+            const comp = metrics?.competition || 'UNSPECIFIED'
+            const compIdx = Number(metrics?.competition_index || 0)
+            
+            const volumes = (metrics?.monthly_search_volumes || []).map((v: any) => ({
+              month: v.month || 'JANUARY',
+              year: Number(v.year || 2026),
+              volume: Number(v.monthly_searches || 0)
+            }))
+
+            results[text] = {
+              avgMonthlySearches: avgSearch,
+              competition: comp,
+              competitionIndex: compIdx,
+              monthlySearchVolumes: volumes
+            }
+          })
+        }
+      } catch (chunkErr) {
+        console.error('Failed to fetch search volume chunk:', chunk, chunkErr)
+        chunk.forEach(kw => {
+          if (!results[kw]) {
+            results[kw] = generateMockKeywordMetrics(kw)
+          }
+        })
+      }
+    }
+
+    // Ensure everything has a fallback if missing from API response
+    keywords.forEach(kw => {
+      if (!results[kw]) {
+        results[kw] = generateMockKeywordMetrics(kw)
+      }
+    })
+
+  } catch (err) {
+    console.error('Failed to fetch live keyword search volumes:', err)
+    keywords.forEach(kw => {
+      if (!results[kw]) {
+        results[kw] = generateMockKeywordMetrics(kw)
+      }
+    })
+  }
+
+  return results
+}
