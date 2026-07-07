@@ -891,6 +891,20 @@ export type LeadChannel =
   | 'LLM'
   | 'Other'
 
+export interface LeadsChannelFinancials {
+  channel: LeadChannel
+  leads: number
+  enrolled: number
+  spend: number
+  revenueCash: number
+  revenueContract: number
+  cpl: number
+  cpa: number
+  roasCash: number
+  roasContract: number
+  isPaid: boolean
+}
+
 export interface TeleCRMLead {
   id: string
   status: string                    // raw TeleCRM status

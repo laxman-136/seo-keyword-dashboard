@@ -3,7 +3,7 @@ import {
   TeleCRMLead, LeadsMonthlyTrend, LeadsFunnelData, 
   LeadsCourseBreakdown, LeadsChannelBreakdown, 
   LeadCategory, LeadChannel, LeadsMonthlyRow,
-  TeleCRMAction, LeadScore, ScoreFactor
+  TeleCRMAction, LeadScore, ScoreFactor, LeadsChannelFinancials
 } from './types'
 import { getOrSetCache } from './cache'
 import { fetchLeadsMonthly } from './sheets'
@@ -127,6 +127,15 @@ function getCurrentMonthRange() {
   const from = new Date(now.getFullYear(), now.getMonth(), 1)
   const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
   return { from, to }
+}
+
+export function parseAmount(val: any): number {
+  if (typeof val === 'number') return val
+  if (!val || typeof val !== 'string') return 0
+  const match = val.replace(/,/g, '').match(/\d+(?:\.\d+)?/)
+  if (!match) return 0
+  const num = parseFloat(match[0])
+  return num > 0 && num < 150 ? num * 1000 : num
 }
 
 export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
@@ -1027,6 +1036,104 @@ export async function getChannelBreakdown(
     convRate: parseFloat((data.total > 0 ? (data.enrolled / data.total) * 100 : 0).toFixed(1)),
     sharePercent: parseFloat(((data.total / totalAllChannels) * 100).toFixed(1))
   }))
+}
+
+export async function getChannelFinancials(
+  dateRange?: { from: Date; to: Date },
+  customToken?: string,
+  customEnterpriseId?: string,
+  bypassCache = false,
+  manualBudgets: Record<string, number> = {},
+  googleSpend = 0,
+  metaSpend = 0
+): Promise<LeadsChannelFinancials[]> {
+  const range = dateRange || getCurrentMonthRange()
+  
+  // 1. Fetch leads
+  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache)
+  
+  // 3. Aggregate lead revenue
+  const financialsMap: Record<LeadChannel, {
+    leads: number;
+    enrolled: number;
+    revenueCash: number;
+    revenueContract: number;
+    spend: number;
+  }> = {
+    'Organic': { leads: 0, enrolled: 0, revenueCash: 0, revenueContract: 0, spend: manualBudgets['Organic'] || 0 },
+    'Website': { leads: 0, enrolled: 0, revenueCash: 0, revenueContract: 0, spend: manualBudgets['Website'] || 0 },
+    'Google Ads': { leads: 0, enrolled: 0, revenueCash: 0, revenueContract: 0, spend: googleSpend },
+    'Meta Ads': { leads: 0, enrolled: 0, revenueCash: 0, revenueContract: 0, spend: metaSpend },
+    'Referral': { leads: 0, enrolled: 0, revenueCash: 0, revenueContract: 0, spend: manualBudgets['Referral'] || 0 },
+    'SOT': { leads: 0, enrolled: 0, revenueCash: 0, revenueContract: 0, spend: manualBudgets['SOT'] || 0 },
+    'LLM': { leads: 0, enrolled: 0, revenueCash: 0, revenueContract: 0, spend: manualBudgets['LLM'] || 0 },
+    'Other': { leads: 0, enrolled: 0, revenueCash: 0, revenueContract: 0, spend: manualBudgets['Other'] || 0 }
+  }
+  
+  const fromTime = getStartOfDay(range.from).getTime()
+  const toTime = getEndOfDay(range.to).getTime()
+  
+  leads.forEach(lead => {
+    const channel = detectLeadChannel(lead)
+    const data = financialsMap[channel]
+    if (!data) return
+    
+    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+    const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
+    
+    const isEnrolled = lead.status === 'Enrolled'
+    const enrollDateVal = lead.fields?.course_enrollment_date
+    const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
+    
+    if (isLeadInPeriod) {
+      data.leads++
+      
+      if (isEnrolled) {
+        const cash = parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
+        const contract = parseAmount(lead.fields?.course_fee)
+        
+        if (isEnrolledInPeriod) {
+          data.enrolled++
+          data.revenueCash += cash
+          data.revenueContract += contract
+        }
+      }
+    } else if (isEnrolledInPeriod) {
+      data.enrolled++
+      const cash = parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
+      const contract = parseAmount(lead.fields?.course_fee)
+      data.revenueCash += cash
+      data.revenueContract += contract
+    }
+  })
+  
+  return Object.entries(financialsMap).map(([channel, data]) => {
+    const spend = data.spend
+    const leadsCount = data.leads
+    const enrolledCount = data.enrolled
+    
+    const cpl = spend > 0 && leadsCount > 0 ? spend / leadsCount : 0
+    const cpa = spend > 0 && enrolledCount > 0 ? spend / enrolledCount : 0
+    
+    const roasCash = spend > 0 ? data.revenueCash / spend : 0
+    const roasContract = spend > 0 ? data.revenueContract / spend : 0
+    
+    const isPaid = channel === 'Google Ads' || channel === 'Meta Ads'
+    
+    return {
+      channel: channel as LeadChannel,
+      leads: leadsCount,
+      enrolled: enrolledCount,
+      spend: parseFloat(spend.toFixed(2)),
+      revenueCash: parseFloat(data.revenueCash.toFixed(2)),
+      revenueContract: parseFloat(data.revenueContract.toFixed(2)),
+      cpl: parseFloat(cpl.toFixed(2)),
+      cpa: parseFloat(cpa.toFixed(2)),
+      roasCash: parseFloat(roasCash.toFixed(2)),
+      roasContract: parseFloat(roasContract.toFixed(2)),
+      isPaid
+    }
+  })
 }
 
 export function getLeadsMonthComparison(

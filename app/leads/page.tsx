@@ -84,6 +84,113 @@ export default function LeadsOverviewPage() {
     }
   }, [from, to, selectedCourse])
 
+  // --- ROI & FINANCIALS STATE & EFFECTS ---
+  const [activeTab, setActiveTab] = useState<'overview' | 'roi'>('overview')
+  const [financials, setFinancials] = useState<any[] | null>(null)
+  const [financialsLoading, setFinancialsLoading] = useState(false)
+  const [budgetMonth, setBudgetMonth] = useState('')
+  const [budgetChannel, setBudgetChannel] = useState('Organic')
+  const [budgetAmount, setBudgetAmount] = useState('')
+  const [savingBudget, setSavingBudget] = useState(false)
+  const [budgetFeedback, setBudgetFeedback] = useState<string | null>(null)
+
+  const fetchFinancials = useCallback(async (isRefresh = false) => {
+    setFinancialsLoading(true)
+    try {
+      const headers: Record<string, string> = {}
+      if (typeof window !== 'undefined') {
+        const clientToken = localStorage.getItem('client-telecrm-api-token')
+        const clientEnterpriseId = localStorage.getItem('client-telecrm-enterprise-id')
+        if (clientToken) headers['x-telecrm-api-token'] = clientToken
+        if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
+      }
+      const refreshParam = isRefresh ? '&refresh=true' : ''
+      const res = await fetch(`/api/leads/financials?from=${from}&to=${to}${refreshParam}`, { headers })
+      if (!res.ok) {
+        throw new Error('Failed to fetch financials')
+      }
+      const payload = await res.json()
+      setFinancials(payload)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setFinancialsLoading(false)
+    }
+  }, [from, to])
+
+  const getMonthsList = useCallback(() => {
+    if (!from || !to) return []
+    const months: string[] = []
+    const start = new Date(from)
+    const end = new Date(to)
+    const current = new Date(start.getFullYear(), start.getMonth(), 1)
+    
+    while (current <= end) {
+      months.push(current.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))
+      current.setMonth(current.getMonth() + 1)
+    }
+    return months
+  }, [from, to])
+
+  useEffect(() => {
+    if (from) {
+      const d = new Date(from)
+      const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      setBudgetMonth(label)
+    }
+  }, [from])
+
+  useEffect(() => {
+    if (activeTab === 'roi') {
+      fetchFinancials()
+    }
+  }, [activeTab, fetchFinancials])
+
+  const handleSaveBudget = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!budgetMonth || !budgetChannel || !budgetAmount) return
+    
+    setSavingBudget(true)
+    setBudgetFeedback(null)
+    
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      }
+      if (typeof window !== 'undefined') {
+        const clientToken = localStorage.getItem('client-telecrm-api-token')
+        const clientEnterpriseId = localStorage.getItem('client-telecrm-enterprise-id')
+        if (clientToken) headers['x-telecrm-api-token'] = clientToken
+        if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
+      }
+      
+      const res = await fetch('/api/leads/budgets', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          month: budgetMonth,
+          channel: budgetChannel,
+          budget: parseFloat(budgetAmount)
+        })
+      })
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to save budget')
+      }
+      
+      setBudgetFeedback(`Successfully saved budget for ${budgetChannel} in ${budgetMonth}!`)
+      setBudgetAmount('')
+      
+      fetchFinancials(true)
+    } catch (err: any) {
+      console.error(err)
+      setBudgetFeedback(`Error: ${err.message}`)
+    } finally {
+      setSavingBudget(false)
+    }
+  }
+
   useEffect(() => {
     fetchData()
   }, [fetchData])
@@ -175,18 +282,47 @@ export default function LeadsOverviewPage() {
         </div>
       </div>
 
-      {/* ── SECTION A: KPI GRID ── */}
-      <div className="space-y-3">
-        {/* Row 1 — Volume Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          <LeadsKPICard
-            title="Total Leads"
-            value={kpi.totalLeads}
-            prevValue={kpi.prevTotalLeads}
-            icon="📋"
-            variant="blue"
-            subtitle="All channels combined"
-          />
+      {/* ── TABS SELECTOR ── */}
+      <div className="flex border-b border-slate-200 gap-6 mt-4">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`pb-3 font-semibold text-sm transition-all relative ${
+            activeTab === 'overview' 
+              ? 'text-indigo-600 border-b-2 border-indigo-600' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          📈 Overview & Funnel
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('roi')
+            fetchFinancials()
+          }}
+          className={`pb-3 font-semibold text-sm transition-all relative ${
+            activeTab === 'roi' 
+              ? 'text-indigo-600 border-b-2 border-indigo-600' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          💸 ROI & Financials
+        </button>
+      </div>
+
+      {activeTab === 'overview' ? (
+        <>
+          {/* ── SECTION A: KPI GRID ── */}
+          <div className="space-y-3">
+            {/* Row 1 — Volume Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+              <LeadsKPICard
+                title="Total Leads"
+                value={kpi.totalLeads}
+                prevValue={kpi.prevTotalLeads}
+                icon="📋"
+                variant="blue"
+                subtitle="All channels combined"
+              />
           <LeadsKPICard
             title="Paid Ads Leads"
             value={kpi.adsLeads}
@@ -278,6 +414,180 @@ export default function LeadsOverviewPage() {
 
       {/* ── SECTION F: Conversion Trend ── */}
       <LeadsConvTrendChart rows={trend} />
+        </>
+      ) : (
+        <div className="space-y-6">
+          {/* Budget Entry Form */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 className="text-sm font-semibold text-slate-800">💼 Add Custom Monthly Budget (Organic & Non-Paid Channels)</h3>
+            <p className="text-xs text-slate-400">
+              Input operational budgets spent on SEO content, tools, chatbot services, or social campaigns to calculate ROI and CPL.
+            </p>
+            <form onSubmit={handleSaveBudget} className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Target Month</label>
+                <select
+                  value={budgetMonth}
+                  onChange={(e) => setBudgetMonth(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none min-w-[150px]"
+                >
+                  {getMonthsList().map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Marketing Channel</label>
+                <select
+                  value={budgetChannel}
+                  onChange={(e) => setBudgetChannel(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none min-w-[150px]"
+                >
+                  <option value="Organic">Organic</option>
+                  <option value="Website">Website</option>
+                  <option value="Referral">Referral</option>
+                  <option value="LLM">LLM</option>
+                  <option value="SOT">SOT</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Budget Amount (INR)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 15000"
+                  value={budgetAmount}
+                  onChange={(e) => setBudgetAmount(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none max-w-[150px]"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingBudget}
+                className="mt-5 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl shadow-md transition-all self-end"
+              >
+                {savingBudget ? 'Saving...' : 'Save Budget'}
+              </button>
+            </form>
+            {budgetFeedback && (
+              <p className={`text-xs ${budgetFeedback.startsWith('Error') ? 'text-red-500' : 'text-emerald-500'}`}>
+                {budgetFeedback}
+              </p>
+            )}
+          </div>
+
+          {/* Financial KPIs */}
+          {financialsLoading ? (
+            <SkeletonLoader />
+          ) : financials ? (
+            <>
+              {/* Financial KPI Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <LeadsKPICard
+                  title="Total Spend"
+                  value={financials.reduce((sum: number, f: any) => sum + f.spend, 0) || 0}
+                  isCurrency={true}
+                  icon="💸"
+                  variant="blue"
+                  subtitle="Google, Meta & custom budgets"
+                />
+                <LeadsKPICard
+                  title="Cash Collected"
+                  value={financials.reduce((sum: number, f: any) => sum + f.revenueCash, 0) || 0}
+                  isCurrency={true}
+                  icon="💰"
+                  variant="emerald"
+                  subtitle="Actual cash received so far"
+                />
+                <LeadsKPICard
+                  title="Contract Value"
+                  value={financials.reduce((sum: number, f: any) => sum + f.revenueContract, 0) || 0}
+                  isCurrency={true}
+                  icon="📄"
+                  variant="indigo"
+                  subtitle="Total contract value of courses"
+                />
+                <LeadsKPICard
+                  title="Blended Cash ROAS"
+                  value={
+                    financials.reduce((sum: number, f: any) => sum + f.spend, 0) > 0
+                      ? financials.reduce((sum: number, f: any) => sum + f.revenueCash, 0) /
+                        financials.reduce((sum: number, f: any) => sum + f.spend, 0)
+                      : 0
+                  }
+                  isMultiplier={true}
+                  icon="🚀"
+                  variant="purple"
+                  subtitle="Cash collected vs spend"
+                />
+              </div>
+
+              {/* Financial Performance Table */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-base">💰 Channel ROI & Financial Performance</h3>
+                    <p className="text-xs text-slate-400 mt-1">ROI / ROAS performance metrics mapped per lead channel</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-[10px] font-semibold uppercase tracking-wider">
+                        <th className="px-6 py-4">Channel</th>
+                        <th className="px-6 py-4 text-center">Leads</th>
+                        <th className="px-6 py-4 text-center">Enrolled</th>
+                        <th className="px-6 py-4 text-right">Spend / Budget</th>
+                        <th className="px-6 py-4 text-right">Cash Received</th>
+                        <th className="px-6 py-4 text-right">Contract Value</th>
+                        <th className="px-6 py-4 text-center">Cash ROAS</th>
+                        <th className="px-6 py-4 text-right">CPL</th>
+                        <th className="px-6 py-4 text-right">CPA</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
+                      {financials.map((f: any) => (
+                        <tr key={f.channel} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4 font-semibold text-slate-800">{f.channel}</td>
+                          <td className="px-6 py-4 text-center">{f.leads}</td>
+                          <td className="px-6 py-4 text-center">{f.enrolled}</td>
+                          <td className="px-6 py-4 text-right font-medium">₹{f.spend.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-right font-medium text-emerald-600">₹{f.revenueCash.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-right font-medium text-indigo-600">₹{f.revenueContract.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-center font-bold">
+                            {f.spend > 0 ? (
+                              <span className={f.roasCash >= 2 ? 'text-emerald-600' : f.roasCash >= 1 ? 'text-amber-600' : 'text-slate-500'}>
+                                {f.roasCash.toFixed(2)}x
+                              </span>
+                            ) : f.revenueCash > 0 ? (
+                              <span className="text-emerald-600 text-xs px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100">
+                                100% Margin
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right text-slate-500">₹{f.cpl.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-right text-slate-500">₹{f.cpa.toLocaleString('en-IN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center">
+              <p className="text-slate-400 text-sm">Failed to load financials</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

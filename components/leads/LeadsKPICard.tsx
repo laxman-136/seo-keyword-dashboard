@@ -12,6 +12,8 @@ interface LeadsKPICardProps {
   icon: string
   variant: LeadsKPICardVariant
   isPercent?: boolean
+  isCurrency?: boolean
+  isMultiplier?: boolean
   subtitle?: string
 }
 
@@ -41,6 +43,8 @@ export default function LeadsKPICard({
   icon,
   variant,
   isPercent = false,
+  isCurrency = false,
+  isMultiplier = false,
   subtitle,
 }: LeadsKPICardProps) {
   const s = STYLES[variant]
@@ -49,12 +53,19 @@ export default function LeadsKPICard({
   const isNegative = delta < 0
   const pctChange = prevValue > 0 ? ((delta / prevValue) * 100).toFixed(1) : null
 
-  const formatVal = (v: number) =>
-    isPercent ? `${v.toFixed(1)}%` : v.toLocaleString()
+  const formatVal = (v: number) => {
+    if (isPercent) return `${v.toFixed(1)}%`
+    if (isCurrency) return `₹${v.toLocaleString('en-IN')}`
+    if (isMultiplier) return `${v.toFixed(2)}x`
+    return v.toLocaleString()
+  }
 
   const formatDelta = (d: number) => {
     const abs = Math.abs(d)
-    const str = isPercent ? `${abs.toFixed(1)}pp` : abs.toLocaleString()
+    let str = abs.toLocaleString()
+    if (isPercent) str = `${abs.toFixed(1)}pp`
+    else if (isCurrency) str = `₹${abs.toLocaleString('en-IN')}`
+    else if (isMultiplier) str = `${abs.toFixed(2)}x`
     return d > 0 ? `+${str}` : `-${str}`
   }
 
