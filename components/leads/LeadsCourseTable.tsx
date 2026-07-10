@@ -35,6 +35,8 @@ export default function LeadsCourseTable({ courses }: LeadsCourseTableProps) {
               <th className="px-4 py-3.5 text-right text-slate-400 font-semibold">Organic</th>
               <th className="px-4 py-3.5 text-right text-pink-400 font-semibold">LLM</th>
               <th className="px-4 py-3.5 text-right text-emerald-400 font-bold">Enrolled</th>
+              <th className="px-4 py-3.5 text-right text-emerald-400 font-bold">Cash Received</th>
+              <th className="px-4 py-3.5 text-right text-indigo-400 font-bold">Contract Value</th>
               <th className="px-4 py-3.5 text-right text-blue-400 font-semibold">High Pot</th>
               <th className="px-4 py-3.5 text-right text-amber-400">Med Pot</th>
               <th className="px-4 py-3.5 text-right text-slate-450">Fresh</th>
@@ -57,6 +59,8 @@ export default function LeadsCourseTable({ courses }: LeadsCourseTableProps) {
                   <td className="px-4 py-4 text-right font-mono text-slate-500">{c.organic.toLocaleString()}</td>
                   <td className="px-4 py-4 text-right font-mono text-pink-600 font-medium">{c.llm.toLocaleString()}</td>
                   <td className="px-4 py-4 text-right font-mono text-emerald-600 font-bold">{c.enrolled.toLocaleString()}</td>
+                  <td className="px-4 py-4 text-right font-mono text-emerald-650 font-bold">₹{(c.revenueCash || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-4 text-right font-mono text-indigo-650 font-bold">₹{(c.revenueContract || 0).toLocaleString('en-IN')}</td>
                   <td className="px-4 py-4 text-right font-mono text-blue-600 font-semibold">{c.highPotential.toLocaleString()}</td>
                   <td className="px-4 py-4 text-right font-mono text-amber-600">{c.mediumPotential.toLocaleString()}</td>
                   <td className="px-4 py-4 text-right font-mono text-slate-500">{c.freshUnqualified.toLocaleString()}</td>
@@ -71,7 +75,7 @@ export default function LeadsCourseTable({ courses }: LeadsCourseTableProps) {
             })}
             {courses.length === 0 && (
               <tr>
-                <td colSpan={13} className="text-center py-10 text-slate-400 font-medium">No course detail data found.</td>
+                <td colSpan={15} className="text-center py-10 text-slate-400 font-medium">No course detail data found.</td>
               </tr>
             )}
           </tbody>

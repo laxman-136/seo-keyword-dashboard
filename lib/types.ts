@@ -267,6 +267,8 @@ export interface LeadsCourseAggregate {
   llm: number
   sharePercent: number
   convRate: number
+  revenueCash?: number
+  revenueContract?: number
 }
 
 export interface LeadsFunnelData {
@@ -947,6 +949,16 @@ export interface TeleCRMLead {
     google_gcl_id?: string
     gclid?: string
     course_enrollment_date?: number
+    course_name_2?: string
+    course_2_name?: string
+    course2_name?: string
+    course_2_enrollment_date?: any
+    course_2_enroll_date?: any
+    course2_enrollment_date?: any
+    course_2_fee?: string
+    amount_paid_emi_1_course_2?: string
+    amount_paid_emi_2_course_2?: string
+    course_2_batch_name?: string
   }
   rating: number
   isArchived: boolean
@@ -1014,6 +1026,8 @@ export interface LeadsCourseBreakdown {
   llmLeads: number
   convRate: number
   sharePercent: number
+  revenueCash?: number
+  revenueContract?: number
 }
 
 export interface LeadsChannelBreakdown {

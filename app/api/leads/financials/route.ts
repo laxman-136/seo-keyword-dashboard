@@ -55,6 +55,7 @@ export async function GET(request: Request) {
 
     const fromStr = searchParams.get('from')
     const toStr = searchParams.get('to')
+    const course = searchParams.get('course') || undefined
 
     if (!fromStr || !toStr) {
       return NextResponse.json({ error: 'Missing from or to date parameter' }, { status: 400 })
@@ -149,7 +150,8 @@ export async function GET(request: Request) {
       bypassCache,
       manualBudgets,
       googleSpend,
-      metaSpend
+      metaSpend,
+      course
     )
 
     return NextResponse.json(financials, {

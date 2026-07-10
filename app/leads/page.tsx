@@ -105,7 +105,8 @@ export default function LeadsOverviewPage() {
         if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
       }
       const refreshParam = isRefresh ? '&refresh=true' : ''
-      const res = await fetch(`/api/leads/financials?from=${from}&to=${to}${refreshParam}`, { headers })
+      const courseParam = selectedCourse !== 'all' ? `&course=${encodeURIComponent(selectedCourse)}` : ''
+      const res = await fetch(`/api/leads/financials?from=${from}&to=${to}${refreshParam}${courseParam}`, { headers })
       if (!res.ok) {
         throw new Error('Failed to fetch financials')
       }
@@ -116,7 +117,7 @@ export default function LeadsOverviewPage() {
     } finally {
       setFinancialsLoading(false)
     }
-  }, [from, to])
+  }, [from, to, selectedCourse])
 
   const getMonthsList = useCallback(() => {
     if (!from || !to) return []

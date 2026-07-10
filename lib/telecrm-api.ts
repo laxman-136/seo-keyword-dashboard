@@ -72,6 +72,25 @@ export const COURSE_TO_GROUP: Record<string, string> = {
   'Master SAP ABAP Training':                         'SAP',
   'Oracle Fusion Technical Training':                 'Oracle Fusion Technical',
   'Oracle Integration Cloud Online Training Course':  'Oracle Integration',
+  'Oracle Apex Online Training':                      'Oracle Apex',
+  'Oracle APEX Online Training Course':               'Oracle Apex',
+}
+
+export function getCourseGroup(courseName: string): string {
+  if (!courseName) return '';
+  const lower = courseName.toLowerCase();
+  if (lower.includes('apex')) return 'Oracle Apex';
+  if (lower.includes('scm') || lower === '77') return 'Oracle Fusion SCM';
+  if (lower.includes('financial')) return 'Oracle Fusion Financials';
+  if (lower.includes('technical') || lower.includes('oic') || lower.includes('integration')) return 'Oracle Fusion Technical';
+  if (lower.includes('hcm')) return 'Oracle Fusion HCM';
+  if (lower.includes('wms') || lower.includes('logfire')) return 'Oracle Fusion WMS';
+  if (lower.includes('ppm') || lower.includes('project')) return 'Oracle Fusion PPM';
+  if (lower.includes('tms') || lower.includes('transportation')) return 'Oracle TMS';
+  if (lower.includes('ebs')) return 'Oracle EBS';
+  if (lower.includes('sap')) return 'SAP';
+  
+  return COURSE_TO_GROUP[courseName] || 'Unknown Course';
 }
 
 export const COURSE_AVG_FEES: Record<string, number> = {
@@ -450,6 +469,31 @@ export async function getCountByStatus(
         counts[status] = (counts[status] || 0) + 1
       }
     }
+
+    // Process Course 2
+    const rawCourse2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
+    if (rawCourse2) {
+      const enroll2DateVal = lead.fields?.course_2_enrollment_date || lead.fields?.course_2_enroll_date || lead.fields?.course2_enrollment_date
+      let enroll2Ms = 0
+      if (enroll2DateVal) {
+        if (typeof enroll2DateVal === 'number') {
+          enroll2Ms = enroll2DateVal
+        } else if (typeof enroll2DateVal === 'string') {
+          const parts = enroll2DateVal.split(/[-/]/)
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10)
+            const month = parseInt(parts[1], 10) - 1
+            const year = parseInt(parts[2], 10)
+            enroll2Ms = new Date(year, month, day).getTime()
+          }
+        }
+      }
+      
+      const isEnrolled2InPeriod = !!(enroll2Ms && enroll2Ms >= fromTime && enroll2Ms <= toTime)
+      if (isEnrolled2InPeriod) {
+        counts['Enrolled'] = (counts['Enrolled'] || 0) + 1
+      }
+    }
   })
   
   return counts
@@ -532,9 +576,18 @@ export async function getCountByCourse(
   
   const counts: Record<string, number> = {}
   leads.forEach(lead => {
-    const rawCourse = lead.fields?.course || ''
-    const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
-    counts[groupName] = (counts[groupName] || 0) + 1
+    // Course 1
+    const rawCourse1 = lead.fields?.course || ''
+    if (rawCourse1) {
+      const groupName1 = getCourseGroup(rawCourse1)
+      counts[groupName1] = (counts[groupName1] || 0) + 1
+    }
+    // Course 2
+    const rawCourse2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
+    if (rawCourse2) {
+      const groupName2 = getCourseGroup(rawCourse2)
+      counts[groupName2] = (counts[groupName2] || 0) + 1
+    }
   })
   
   return counts
@@ -673,8 +726,16 @@ export async function getMonthlyTrend(
             }
             
             const rawCourse = lead.fields?.course || ''
-            const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
-            courseMap[groupName] = (courseMap[groupName] || 0) + 1
+            if (rawCourse) {
+              const groupName = getCourseGroup(rawCourse)
+              courseMap[groupName] = (courseMap[groupName] || 0) + 1
+            }
+            
+            const rawCourse2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
+            if (rawCourse2) {
+              const groupName2 = getCourseGroup(rawCourse2)
+              courseMap[groupName2] = (courseMap[groupName2] || 0) + 1
+            }
           } else if (isEnrolledInMonth) {
             // Prior lead enrolling in this period
             enrolled++
@@ -862,6 +923,8 @@ export async function getCourseBreakdown(
     metaAdsLeads: number;
     llmLeads: number;
     rawCourses: Set<string>;
+    revenueCash: number;
+    revenueContract: number;
   }> = {}
   
   // Initialize default groups to ensure they are present in listings
@@ -870,7 +933,9 @@ export async function getCourseBreakdown(
     coursesMap[group] = {
       total: 0, enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0,
       websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0, llmLeads: 0,
-      rawCourses: new Set<string>()
+      rawCourses: new Set<string>(),
+      revenueCash: 0,
+      revenueContract: 0
     }
   })
   
@@ -878,69 +943,121 @@ export async function getCourseBreakdown(
   coursesMap['Unknown Course'] = {
     total: 0, enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0,
     websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0, llmLeads: 0,
-    rawCourses: new Set<string>()
+    rawCourses: new Set<string>(),
+    revenueCash: 0,
+    revenueContract: 0
   }
   
   const fromTime = getStartOfDay(range.from).getTime()
   const toTime = getEndOfDay(range.to).getTime()
 
   leads.forEach(lead => {
+    // 1. Course 1
     const rawCourse = lead.fields?.course || ''
-    const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
-    
-    if (!coursesMap[groupName]) {
-      coursesMap[groupName] = {
-        total: 0, enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0,
-        websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0, llmLeads: 0,
-        rawCourses: new Set<string>()
-      }
-    }
-    
-    const group = coursesMap[groupName]
     if (rawCourse) {
-      group.rawCourses.add(rawCourse)
-    }
-    
-    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
-    const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
-    
-    const isEnrolled = lead.status === 'Enrolled'
-    const enrollDateVal = lead.fields?.course_enrollment_date
-    const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
-    
-    if (isLeadInPeriod) {
-      group.total++
+      const groupName = getCourseGroup(rawCourse)
       
-      if (isEnrolled) {
-        if (isEnrolledInPeriod) {
-          group.enrolled++
-        } else {
-          // Future enrollment, count as a High Potential fallback status in this period
-          group.highPotential++
+      if (!coursesMap[groupName]) {
+        coursesMap[groupName] = {
+          total: 0, enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0,
+          websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0, llmLeads: 0,
+          rawCourses: new Set<string>(),
+          revenueCash: 0,
+          revenueContract: 0
         }
-      } else {
-        const cat = STATUS_TO_CATEGORY[lead.status]
-        if (cat === 'High Potential') group.highPotential++
-        else if (cat === 'Medium Potential') group.mediumPotential++
-        else if (cat === 'Fresh/Unqualified') group.freshUnqualified++
-        else if (cat === 'Low/Cold') group.lowCold++
       }
       
-      const channel = detectLeadChannel(lead)
-      if (channel === 'Website') {
-        group.websiteLeads++
-      } else if (channel === 'Google Ads') {
-        group.googleAdsLeads++
-      } else if (channel === 'Meta Ads') {
-        group.metaAdsLeads++
-      } else if (channel === 'LLM') {
-        group.llmLeads++
-      } else {
-        group.organicLeads++
+      const group = coursesMap[groupName]
+      group.rawCourses.add(rawCourse)
+      
+      const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+      const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
+      
+      const isEnrolled = lead.status === 'Enrolled'
+      const enrollDateVal = lead.fields?.course_enrollment_date
+      const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
+      
+      if (isLeadInPeriod) {
+        group.total++
+        
+        if (isEnrolled) {
+          if (isEnrolledInPeriod) {
+            group.enrolled++
+            group.revenueCash += parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
+            group.revenueContract += parseAmount(lead.fields?.course_fee)
+          } else {
+            // Future enrollment, count as a High Potential fallback status in this period
+            group.highPotential++
+          }
+        } else {
+          const cat = STATUS_TO_CATEGORY[lead.status]
+          if (cat === 'High Potential') group.highPotential++
+          else if (cat === 'Medium Potential') group.mediumPotential++
+          else if (cat === 'Fresh/Unqualified') group.freshUnqualified++
+          else if (cat === 'Low/Cold') group.lowCold++
+        }
+        
+        const channel = detectLeadChannel(lead)
+        if (channel === 'Website') {
+          group.websiteLeads++
+        } else if (channel === 'Google Ads') {
+          group.googleAdsLeads++
+        } else if (channel === 'Meta Ads') {
+          group.metaAdsLeads++
+        } else if (channel === 'LLM') {
+          group.llmLeads++
+        } else {
+          group.organicLeads++
+        }
+      } else if (isEnrolledInPeriod) {
+        // Prior lead enrolling in this period
+        group.enrolled++
+        group.revenueCash += parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
+        group.revenueContract += parseAmount(lead.fields?.course_fee)
       }
-    } else if (isEnrolledInPeriod) {
-      // Prior lead enrolling in this period
-      group.enrolled++
+    }
+
+    // 2. Course 2
+    const rawCourse2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
+    if (rawCourse2) {
+      const groupName2 = getCourseGroup(rawCourse2)
+      
+      if (!coursesMap[groupName2]) {
+        coursesMap[groupName2] = {
+          total: 0, enrolled: 0, highPotential: 0, mediumPotential: 0, freshUnqualified: 0, lowCold: 0,
+          websiteLeads: 0, organicLeads: 0, googleAdsLeads: 0, metaAdsLeads: 0, llmLeads: 0,
+          rawCourses: new Set<string>(),
+          revenueCash: 0,
+          revenueContract: 0
+        }
+      }
+      
+      const group2 = coursesMap[groupName2]
+      group2.rawCourses.add(rawCourse2)
+      
+      const enroll2DateVal = lead.fields?.course_2_enrollment_date || lead.fields?.course_2_enroll_date || lead.fields?.course2_enrollment_date
+      let enroll2Ms = 0
+      if (enroll2DateVal) {
+        if (typeof enroll2DateVal === 'number') {
+          enroll2Ms = enroll2DateVal
+        } else if (typeof enroll2DateVal === 'string') {
+          const parts = enroll2DateVal.split(/[-/]/)
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10)
+            const month = parseInt(parts[1], 10) - 1
+            const year = parseInt(parts[2], 10)
+            enroll2Ms = new Date(year, month, day).getTime()
+          }
+        }
+      }
+      
+      const isEnrolled2InPeriod = !!(enroll2Ms && enroll2Ms >= fromTime && enroll2Ms <= toTime)
+      if (isEnrolled2InPeriod) {
+        group2.enrolled++
+        group2.total++ // Increment total so conversion rate calculates properly
+        group2.revenueCash += parseAmount(lead.fields?.amount_paid_emi_1_course_2) + parseAmount(lead.fields?.amount_paid_emi_2_course_2)
+        group2.revenueContract += parseAmount(lead.fields?.course_2_fee)
+      }
     }
   })
   
@@ -962,7 +1079,9 @@ export async function getCourseBreakdown(
     adsLeads: data.googleAdsLeads + data.metaAdsLeads,
     llmLeads: data.llmLeads,
     convRate: parseFloat((data.total > 0 ? (data.enrolled / data.total) * 100 : 0).toFixed(1)),
-    sharePercent: parseFloat(((data.total / totalAllCourses) * 100).toFixed(1))
+    sharePercent: parseFloat(((data.total / totalAllCourses) * 100).toFixed(1)),
+    revenueCash: data.revenueCash,
+    revenueContract: data.revenueContract
   })).sort((a, b) => b.total - a.total)
 }
 
@@ -1045,7 +1164,8 @@ export async function getChannelFinancials(
   bypassCache = false,
   manualBudgets: Record<string, number> = {},
   googleSpend = 0,
-  metaSpend = 0
+  metaSpend = 0,
+  course?: string
 ): Promise<LeadsChannelFinancials[]> {
   const range = dateRange || getCurrentMonthRange()
   
@@ -1104,6 +1224,33 @@ export async function getChannelFinancials(
       const contract = parseAmount(lead.fields?.course_fee)
       data.revenueCash += cash
       data.revenueContract += contract
+    }
+
+    // Process Course 2
+    const rawCourse2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
+    if (rawCourse2) {
+      const enroll2DateVal = lead.fields?.course_2_enrollment_date || lead.fields?.course_2_enroll_date || lead.fields?.course2_enrollment_date
+      let enroll2Ms = 0
+      if (enroll2DateVal) {
+        if (typeof enroll2DateVal === 'number') {
+          enroll2Ms = enroll2DateVal
+        } else if (typeof enroll2DateVal === 'string') {
+          const parts = enroll2DateVal.split(/[-/]/)
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10)
+            const month = parseInt(parts[1], 10) - 1
+            const year = parseInt(parts[2], 10)
+            enroll2Ms = new Date(year, month, day).getTime()
+          }
+        }
+      }
+      
+      const isEnrolled2InPeriod = !!(enroll2Ms && enroll2Ms >= fromTime && enroll2Ms <= toTime)
+      if (isEnrolled2InPeriod) {
+        data.enrolled++
+        data.revenueCash += parseAmount(lead.fields?.amount_paid_emi_1_course_2) + parseAmount(lead.fields?.amount_paid_emi_2_course_2)
+        data.revenueContract += parseAmount(lead.fields?.course_2_fee)
+      }
     }
   })
   
@@ -1361,9 +1508,13 @@ export async function getAllLeads(
   if (filters?.course && filters.course !== 'all') {
     const targetCourseGroup = filters.course
     results = results.filter(lead => {
-      const rawCourse = lead.fields?.course || ''
-      const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
-      return groupName === targetCourseGroup
+      const rawCourse1 = lead.fields?.course || ''
+      const rawCourse2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
+      
+      const group1 = getCourseGroup(rawCourse1)
+      const group2 = rawCourse2 ? getCourseGroup(rawCourse2) : ''
+      
+      return group1 === targetCourseGroup || group2 === targetCourseGroup
     })
   }
 
@@ -1556,7 +1707,7 @@ export function scoreLead(lead: TeleCRMLead): LeadScore {
   // ── POSITIVE FACTORS ─────────────────────────────────
   // Course (based on historical conv rates)
   const rawCourse = lead.fields?.course || ''
-  const courseGroup = COURSE_TO_GROUP[rawCourse] || ''
+  const courseGroup = getCourseGroup(rawCourse)
   if (['Oracle Fusion Technical', 'Oracle Fusion Financials'].includes(courseGroup)) {
     score += 15
     factors.push({ factor: 'Course Demand', impact: 15, reason: `Enrolled in high-demand course: ${courseGroup}` })

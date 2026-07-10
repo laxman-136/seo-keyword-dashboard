@@ -23,6 +23,7 @@ export default function CourseSelector({ selectedCourse, onChange, dark = false 
     { value: 'Oracle Fusion PPM', label: 'Oracle Fusion PPM' },
     { value: 'Oracle Fusion WMS', label: 'Oracle Fusion WMS' },
     { value: 'Oracle Integration', label: 'Oracle Integration' },
+    { value: 'Oracle Apex', label: 'Oracle Apex' },
     { value: 'SAP', label: 'SAP' }
   ]
 
