@@ -487,7 +487,7 @@ export default function LeadsOverviewPage() {
           ) : financials ? (
             <>
               {/* Financial KPI Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <LeadsKPICard
                   title="Total Spend"
                   value={financials.reduce((sum: number, f: any) => sum + f.spend, 0) || 0}
@@ -511,6 +511,17 @@ export default function LeadsOverviewPage() {
                   icon="📄"
                   variant="indigo"
                   subtitle="Total contract value of courses"
+                />
+                <LeadsKPICard
+                  title="Due Amount"
+                  value={
+                    (financials.reduce((sum: number, f: any) => sum + f.revenueContract, 0) || 0) -
+                    (financials.reduce((sum: number, f: any) => sum + f.revenueCash, 0) || 0)
+                  }
+                  isCurrency={true}
+                  icon="⚠️"
+                  variant="amber"
+                  subtitle="Pending collections from students"
                 />
                 <LeadsKPICard
                   title="Blended Cash ROAS"
@@ -546,6 +557,7 @@ export default function LeadsOverviewPage() {
                         <th className="px-6 py-4 text-right">Spend / Budget</th>
                         <th className="px-6 py-4 text-right">Cash Received</th>
                         <th className="px-6 py-4 text-right">Contract Value</th>
+                        <th className="px-6 py-4 text-right text-amber-600 font-semibold">Due Amount</th>
                         <th className="px-6 py-4 text-center">Cash ROAS</th>
                         <th className="px-6 py-4 text-right">CPL</th>
                         <th className="px-6 py-4 text-right">CPA</th>
@@ -560,6 +572,7 @@ export default function LeadsOverviewPage() {
                           <td className="px-6 py-4 text-right font-medium">₹{f.spend.toLocaleString('en-IN')}</td>
                           <td className="px-6 py-4 text-right font-medium text-emerald-600">₹{f.revenueCash.toLocaleString('en-IN')}</td>
                           <td className="px-6 py-4 text-right font-medium text-indigo-600">₹{f.revenueContract.toLocaleString('en-IN')}</td>
+                          <td className="px-6 py-4 text-right font-semibold text-amber-600">₹{(f.revenueContract - f.revenueCash).toLocaleString('en-IN')}</td>
                           <td className="px-6 py-4 text-center font-bold">
                             {f.spend > 0 ? (
                               <span className={f.roasCash >= 2 ? 'text-emerald-600' : f.roasCash >= 1 ? 'text-amber-600' : 'text-slate-500'}>
