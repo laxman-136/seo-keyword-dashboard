@@ -99,8 +99,16 @@ export function parseSheetGrid(values: string[][]): {
         // Fallback for single column
         if (matchingCols[0].header.includes('page')) {
           pageColIdx = matchingCols[0].idx
+          // If the next column exists, assume it is the Position column for this month (e.g. to handle typos in position header)
+          if (pageColIdx + 1 < headers.length) {
+            posColIdx = pageColIdx + 1
+          }
         } else {
           posColIdx = matchingCols[0].idx
+          // If the previous column exists, assume it is the Page column for this month
+          if (posColIdx - 1 >= 0) {
+            pageColIdx = posColIdx - 1
+          }
         }
       }
 
