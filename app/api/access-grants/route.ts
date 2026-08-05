@@ -86,8 +86,8 @@ export async function POST(request: Request) {
     if ((!finalSeoSheetId && !finalLeadsSheetId && !finalRevenueSheetId) || !apiKey || !label) {
       return NextResponse.json({ error: 'At least one active sheet configuration and an API key are required.' }, { status: 400 })
     }
-    if (![15, 30, 90].includes(durationDays)) {
-      return NextResponse.json({ error: 'Duration must be 15, 30, or 90 days.' }, { status: 400 })
+    if (![15, 30, 90, 36500].includes(durationDays)) {
+      return NextResponse.json({ error: 'Duration must be 15, 30, 90 days, or Infinite.' }, { status: 400 })
     }
 
     const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString()

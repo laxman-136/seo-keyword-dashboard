@@ -198,7 +198,9 @@ export default function SettingsPage() {
   }
 
   const formatTimeRemaining = (expiresAt: string) => {
-    const diff = new Date(expiresAt).getTime() - Date.now()
+    const expiresDate = new Date(expiresAt)
+    if (expiresDate.getFullYear() >= 2076) return 'Infinite'
+    const diff = expiresDate.getTime() - Date.now()
     if (diff <= 0) return 'Expired'
     const days = Math.floor(diff / 86400000)
     if (days > 0) return `${days} day${days > 1 ? 's' : ''}`
@@ -663,6 +665,7 @@ export default function SettingsPage() {
                       <option value={15}>15 days</option>
                       <option value={30}>30 days</option>
                       <option value={90}>90 days</option>
+                      <option value={36500}>Infinite</option>
                     </select>
                   </div>
                   <div className="self-end">
@@ -772,7 +775,9 @@ export default function SettingsPage() {
                             ))}
                           </div>
 
-                          <div className="text-[11px] text-slate-500">Expires: {new Date(grant.expiresAt).toLocaleDateString()} ({formatTimeRemaining(grant.expiresAt)})</div>
+                          <div className="text-[11px] text-slate-500">
+                            Expires: {new Date(grant.expiresAt).getFullYear() >= 2076 ? 'Infinite' : `${new Date(grant.expiresAt).toLocaleDateString()} (${formatTimeRemaining(grant.expiresAt)})`}
+                          </div>
                           <div className="text-[11px] text-slate-500">
                             Share link:
                             <div className="mt-1 flex flex-wrap items-center gap-2">
