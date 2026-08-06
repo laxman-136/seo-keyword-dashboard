@@ -332,6 +332,7 @@ function generateMockCRMLeads(fromMs: number, toMs: number): TeleCRMLead[] {
         modified_on: createdOn + dayMs,
         course_fee: status === 'Enrolled' ? '25000' : undefined,
         amount_paid: status === 'Enrolled' ? '25000' : undefined,
+        batch_number: status === 'Enrolled' ? 50 + (i % 8) : undefined,
         utmsource: campaignInfo.source,
         utmmedium: campaignInfo.medium,
         utmcampaign: campaignInfo.campaign || undefined,

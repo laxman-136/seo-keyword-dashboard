@@ -172,69 +172,20 @@ export default function LeadsOverviewPage() {
   const fetchBatchRevenue = useCallback(async (isRefresh = false) => {
     setBatchRevenueLoading(true)
     try {
-      const queryParams = new URLSearchParams()
-      if (isRefresh) {
-        queryParams.set('refresh', 'true')
+      const headers: Record<string, string> = {}
+      if (typeof window !== 'undefined') {
+        const clientToken = localStorage.getItem('client-telecrm-api-token')
+        const clientEnterpriseId = localStorage.getItem('client-telecrm-enterprise-id')
+        if (clientToken) headers['x-telecrm-api-token'] = clientToken
+        if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
       }
-      
-      const clientSeoSheetId = localStorage.getItem('client-seo-sheet-id')
-      const clientApiKey = localStorage.getItem('client-api-key')
-      
-      if (clientSeoSheetId) {
-        queryParams.set('sheetId', clientSeoSheetId === 'mock' ? 'mock' : clientSeoSheetId)
-        if (clientApiKey) {
-          queryParams.set('apiKey', clientApiKey)
-        }
-      }
-
-      const res = await fetch(`/api/revenue?${queryParams.toString()}`)
+      const refreshParam = isRefresh ? '?refresh=true' : ''
+      const res = await fetch(`/api/leads/batch-revenue${refreshParam}`, { headers })
       if (!res.ok) {
         throw new Error('Failed to fetch batch revenue')
       }
-      const data = await res.json()
-      
-      const coursesRows: any[] = data.courses || []
-      const batchMap: Record<string, any> = {}
-      
-      coursesRows.forEach(row => {
-        const batch = (row.batchNo || '').trim()
-        if (!batch) return
-        
-        if (!batchMap[batch]) {
-          batchMap[batch] = {
-            batchNo: batch,
-            faculty: new Set(),
-            conversions: 0,
-            revenue: 0,
-            adSpend: 0,
-            paidRevenue: 0
-          }
-        }
-        
-        batchMap[batch].conversions += row.conversions || 0
-        batchMap[batch].revenue += row.revenue || 0
-        batchMap[batch].adSpend += row.totalAdSpend || 0
-        batchMap[batch].paidRevenue += row.paidRevenue || 0
-        if (row.faculty) {
-          row.faculty.split(',').forEach((f: string) => {
-            const trimmed = f.trim()
-            if (trimmed) batchMap[batch].faculty.add(trimmed)
-          })
-        }
-      })
-      
-      const aggregated = Object.values(batchMap).map((b: any) => ({
-        batchNo: b.batchNo,
-        faculty: Array.from(b.faculty).join(', '),
-        conversions: b.conversions,
-        revenue: b.revenue,
-        adSpend: b.adSpend,
-        avgFee: b.conversions > 0 ? Math.round(b.revenue / b.conversions) : 0,
-        roas: b.adSpend > 0 ? parseFloat((b.paidRevenue / b.adSpend).toFixed(2)) : 0
-      }))
-      
-      aggregated.sort((a, b) => a.batchNo.localeCompare(b.batchNo, undefined, { numeric: true, sensitivity: 'base' }))
-      setBatchRevenue(aggregated)
+      const payload = await res.json()
+      setBatchRevenue(payload.batches || [])
     } catch (err) {
       console.error('Error fetching batch revenue:', err)
     } finally {
