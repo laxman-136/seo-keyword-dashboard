@@ -1,6 +1,7 @@
 // app/api/leads/budgets/route.ts
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
+import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
@@ -17,6 +18,21 @@ export async function GET(request: Request) {
     const user = getCurrentUser(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let activeLabel = null
+    if (user.role === 'viewer') {
+      const grants = await getValidAccessGrantsForRecipient(user.email)
+      const activeGrant = grants[0]
+      if (!activeGrant) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      activeLabel = activeGrant.label
+    }
+
+    const isAllowed = isSectionAllowed('revenue', user.role, activeLabel)
+    if (!isAllowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     if (!supabase) {
@@ -48,6 +64,11 @@ export async function POST(request: Request) {
     const user = getCurrentUser(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Viewers cannot modify budgets
+    if (user.role === 'viewer') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     if (!supabase) {

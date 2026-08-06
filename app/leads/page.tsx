@@ -84,8 +84,54 @@ export default function LeadsOverviewPage() {
     }
   }, [from, to, selectedCourse])
 
+  // --- SESSION & ACCESS CONTROL STATE ---
+  const [currentUser, setCurrentUser] = useState<any | null>(null)
+  const [viewerGrants, setViewerGrants] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(async res => {
+        if (!res.ok) return
+        const data = await res.json()
+        setCurrentUser(data.user || null)
+        setViewerGrants(data.viewerAccess || [])
+      })
+      .catch((err) => console.error('Failed to fetch user:', err))
+  }, [])
+
+  const hasRevenueAccess = React.useMemo(() => {
+    if (!currentUser) return false
+    const role = currentUser.role
+    if (role === 'superadmin' || role === 'admin' || role === 'ceo') {
+      return true
+    }
+    if (role === 'user') {
+      return false
+    }
+    if (role === 'viewer') {
+      const activeGrant = viewerGrants[0]
+      if (activeGrant && activeGrant.label) {
+        const label = activeGrant.label
+        if (label.includes('| allowed:')) {
+          const parts = label.split('| allowed:')
+          const allowedStr = parts[1] || ''
+          const allowedSections = allowedStr.split(',').map((s: string) => s.trim())
+          return allowedSections.includes('revenue')
+        }
+      }
+      return true // fallback for legacy grants
+    }
+    return false
+  }, [currentUser, viewerGrants])
+
   // --- ROI & FINANCIALS STATE & EFFECTS ---
   const [activeTab, setActiveTab] = useState<'overview' | 'roi' | 'batch'>('overview')
+
+  useEffect(() => {
+    if (currentUser && !hasRevenueAccess && activeTab !== 'overview') {
+      setActiveTab('overview')
+    }
+  }, [currentUser, hasRevenueAccess, activeTab])
   const [financials, setFinancials] = useState<any[] | null>(null)
   const [financialsLoading, setFinancialsLoading] = useState(false)
   const [budgetMonth, setBudgetMonth] = useState('')
@@ -389,31 +435,35 @@ export default function LeadsOverviewPage() {
         >
           📈 Overview & Funnel
         </button>
-        <button
-          onClick={() => {
-            setActiveTab('roi')
-            fetchFinancials()
-          }}
-          className={`pb-3 font-semibold text-sm transition-all relative ${
-            activeTab === 'roi' 
-              ? 'text-indigo-600 border-b-2 border-indigo-600' 
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          💸 ROI & Financials
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab('batch')
-          }}
-          className={`pb-3 font-semibold text-sm transition-all relative ${
-            activeTab === 'batch' 
-              ? 'text-indigo-600 border-b-2 border-indigo-600' 
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          📦 Batch-wise Revenue
-        </button>
+        {hasRevenueAccess && (
+          <>
+            <button
+              onClick={() => {
+                setActiveTab('roi')
+                fetchFinancials()
+              }}
+              className={`pb-3 font-semibold text-sm transition-all relative ${
+                activeTab === 'roi' 
+                  ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              💸 ROI & Financials
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('batch')
+              }}
+              className={`pb-3 font-semibold text-sm transition-all relative ${
+                activeTab === 'batch' 
+                  ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              📦 Batch-wise Revenue
+            </button>
+          </>
+        )}
       </div>
 
       {activeTab === 'overview' && (
