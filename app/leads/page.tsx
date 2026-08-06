@@ -85,7 +85,7 @@ export default function LeadsOverviewPage() {
   }, [from, to, selectedCourse])
 
   // --- ROI & FINANCIALS STATE & EFFECTS ---
-  const [activeTab, setActiveTab] = useState<'overview' | 'roi'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'roi' | 'batch'>('overview')
   const [financials, setFinancials] = useState<any[] | null>(null)
   const [financialsLoading, setFinancialsLoading] = useState(false)
   const [budgetMonth, setBudgetMonth] = useState('')
@@ -93,6 +93,10 @@ export default function LeadsOverviewPage() {
   const [budgetAmount, setBudgetAmount] = useState('')
   const [savingBudget, setSavingBudget] = useState(false)
   const [budgetFeedback, setBudgetFeedback] = useState<string | null>(null)
+
+  // --- BATCH REVENUE STATE ---
+  const [batchRevenue, setBatchRevenue] = useState<any[]>([])
+  const [batchRevenueLoading, setBatchRevenueLoading] = useState(false)
 
   const fetchFinancials = useCallback(async (isRefresh = false) => {
     setFinancialsLoading(true)
@@ -118,6 +122,85 @@ export default function LeadsOverviewPage() {
       setFinancialsLoading(false)
     }
   }, [from, to, selectedCourse])
+
+  const fetchBatchRevenue = useCallback(async (isRefresh = false) => {
+    setBatchRevenueLoading(true)
+    try {
+      const queryParams = new URLSearchParams()
+      if (isRefresh) {
+        queryParams.set('refresh', 'true')
+      }
+      
+      const clientSeoSheetId = localStorage.getItem('client-seo-sheet-id')
+      const clientApiKey = localStorage.getItem('client-api-key')
+      
+      if (clientSeoSheetId) {
+        queryParams.set('sheetId', clientSeoSheetId === 'mock' ? 'mock' : clientSeoSheetId)
+        if (clientApiKey) {
+          queryParams.set('apiKey', clientApiKey)
+        }
+      }
+
+      const res = await fetch(`/api/revenue?${queryParams.toString()}`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch batch revenue')
+      }
+      const data = await res.json()
+      
+      const coursesRows: any[] = data.courses || []
+      const batchMap: Record<string, any> = {}
+      
+      coursesRows.forEach(row => {
+        const batch = (row.batchNo || '').trim()
+        if (!batch) return
+        
+        if (!batchMap[batch]) {
+          batchMap[batch] = {
+            batchNo: batch,
+            faculty: new Set(),
+            conversions: 0,
+            revenue: 0,
+            adSpend: 0,
+            paidRevenue: 0
+          }
+        }
+        
+        batchMap[batch].conversions += row.conversions || 0
+        batchMap[batch].revenue += row.revenue || 0
+        batchMap[batch].adSpend += row.totalAdSpend || 0
+        batchMap[batch].paidRevenue += row.paidRevenue || 0
+        if (row.faculty) {
+          row.faculty.split(',').forEach((f: string) => {
+            const trimmed = f.trim()
+            if (trimmed) batchMap[batch].faculty.add(trimmed)
+          })
+        }
+      })
+      
+      const aggregated = Object.values(batchMap).map((b: any) => ({
+        batchNo: b.batchNo,
+        faculty: Array.from(b.faculty).join(', '),
+        conversions: b.conversions,
+        revenue: b.revenue,
+        adSpend: b.adSpend,
+        avgFee: b.conversions > 0 ? Math.round(b.revenue / b.conversions) : 0,
+        roas: b.adSpend > 0 ? parseFloat((b.paidRevenue / b.adSpend).toFixed(2)) : 0
+      }))
+      
+      aggregated.sort((a, b) => a.batchNo.localeCompare(b.batchNo, undefined, { numeric: true, sensitivity: 'base' }))
+      setBatchRevenue(aggregated)
+    } catch (err) {
+      console.error('Error fetching batch revenue:', err)
+    } finally {
+      setBatchRevenueLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'batch') {
+      fetchBatchRevenue()
+    }
+  }, [activeTab, fetchBatchRevenue])
 
   const getMonthsList = useCallback(() => {
     if (!from || !to) return []
@@ -272,14 +355,25 @@ export default function LeadsOverviewPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <RefreshBar
-            loading={loading}
-            refreshing={refreshing}
-            lastUpdated={data?.kpi?.lastRefreshedAt || new Date().toISOString()}
-            onRefresh={() => fetchData(true)}
-          />
-          <DateRangePicker />
-          <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
+          {activeTab === 'batch' ? (
+            <RefreshBar
+              loading={batchRevenueLoading}
+              refreshing={batchRevenueLoading}
+              lastUpdated={new Date().toISOString()}
+              onRefresh={() => fetchBatchRevenue(true)}
+            />
+          ) : (
+            <>
+              <RefreshBar
+                loading={loading}
+                refreshing={refreshing}
+                lastUpdated={data?.kpi?.lastRefreshedAt || new Date().toISOString()}
+                onRefresh={() => fetchData(true)}
+              />
+              <DateRangePicker />
+              <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
+            </>
+          )}
         </div>
       </div>
 
@@ -308,9 +402,21 @@ export default function LeadsOverviewPage() {
         >
           💸 ROI & Financials
         </button>
+        <button
+          onClick={() => {
+            setActiveTab('batch')
+          }}
+          className={`pb-3 font-semibold text-sm transition-all relative ${
+            activeTab === 'batch' 
+              ? 'text-indigo-600 border-b-2 border-indigo-600' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          📦 Batch-wise Revenue
+        </button>
       </div>
 
-      {activeTab === 'overview' ? (
+      {activeTab === 'overview' && (
         <>
           {/* ── SECTION A: KPI GRID ── */}
           <div className="space-y-3">
@@ -416,7 +522,9 @@ export default function LeadsOverviewPage() {
       {/* ── SECTION F: Conversion Trend ── */}
       <LeadsConvTrendChart rows={trend} />
         </>
-      ) : (
+      )}
+
+      {activeTab === 'roi' && (
         <div className="space-y-6">
           {/* Budget Entry Form */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -600,6 +708,146 @@ export default function LeadsOverviewPage() {
               <p className="text-slate-400 text-sm">Failed to load financials</p>
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'batch' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[120px]">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">Revenue</span>
+                <h3 className="text-slate-400 text-xs font-semibold mt-2">Total Batch Revenue</h3>
+              </div>
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight mt-1">
+                ₹{batchRevenue.reduce((sum, b) => sum + b.revenue, 0).toLocaleString()}
+              </p>
+            </div>
+            
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[120px]">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Students</span>
+                <h3 className="text-slate-400 text-xs font-semibold mt-2">Total Enrollments</h3>
+              </div>
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight mt-1">
+                {batchRevenue.reduce((sum, b) => sum + b.conversions, 0).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[120px]">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">Batches</span>
+                <h3 className="text-slate-400 text-xs font-semibold mt-2">Total Batches</h3>
+              </div>
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight mt-1">
+                {batchRevenue.length}
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[120px]">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">Performance</span>
+                <h3 className="text-slate-400 text-xs font-semibold mt-2">Average Batch Yield</h3>
+              </div>
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight mt-1">
+                ₹{batchRevenue.length > 0 
+                  ? Math.round(batchRevenue.reduce((sum, b) => sum + b.revenue, 0) / batchRevenue.length).toLocaleString()
+                  : '0'}
+              </p>
+            </div>
+          </div>
+
+          {/* Simple Premium Bar Chart of Batch Revenues */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-700 mb-4">Batch-wise Revenue Performance Chart</h3>
+            <div className="h-[250px] w-full flex items-end gap-2 pt-6 pb-2 px-4 border-b border-slate-100 overflow-x-auto">
+              {batchRevenue.length === 0 ? (
+                <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-medium">
+                  No data to display in chart
+                </div>
+              ) : (
+                batchRevenue.map((b, idx) => {
+                  const maxRevenue = Math.max(...batchRevenue.map(item => item.revenue), 1)
+                  const heightPercent = (b.revenue / maxRevenue) * 100
+                  return (
+                    <div key={b.batchNo} className="flex-1 min-w-[60px] flex flex-col items-center group relative h-full justify-end">
+                      {/* Tooltip */}
+                      <div className="absolute bottom-[calc(100%-8px)] mb-2 hidden group-hover:flex flex-col items-center z-10">
+                        <div className="bg-slate-900 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-xl font-medium whitespace-nowrap">
+                          <p className="font-bold">{b.batchNo}</p>
+                          <p className="text-slate-300">Revenue: ₹{b.revenue.toLocaleString()}</p>
+                          <p className="text-slate-300">Enrolled: {b.conversions} students</p>
+                        </div>
+                        <div className="w-2 h-2 bg-slate-900 rotate-45 -mt-1"></div>
+                      </div>
+                      
+                      {/* Bar */}
+                      <div 
+                        style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                        className="w-full bg-gradient-to-t from-indigo-500 to-indigo-400 rounded-t-lg group-hover:from-indigo-600 group-hover:to-indigo-500 transition-all duration-300 shadow-sm"
+                      />
+                      
+                      {/* Label */}
+                      <span className="text-[10px] text-slate-400 font-bold mt-2 truncate w-full text-center">
+                        {b.batchNo}
+                      </span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Detailed Batch-wise Revenue Table */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-700">Detailed Batch Performance Breakdown</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Aggregated student conversions, average fee ticket size, and revenue yield per batch</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Batch Name</th>
+                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Faculty</th>
+                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Student Conversions</th>
+                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Total Revenue</th>
+                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Avg Fee per Student</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {batchRevenueLoading ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-10">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        <p className="text-slate-400 text-xs mt-2 font-medium">Aggregating batch revenue...</p>
+                      </td>
+                    </tr>
+                  ) : batchRevenue.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-10 text-slate-400 text-xs font-medium">
+                        No batch revenue data found in spreadsheet.
+                      </td>
+                    </tr>
+                  ) : (
+                    batchRevenue.map((b) => (
+                      <tr key={b.batchNo} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 text-xs font-bold text-slate-800">{b.batchNo}</td>
+                        <td className="px-6 py-4 text-xs text-slate-500 font-medium">{b.faculty || '—'}</td>
+                        <td className="px-6 py-4 text-xs text-slate-700 font-semibold text-right">{b.conversions}</td>
+                        <td className="px-6 py-4 text-xs text-slate-900 font-extrabold text-right">₹{b.revenue.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-xs text-slate-700 font-semibold text-right">₹{b.avgFee.toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
     </div>
