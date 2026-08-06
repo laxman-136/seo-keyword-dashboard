@@ -143,6 +143,7 @@ export default function LeadsOverviewPage() {
   // --- BATCH REVENUE STATE ---
   const [batchRevenue, setBatchRevenue] = useState<any[]>([])
   const [batchRevenueLoading, setBatchRevenueLoading] = useState(false)
+  const [selectedYear, setSelectedYear] = useState<string>('all')
 
   const fetchFinancials = useCallback(async (isRefresh = false) => {
     setFinancialsLoading(true)
@@ -169,7 +170,7 @@ export default function LeadsOverviewPage() {
     }
   }, [from, to, selectedCourse])
 
-  const fetchBatchRevenue = useCallback(async (isRefresh = false) => {
+  const fetchBatchRevenue = useCallback(async (isRefresh = false, yearVal = selectedYear) => {
     setBatchRevenueLoading(true)
     try {
       const headers: Record<string, string> = {}
@@ -179,8 +180,8 @@ export default function LeadsOverviewPage() {
         if (clientToken) headers['x-telecrm-api-token'] = clientToken
         if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
       }
-      const refreshParam = isRefresh ? '?refresh=true' : ''
-      const res = await fetch(`/api/leads/batch-revenue${refreshParam}`, { headers })
+      const refreshParam = isRefresh ? '&refresh=true' : ''
+      const res = await fetch(`/api/leads/batch-revenue?year=${yearVal}${refreshParam}`, { headers })
       if (!res.ok) {
         throw new Error('Failed to fetch batch revenue')
       }
@@ -191,13 +192,13 @@ export default function LeadsOverviewPage() {
     } finally {
       setBatchRevenueLoading(false)
     }
-  }, [])
+  }, [selectedYear])
 
   useEffect(() => {
     if (activeTab === 'batch') {
-      fetchBatchRevenue()
+      fetchBatchRevenue(false, selectedYear)
     }
-  }, [activeTab, fetchBatchRevenue])
+  }, [activeTab, selectedYear, fetchBatchRevenue])
 
   const getMonthsList = useCallback(() => {
     if (!from || !to) return []
@@ -353,12 +354,27 @@ export default function LeadsOverviewPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {activeTab === 'batch' ? (
-            <RefreshBar
-              loading={batchRevenueLoading}
-              refreshing={batchRevenueLoading}
-              lastUpdated={new Date().toISOString()}
-              onRefresh={() => fetchBatchRevenue(true)}
-            />
+            <>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-slate-500">Year:</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-semibold outline-none"
+                >
+                  <option value="all">All Years</option>
+                  <option value="2026">2026</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                </select>
+              </div>
+              <RefreshBar
+                loading={batchRevenueLoading}
+                refreshing={batchRevenueLoading}
+                lastUpdated={new Date().toISOString()}
+                onRefresh={() => fetchBatchRevenue(true)}
+              />
+            </>
           ) : (
             <>
               <RefreshBar
@@ -771,13 +787,15 @@ export default function LeadsOverviewPage() {
                 batchRevenue.map((b, idx) => {
                   const maxRevenue = Math.max(...batchRevenue.map(item => item.revenue), 1)
                   const heightPercent = (b.revenue / maxRevenue) * 100
+                  const cleanCourseShortName = b.courseName.replace('Oracle Fusion ', '')
                   return (
-                    <div key={b.batchNo} className="flex-1 min-w-[60px] flex flex-col items-center group relative h-full justify-end">
+                    <div key={`${b.courseName}-${b.batchNo}`} className="flex-1 min-w-[90px] flex flex-col items-center group relative h-full justify-end">
                       {/* Tooltip */}
                       <div className="absolute bottom-[calc(100%-8px)] mb-2 hidden group-hover:flex flex-col items-center z-10">
                         <div className="bg-slate-900 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-xl font-medium whitespace-nowrap">
-                          <p className="font-bold">{b.batchNo}</p>
-                          <p className="text-slate-300">Revenue: ₹{b.revenue.toLocaleString()}</p>
+                          <p className="font-bold text-indigo-400">{b.courseName}</p>
+                          <p className="font-semibold text-slate-200">{b.batchNo}</p>
+                          <p className="text-slate-300 mt-1">Revenue: ₹{b.revenue.toLocaleString()}</p>
                           <p className="text-slate-300">Enrolled: {b.conversions} students</p>
                         </div>
                         <div className="w-2 h-2 bg-slate-900 rotate-45 -mt-1"></div>
@@ -790,7 +808,10 @@ export default function LeadsOverviewPage() {
                       />
                       
                       {/* Label */}
-                      <span className="text-[10px] text-slate-400 font-bold mt-2 truncate w-full text-center">
+                      <span className="text-[9px] text-slate-500 font-bold mt-2 truncate w-full text-center" title={`${cleanCourseShortName} - ${b.batchNo}`}>
+                        {cleanCourseShortName}
+                      </span>
+                      <span className="text-[8px] text-slate-400 font-semibold truncate w-full text-center">
                         {b.batchNo}
                       </span>
                     </div>
@@ -805,7 +826,7 @@ export default function LeadsOverviewPage() {
             <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-700">Detailed Batch Performance Breakdown</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Aggregated student conversions, average fee ticket size, and revenue yield per batch</p>
+                <p className="text-xs text-slate-400 mt-0.5">Aggregated student conversions, average fee ticket size, and revenue yield per course batch</p>
               </div>
             </div>
 
@@ -813,8 +834,8 @@ export default function LeadsOverviewPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Course Name</th>
                     <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Batch Name</th>
-                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Faculty</th>
                     <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Student Conversions</th>
                     <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Total Revenue</th>
                     <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Avg Fee per Student</th>
@@ -831,14 +852,14 @@ export default function LeadsOverviewPage() {
                   ) : batchRevenue.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="text-center py-10 text-slate-400 text-xs font-medium">
-                        No batch revenue data found in spreadsheet.
+                        No batch revenue data found in TeleCRM.
                       </td>
                     </tr>
                   ) : (
                     batchRevenue.map((b) => (
-                      <tr key={b.batchNo} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 text-xs font-bold text-slate-800">{b.batchNo}</td>
-                        <td className="px-6 py-4 text-xs text-slate-500 font-medium">{b.faculty || '—'}</td>
+                      <tr key={`${b.courseName}-${b.batchNo}`} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 text-xs font-bold text-indigo-600">{b.courseName}</td>
+                        <td className="px-6 py-4 text-xs text-slate-700 font-semibold">{b.batchNo}</td>
                         <td className="px-6 py-4 text-xs text-slate-700 font-semibold text-right">{b.conversions}</td>
                         <td className="px-6 py-4 text-xs text-slate-900 font-extrabold text-right">₹{b.revenue.toLocaleString()}</td>
                         <td className="px-6 py-4 text-xs text-slate-700 font-semibold text-right">₹{b.avgFee.toLocaleString()}</td>

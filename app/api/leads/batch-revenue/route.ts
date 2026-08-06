@@ -20,20 +20,6 @@ function getBatchName(num: number | string): string {
   return `${parsed}${suffix} Batch`
 }
 
-const GROUP_TO_FACULTY: Record<string, string> = {
-  'Oracle Fusion SCM': 'Krishna',
-  'Oracle Fusion HCM': 'Sumesh Raj',
-  'Oracle Fusion Financials': 'Srinivas, Bhasha',
-  'Oracle Fusion Technical': 'Vijay, Nageshwar',
-  'Oracle Fusion WMS': 'Harish',
-  'Oracle Fusion PPM': 'Srinivas',
-  'Oracle TMS': 'Krishna',
-  'Oracle EBS': 'Srinivas',
-  'SAP': 'Vijay',
-  'Oracle Apex': 'Nageshwar',
-  'Oracle Integration': 'Vijay'
-}
-
 export async function GET(request: Request) {
   try {
     const user = getCurrentUser(request)
@@ -58,6 +44,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const bypassCache = searchParams.get('refresh') === 'true'
+    const selectedYearStr = searchParams.get('year') || 'all'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
 
@@ -69,13 +56,10 @@ export async function GET(request: Request) {
     )
 
     const batchMap: Record<string, {
+      courseName: string
       batchNo: string
-      faculty: Set<string>
       conversions: number
       revenue: number
-      adSpend: number
-      avgFee: number
-      roas: number
     }> = {}
 
     leads.forEach(lead => {
@@ -85,72 +69,109 @@ export async function GET(request: Request) {
       // --- Course 1 ---
       const batchNum1 = lead.fields?.batch_number
       if (batchNum1) {
-        const batchName = getBatchName(batchNum1)
-        if (!batchMap[batchName]) {
-          batchMap[batchName] = {
-            batchNo: batchName,
-            faculty: new Set(),
-            conversions: 0,
-            revenue: 0,
-            adSpend: 0,
-            avgFee: 0,
-            roas: 0
+        const enrollDateVal = lead.fields?.course_enrollment_date
+        let enrollYear1 = null
+        if (enrollDateVal) {
+          enrollYear1 = new Date(enrollDateVal).getFullYear()
+        } else {
+          const fallbackDate = lead.fields?.lead_date || lead.fields?.created_on
+          if (fallbackDate) enrollYear1 = new Date(fallbackDate).getFullYear()
+        }
+
+        if (selectedYearStr !== 'all') {
+          const targetYear = parseInt(selectedYearStr, 10)
+          if (enrollYear1 && enrollYear1 !== targetYear) {
+            // Return from callback to skip Course 1
+            return
           }
         }
-        batchMap[batchName].conversions += 1
+
+        const batchName = getBatchName(batchNum1)
+        const courseName = getCourseGroup(lead.fields?.course || '')
+        const mapKey = `${courseName}|${batchName}`
         
+        if (!batchMap[mapKey]) {
+          batchMap[mapKey] = {
+            courseName,
+            batchNo: batchName,
+            conversions: 0,
+            revenue: 0
+          }
+        }
+        
+        batchMap[mapKey].conversions += 1
         const cash = parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
-        batchMap[batchName].revenue += cash
-        
-        const courseGroup = getCourseGroup(lead.fields?.course || '')
-        const faculty = GROUP_TO_FACULTY[courseGroup] || 'Guest Faculty'
-        faculty.split(',').forEach(f => {
-          const trimmed = f.trim()
-          if (trimmed) batchMap[batchName].faculty.add(trimmed)
-        })
+        batchMap[mapKey].revenue += cash
       }
 
       // --- Course 2 ---
       const batchName2 = lead.fields?.course_2_batch_name
       if (batchName2) {
-        const formattedBatchName = getBatchName(batchName2)
-        if (!batchMap[formattedBatchName]) {
-          batchMap[formattedBatchName] = {
-            batchNo: formattedBatchName,
-            faculty: new Set(),
-            conversions: 0,
-            revenue: 0,
-            adSpend: 0,
-            avgFee: 0,
-            roas: 0
+        const enroll2DateVal = lead.fields?.course_2_enrollment_date || lead.fields?.course_2_enroll_date || lead.fields?.course2_enrollment_date
+        let enroll2Ms = 0
+        if (enroll2DateVal) {
+          if (typeof enroll2DateVal === 'number') {
+            enroll2Ms = enroll2DateVal
+          } else if (typeof enroll2DateVal === 'string') {
+            const parts = enroll2DateVal.split(/[-/]/)
+            if (parts.length === 3) {
+              const day = parseInt(parts[0], 10)
+              const month = parseInt(parts[1], 10) - 1
+              const year = parseInt(parts[2], 10)
+              enroll2Ms = new Date(year, month, day).getTime()
+            }
           }
         }
-        batchMap[formattedBatchName].conversions += 1
+
+        let enrollYear2 = null
+        if (enroll2Ms) {
+          enrollYear2 = new Date(enroll2Ms).getFullYear()
+        } else {
+          const fallbackDate = lead.fields?.created_on
+          if (fallbackDate) enrollYear2 = new Date(fallbackDate).getFullYear()
+        }
+
+        if (selectedYearStr !== 'all') {
+          const targetYear = parseInt(selectedYearStr, 10)
+          if (enrollYear2 && enrollYear2 !== targetYear) {
+            // Return from callback to skip Course 2
+            return
+          }
+        }
+
+        const formattedBatchName = getBatchName(batchName2)
+        const courseName2 = getCourseGroup(lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || '')
+        const mapKey2 = `${courseName2}|${formattedBatchName}`
         
+        if (!batchMap[mapKey2]) {
+          batchMap[mapKey2] = {
+            courseName: courseName2,
+            batchNo: formattedBatchName,
+            conversions: 0,
+            revenue: 0
+          }
+        }
+        
+        batchMap[mapKey2].conversions += 1
         const cash2 = parseAmount(lead.fields?.amount_paid_emi_1_course_2) + parseAmount(lead.fields?.amount_paid_emi_2_course_2)
-        batchMap[formattedBatchName].revenue += cash2
-        
-        const courseName2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
-        const courseGroup2 = getCourseGroup(courseName2)
-        const faculty2 = GROUP_TO_FACULTY[courseGroup2] || 'Guest Faculty'
-        faculty2.split(',').forEach(f => {
-          const trimmed = f.trim()
-          if (trimmed) batchMap[formattedBatchName].faculty.add(trimmed)
-        })
+        batchMap[mapKey2].revenue += cash2
       }
     })
 
     const aggregated = Object.values(batchMap).map(b => ({
+      courseName: b.courseName,
       batchNo: b.batchNo,
-      faculty: Array.from(b.faculty).join(', '),
       conversions: b.conversions,
       revenue: b.revenue,
-      adSpend: 0,
-      avgFee: b.conversions > 0 ? Math.round(b.revenue / b.conversions) : 0,
-      roas: 0
+      avgFee: b.conversions > 0 ? Math.round(b.revenue / b.conversions) : 0
     }))
 
-    aggregated.sort((a, b) => a.batchNo.localeCompare(b.batchNo, undefined, { numeric: true, sensitivity: 'base' }))
+    // Sort by Course Name first, then by Batch number
+    aggregated.sort((a, b) => {
+      const courseComp = a.courseName.localeCompare(b.courseName)
+      if (courseComp !== 0) return courseComp
+      return a.batchNo.localeCompare(b.batchNo, undefined, { numeric: true, sensitivity: 'base' })
+    })
 
     return NextResponse.json({
       batches: aggregated,
