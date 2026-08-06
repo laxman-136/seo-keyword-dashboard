@@ -22,6 +22,7 @@ export interface SessionUser {
   email: string
   name: string
   role: UserRole
+  grantId?: string
 }
 
 // ─── Password Hashing ───────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ export function createToken(user: SessionUser): string {
     email: user.email,
     name: user.name,
     role: user.role,
+    grantId: user.grantId,
     exp: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
   }
   const data = Buffer.from(JSON.stringify(payload)).toString('base64url')
@@ -67,7 +69,7 @@ export function verifyToken(token: string): SessionUser | null {
     if (!crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expectedSig, 'hex'))) return null
     const payload = JSON.parse(Buffer.from(data, 'base64url').toString())
     if (!payload.exp || payload.exp < Date.now()) return null
-    return { email: payload.email, name: payload.name, role: payload.role }
+    return { email: payload.email, name: payload.name, role: payload.role, grantId: payload.grantId }
   } catch {
     return null
   }

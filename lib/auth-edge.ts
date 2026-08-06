@@ -9,6 +9,7 @@ export interface SessionUser {
   email: string
   name: string
   role: 'superadmin' | 'admin' | 'ceo' | 'user' | 'viewer'
+  grantId?: string
 }
 
 /**
@@ -34,7 +35,7 @@ export function decodeTokenEdge(token: string): SessionUser | null {
     // Basic shape check
     if (!payload.email || !payload.role) return null
 
-    return { email: payload.email, name: payload.name, role: payload.role }
+    return { email: payload.email, name: payload.name, role: payload.role, grantId: payload.grantId }
   } catch {
     return null
   }

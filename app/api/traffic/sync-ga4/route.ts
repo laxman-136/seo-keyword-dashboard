@@ -7,7 +7,20 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
   try {
-    const { seoSheetId, apiKey, gaPropertyId, gaClientEmail, gaPrivateKey } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    let { seoSheetId, apiKey, gaPropertyId, gaClientEmail, gaPrivateKey } = body
+
+    if (!seoSheetId || !gaPropertyId || !gaClientEmail || !gaPrivateKey) {
+      const { getActiveConfiguration } = await import('@/lib/configurations-store')
+      const activeConfig = await getActiveConfiguration()
+      if (activeConfig) {
+        if (!seoSheetId) seoSheetId = activeConfig.seoSheetId || activeConfig.sheetId
+        if (!apiKey) apiKey = activeConfig.apiKey
+        if (!gaPropertyId) gaPropertyId = activeConfig.gaPropertyId
+        if (!gaClientEmail) gaClientEmail = activeConfig.gaClientEmail
+        if (!gaPrivateKey) gaPrivateKey = activeConfig.gaPrivateKey
+      }
+    }
 
     if (!seoSheetId) {
       return NextResponse.json({ error: 'SEO Spreadsheet ID is required. Please set it in Settings.' }, { status: 400 })

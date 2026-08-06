@@ -11,6 +11,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ user: null }, { status: 401 })
   }
 
-  const grants = await getValidAccessGrantsForRecipient(user.email)
+  let grants = await getValidAccessGrantsForRecipient(user.email)
+  if (user.grantId) {
+    const loggedInGrantIdx = grants.findIndex(g => g.id === user.grantId)
+    if (loggedInGrantIdx > 0) {
+      const [loggedInGrant] = grants.splice(loggedInGrantIdx, 1)
+      grants = [loggedInGrant, ...grants]
+    }
+  }
   return NextResponse.json({ user, viewerAccess: grants })
 }

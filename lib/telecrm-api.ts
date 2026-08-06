@@ -221,10 +221,31 @@ export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
 }
 
 // Resolves credentials (client-side passed vs server-side variables)
-function getCredentials(customToken?: string, customEnterpriseId?: string) {
-  const token = customToken || process.env.TELECRM_API_TOKEN || ''
-  const enterpriseId = customEnterpriseId || process.env.TELECRM_ENTERPRISE_ID || ''
-  return { token, enterpriseId }
+async function getCredentials(customToken?: string, customEnterpriseId?: string) {
+  let token = customToken
+  let enterpriseId = customEnterpriseId
+
+  if (!token || !enterpriseId) {
+    const envToken = process.env.TELECRM_API_TOKEN
+    const envEnterpriseId = process.env.TELECRM_ENTERPRISE_ID
+    if (envToken && envEnterpriseId) {
+      if (!token) token = envToken
+      if (!enterpriseId) enterpriseId = envEnterpriseId
+    } else {
+      try {
+        const { getActiveConfiguration } = await import('./configurations-store')
+        const activeConfig = await getActiveConfiguration()
+        if (activeConfig) {
+          if (!token) token = activeConfig.telecrmApiToken || ''
+          if (!enterpriseId) enterpriseId = activeConfig.telecrmEnterpriseId || ''
+        }
+      } catch (err) {
+        console.warn('Failed to load active configuration for TeleCRM credentials:', err)
+      }
+    }
+  }
+
+  return { token: token || '', enterpriseId: enterpriseId || '' }
 }
 
 export class TeleCRMApiError extends Error {
@@ -343,7 +364,7 @@ export async function searchLeads(
   customToken?: string,
   customEnterpriseId?: string
 ): Promise<{ data: TeleCRMLead[]; total_count: number }> {
-  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
+  const { token, enterpriseId } = await getCredentials(customToken, customEnterpriseId)
   
   if (!token || !enterpriseId) {
     const fromMs = filters.created_on?.from || 0
@@ -403,7 +424,7 @@ export async function getLeadCount(
   customEnterpriseId?: string,
   bypassCache = false
 ): Promise<number> {
-  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
+  const { token, enterpriseId } = await getCredentials(customToken, customEnterpriseId)
   const fromStr = dateRange ? getStartOfDay(dateRange.from).getTime() : 0
   const toStr = dateRange ? getEndOfDay(dateRange.to).getTime() : 0
   
@@ -600,7 +621,7 @@ export async function getEnrolledCount(
   customEnterpriseId?: string,
   bypassCache = false
 ): Promise<number> {
-  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
+  const { token, enterpriseId } = await getCredentials(customToken, customEnterpriseId)
   const fromMs = dateRange ? getStartOfDay(dateRange.from).getTime() : 0
   const toMs = dateRange ? getEndOfDay(dateRange.to).getTime() : 0
   
@@ -631,7 +652,7 @@ export async function getMonthlyTrend(
   bypassCache = false,
   course?: string
 ): Promise<LeadsMonthlyTrend[]> {
-  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
+  const { token, enterpriseId } = await getCredentials(customToken, customEnterpriseId)
   
   const cacheKey = `telecrm_monthly_trend_${months}_${course || 'all'}_${enterpriseId}`
   
@@ -1385,7 +1406,7 @@ export async function getAllLeads(
   customEnterpriseId?: string,
   bypassCache = false
 ): Promise<TeleCRMLead[]> {
-  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
+  const { token, enterpriseId } = await getCredentials(customToken, customEnterpriseId)
   const fromMs = filters?.dateRange ? getStartOfDay(filters.dateRange.from).getTime() : 0
   const toMs = filters?.dateRange ? getEndOfDay(filters.dateRange.to).getTime() : 0
   
@@ -1612,7 +1633,7 @@ export async function getLeadActions(
   customEnterpriseId?: string,
   bypassCache = false
 ): Promise<TeleCRMAction[]> {
-  const { token, enterpriseId } = getCredentials(customToken, customEnterpriseId)
+  const { token, enterpriseId } = await getCredentials(customToken, customEnterpriseId)
   
   if (!token || !enterpriseId) {
     try {

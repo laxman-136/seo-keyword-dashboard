@@ -19,7 +19,8 @@ export async function GET(request: Request, context: { params: Promise<{ grantId
     const token = createToken({
       email: grant.recipientEmail,
       name: grant.recipientEmail,
-      role: 'viewer'
+      role: 'viewer',
+      grantId: grantId
     })
     const cookie = makeViewerAuthCookie(token)
 

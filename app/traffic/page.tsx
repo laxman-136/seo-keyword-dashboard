@@ -134,12 +134,9 @@ export default function TrafficOverview() {
     try {
       const clientSeoSheetId = localStorage.getItem('client-seo-sheet-id')
       const apiKey = localStorage.getItem('client-api-key')
-      const gaPropertyId = localStorage.getItem('client-ga-property-id')
-      const gaClientEmail = localStorage.getItem('client-ga-client-email')
-      const gaPrivateKey = localStorage.getItem('client-ga-private-key')
 
-      if (!clientSeoSheetId || clientSeoSheetId === 'mock' || !gaPropertyId || !gaClientEmail || !gaPrivateKey) {
-        throw new Error('GA4 integration is not configured in Settings.')
+      if (!clientSeoSheetId || clientSeoSheetId === 'mock') {
+        throw new Error('SEO Spreadsheet ID is not configured.')
       }
 
       const res = await fetch('/api/traffic/sync-ga4-monthly', {
@@ -148,9 +145,9 @@ export default function TrafficOverview() {
         body: JSON.stringify({
           seoSheetId: clientSeoSheetId,
           apiKey,
-          gaPropertyId,
-          gaClientEmail,
-          gaPrivateKey
+          gaPropertyId: localStorage.getItem('client-ga-property-id') || undefined,
+          gaClientEmail: localStorage.getItem('client-ga-client-email') || undefined,
+          gaPrivateKey: localStorage.getItem('client-ga-private-key') || undefined
         })
       })
 
