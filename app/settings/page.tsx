@@ -72,7 +72,7 @@ export default function SettingsPage() {
   const [shareLoading, setShareLoading] = useState(false)
   const [shareMessage, setShareMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [copiedShareId, setCopiedShareId] = useState<string | null>(null)
-  const [shareSections, setShareSections] = useState<string[]>(['keywords', 'traffic', 'leads', 'revenue', 'site'])
+  const [shareSections, setShareSections] = useState<string[]>(['keywords', 'traffic', 'leads', 'roi', 'batch', 'revenue', 'site'])
 
   const isViewer = currentUser?.role === 'viewer'
   const canShare = currentUser?.role === 'superadmin' || currentUser?.role === 'admin' || currentUser?.role === 'ceo' || currentUser?.role === 'user'
@@ -150,8 +150,8 @@ export default function SettingsPage() {
           action: 'grant',
           recipientEmail: shareEmail.trim().toLowerCase(),
           seoSheetId: shareSections.some(s => ['keywords', 'traffic', 'site'].includes(s)) ? activeConfig.seoSheetId : undefined,
-          leadsSheetId: shareSections.includes('leads') ? activeConfig.leadsSheetId : undefined,
-          revenueSheetId: shareSections.includes('revenue') ? activeConfig.revenueSheetId : undefined,
+          leadsSheetId: shareSections.some(s => ['leads', 'roi', 'batch'].includes(s)) ? activeConfig.leadsSheetId : undefined,
+          revenueSheetId: shareSections.some(s => ['revenue', 'roi', 'batch'].includes(s)) ? activeConfig.revenueSheetId : undefined,
           apiKey: activeConfig.apiKey,
           label: activeConfig.label,
           durationDays: shareDuration,
@@ -218,7 +218,7 @@ export default function SettingsPage() {
         allowed: allowedStr.trim().split(',')
       }
     }
-    return { name: lbl || '', allowed: ['keywords', 'traffic', 'leads', 'revenue', 'site'] }
+    return { name: lbl || '', allowed: ['keywords', 'traffic', 'leads', 'roi', 'batch', 'revenue', 'site'] }
   }
 
   const activeViewerCount = ownerGrants.length
@@ -688,6 +688,8 @@ export default function SettingsPage() {
                       { id: 'traffic', label: 'Traffic Analytics' },
                       { id: 'ads', label: 'Ads Performance' },
                       { id: 'leads', label: 'Leads Report' },
+                      { id: 'roi', label: 'ROI & Financials' },
+                      { id: 'batch', label: 'Batch-wise Revenue' },
                       { id: 'revenue', label: 'Revenue & Conversion' },
                       { id: 'site', label: 'Site Status' }
                     ].map(sec => {
@@ -770,7 +772,7 @@ export default function SettingsPage() {
                           <div className="flex flex-wrap gap-1.5 pt-0.5">
                             {allowed.map(sec => (
                               <span key={sec} className="px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider">
-                                {sec === 'site' ? 'site status' : sec === 'keywords' ? 'keywords' : sec === 'traffic' ? 'traffic' : sec === 'leads' ? 'leads' : sec === 'revenue' ? 'revenue' : sec === 'ads' ? 'ads performance' : sec}
+                                {sec === 'site' ? 'site status' : sec === 'keywords' ? 'keywords' : sec === 'traffic' ? 'traffic' : sec === 'leads' ? 'leads' : sec === 'roi' ? 'ROI & Financials' : sec === 'batch' ? 'Batch Revenue' : sec === 'revenue' ? 'revenue' : sec === 'ads' ? 'ads performance' : sec}
                               </span>
                             ))}
                           </div>

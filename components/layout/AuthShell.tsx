@@ -193,10 +193,19 @@ export default function AuthShell({ children }: Props) {
         }
 
         if (pathSection) {
-          const isAllowed = isSectionAllowed(pathSection, role, activeLabel)
+          let isAllowed = isSectionAllowed(pathSection, role, activeLabel)
+          if (pathSection === 'leads' && !isAllowed) {
+            isAllowed = isSectionAllowed('roi', role, activeLabel) || isSectionAllowed('batch', role, activeLabel)
+          }
+
           if (!isAllowed) {
-            const sections = ['keywords', 'traffic', 'leads', 'revenue', 'site']
-            const allowedSections = sections.filter(sec => isSectionAllowed(sec, role, activeLabel))
+            const sections = ['keywords', 'traffic', 'leads', 'roi', 'batch', 'revenue', 'site']
+            const allowedSections = sections.filter(sec => {
+              if (sec === 'leads') {
+                return isSectionAllowed('leads', role, activeLabel) || isSectionAllowed('roi', role, activeLabel) || isSectionAllowed('batch', role, activeLabel)
+              }
+              return isSectionAllowed(sec, role, activeLabel)
+            })
             
             if (allowedSections.length > 0) {
               const firstAllowed = allowedSections[0]
@@ -204,6 +213,8 @@ export default function AuthShell({ children }: Props) {
                 keywords: '/',
                 traffic: '/traffic',
                 leads: '/leads',
+                roi: '/leads',
+                batch: '/leads',
                 revenue: '/revenue',
                 site: '/site-status'
               }

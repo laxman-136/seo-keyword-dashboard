@@ -99,15 +99,11 @@ export default function LeadsOverviewPage() {
       .catch((err) => console.error('Failed to fetch user:', err))
   }, [])
 
-  const hasRevenueAccess = React.useMemo(() => {
+  const hasOverviewAccess = React.useMemo(() => {
     if (!currentUser) return false
     const role = currentUser.role
-    if (role === 'superadmin' || role === 'admin' || role === 'ceo') {
-      return true
-    }
-    if (role === 'user') {
-      return false
-    }
+    if (role === 'superadmin' || role === 'admin' || role === 'ceo') return true
+    if (role === 'user') return false
     if (role === 'viewer') {
       const activeGrant = viewerGrants[0]
       if (activeGrant && activeGrant.label) {
@@ -116,10 +112,52 @@ export default function LeadsOverviewPage() {
           const parts = label.split('| allowed:')
           const allowedStr = parts[1] || ''
           const allowedSections = allowedStr.split(',').map((s: string) => s.trim())
-          return allowedSections.includes('revenue')
+          return allowedSections.includes('leads')
         }
       }
-      return true // fallback for legacy grants
+      return true
+    }
+    return false
+  }, [currentUser, viewerGrants])
+
+  const hasRoiAccess = React.useMemo(() => {
+    if (!currentUser) return false
+    const role = currentUser.role
+    if (role === 'superadmin' || role === 'admin' || role === 'ceo') return true
+    if (role === 'user') return false
+    if (role === 'viewer') {
+      const activeGrant = viewerGrants[0]
+      if (activeGrant && activeGrant.label) {
+        const label = activeGrant.label
+        if (label.includes('| allowed:')) {
+          const parts = label.split('| allowed:')
+          const allowedStr = parts[1] || ''
+          const allowedSections = allowedStr.split(',').map((s: string) => s.trim())
+          return allowedSections.includes('roi')
+        }
+      }
+      return true
+    }
+    return false
+  }, [currentUser, viewerGrants])
+
+  const hasBatchAccess = React.useMemo(() => {
+    if (!currentUser) return false
+    const role = currentUser.role
+    if (role === 'superadmin' || role === 'admin' || role === 'ceo') return true
+    if (role === 'user') return false
+    if (role === 'viewer') {
+      const activeGrant = viewerGrants[0]
+      if (activeGrant && activeGrant.label) {
+        const label = activeGrant.label
+        if (label.includes('| allowed:')) {
+          const parts = label.split('| allowed:')
+          const allowedStr = parts[1] || ''
+          const allowedSections = allowedStr.split(',').map((s: string) => s.trim())
+          return allowedSections.includes('batch')
+        }
+      }
+      return true
     }
     return false
   }, [currentUser, viewerGrants])
@@ -128,10 +166,28 @@ export default function LeadsOverviewPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'roi' | 'batch'>('overview')
 
   useEffect(() => {
-    if (currentUser && !hasRevenueAccess && activeTab !== 'overview') {
-      setActiveTab('overview')
+    if (currentUser) {
+      if (activeTab === 'overview' && !hasOverviewAccess) {
+        if (hasRoiAccess) {
+          setActiveTab('roi')
+        } else if (hasBatchAccess) {
+          setActiveTab('batch')
+        }
+      } else if (activeTab === 'roi' && !hasRoiAccess) {
+        if (hasOverviewAccess) {
+          setActiveTab('overview')
+        } else if (hasBatchAccess) {
+          setActiveTab('batch')
+        }
+      } else if (activeTab === 'batch' && !hasBatchAccess) {
+        if (hasOverviewAccess) {
+          setActiveTab('overview')
+        } else if (hasRoiAccess) {
+          setActiveTab('roi')
+        }
+      }
     }
-  }, [currentUser, hasRevenueAccess, activeTab])
+  }, [currentUser, hasOverviewAccess, hasRoiAccess, hasBatchAccess, activeTab])
   const [financials, setFinancials] = useState<any[] | null>(null)
   const [financialsLoading, setFinancialsLoading] = useState(false)
   const [budgetMonth, setBudgetMonth] = useState('')
@@ -403,44 +459,46 @@ export default function LeadsOverviewPage() {
 
       {/* ── TABS SELECTOR ── */}
       <div className="flex border-b border-slate-200 gap-6 mt-4">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`pb-3 font-semibold text-sm transition-all relative ${
-            activeTab === 'overview' 
-              ? 'text-indigo-600 border-b-2 border-indigo-600' 
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          📈 Overview & Funnel
-        </button>
-        {hasRevenueAccess && (
-          <>
-            <button
-              onClick={() => {
-                setActiveTab('roi')
-                fetchFinancials()
-              }}
-              className={`pb-3 font-semibold text-sm transition-all relative ${
-                activeTab === 'roi' 
-                  ? 'text-indigo-600 border-b-2 border-indigo-600' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              💸 ROI & Financials
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('batch')
-              }}
-              className={`pb-3 font-semibold text-sm transition-all relative ${
-                activeTab === 'batch' 
-                  ? 'text-indigo-600 border-b-2 border-indigo-600' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              📦 Batch-wise Revenue
-            </button>
-          </>
+        {hasOverviewAccess && (
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`pb-3 font-semibold text-sm transition-all relative ${
+              activeTab === 'overview' 
+                ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            📈 Overview & Funnel
+          </button>
+        )}
+        {hasRoiAccess && (
+          <button
+            onClick={() => {
+              setActiveTab('roi')
+              fetchFinancials()
+            }}
+            className={`pb-3 font-semibold text-sm transition-all relative ${
+              activeTab === 'roi' 
+                ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            💸 ROI & Financials
+          </button>
+        )}
+        {hasBatchAccess && (
+          <button
+            onClick={() => {
+              setActiveTab('batch')
+            }}
+            className={`pb-3 font-semibold text-sm transition-all relative ${
+              activeTab === 'batch' 
+                ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            📦 Batch-wise Revenue
+          </button>
         )}
       </div>
 

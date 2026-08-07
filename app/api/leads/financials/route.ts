@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       activeLabel = activeGrant.label
     }
 
-    const isAllowed = isSectionAllowed('revenue', user.role, activeLabel)
+    const isAllowed = isSectionAllowed('roi', user.role, activeLabel)
     if (!isAllowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
