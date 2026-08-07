@@ -1192,7 +1192,7 @@ export async function getChannelFinancials(
   const range = dateRange || getCurrentMonthRange()
   
   // 1. Fetch leads
-  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache)
+  const leads = await getAllLeadsForPeriod(range, customToken, customEnterpriseId, bypassCache, course)
   
   // 3. Aggregate lead revenue
   const financialsMap: Record<LeadChannel, {
@@ -1220,58 +1220,69 @@ export async function getChannelFinancials(
     const data = financialsMap[channel]
     if (!data) return
     
-    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
-    const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
+    // --- Course 1 Check ---
+    const courseGroup1 = getCourseGroup(lead.fields?.course || '')
+    const isCourse1Match = !course || courseGroup1 === course
     
-    const isEnrolled = lead.status === 'Enrolled'
-    const enrollDateVal = lead.fields?.course_enrollment_date
-    const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
-    
-    if (isLeadInPeriod) {
-      data.leads++
+    if (isCourse1Match) {
+      const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+      const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
       
-      if (isEnrolled) {
-        const cash = parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
-        const contract = parseAmount(lead.fields?.course_fee)
+      const isEnrolled = lead.status === 'Enrolled'
+      const enrollDateVal = lead.fields?.course_enrollment_date
+      const isEnrolledInPeriod = !!(isEnrolled && enrollDateVal && enrollDateVal >= fromTime && enrollDateVal <= toTime)
+      
+      if (isLeadInPeriod) {
+        data.leads++
         
-        if (isEnrolledInPeriod) {
-          data.enrolled++
-          data.revenueCash += cash
-          data.revenueContract += contract
-        }
-      }
-    } else if (isEnrolledInPeriod) {
-      data.enrolled++
-      const cash = parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
-      const contract = parseAmount(lead.fields?.course_fee)
-      data.revenueCash += cash
-      data.revenueContract += contract
-    }
-
-    // Process Course 2
-    const rawCourse2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
-    if (rawCourse2) {
-      const enroll2DateVal = lead.fields?.course_2_enrollment_date || lead.fields?.course_2_enroll_date || lead.fields?.course2_enrollment_date
-      let enroll2Ms = 0
-      if (enroll2DateVal) {
-        if (typeof enroll2DateVal === 'number') {
-          enroll2Ms = enroll2DateVal
-        } else if (typeof enroll2DateVal === 'string') {
-          const parts = enroll2DateVal.split(/[-/]/)
-          if (parts.length === 3) {
-            const day = parseInt(parts[0], 10)
-            const month = parseInt(parts[1], 10) - 1
-            const year = parseInt(parts[2], 10)
-            enroll2Ms = new Date(year, month, day).getTime()
+        if (isEnrolled) {
+          const cash = parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
+          const contract = parseAmount(lead.fields?.course_fee)
+          
+          if (isEnrolledInPeriod) {
+            data.enrolled++
+            data.revenueCash += cash
+            data.revenueContract += contract
           }
         }
-      }
-      
-      const isEnrolled2InPeriod = !!(enroll2Ms && enroll2Ms >= fromTime && enroll2Ms <= toTime)
-      if (isEnrolled2InPeriod) {
+      } else if (isEnrolledInPeriod) {
         data.enrolled++
-        data.revenueCash += parseAmount(lead.fields?.amount_paid_emi_1_course_2) + parseAmount(lead.fields?.amount_paid_emi_2_course_2)
-        data.revenueContract += parseAmount(lead.fields?.course_2_fee)
+        const cash = parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
+        const contract = parseAmount(lead.fields?.course_fee)
+        data.revenueCash += cash
+        data.revenueContract += contract
+      }
+    }
+
+    // --- Course 2 Check ---
+    const rawCourse2 = lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || ''
+    if (rawCourse2) {
+      const courseGroup2 = getCourseGroup(rawCourse2)
+      const isCourse2Match = !course || courseGroup2 === course
+      
+      if (isCourse2Match) {
+        const enroll2DateVal = lead.fields?.course_2_enrollment_date || lead.fields?.course_2_enroll_date || lead.fields?.course2_enrollment_date
+        let enroll2Ms = 0
+        if (enroll2DateVal) {
+          if (typeof enroll2DateVal === 'number') {
+            enroll2Ms = enroll2DateVal
+          } else if (typeof enroll2DateVal === 'string') {
+            const parts = enroll2DateVal.split(/[-/]/)
+            if (parts.length === 3) {
+              const day = parseInt(parts[0], 10)
+              const month = parseInt(parts[1], 10) - 1
+              const year = parseInt(parts[2], 10)
+              enroll2Ms = new Date(year, month, day).getTime()
+            }
+          }
+        }
+        
+        const isEnrolled2InPeriod = !!(enroll2Ms && enroll2Ms >= fromTime && enroll2Ms <= toTime)
+        if (isEnrolled2InPeriod) {
+          data.enrolled++
+          data.revenueCash += parseAmount(lead.fields?.amount_paid_emi_1_course_2) + parseAmount(lead.fields?.amount_paid_emi_2_course_2)
+          data.revenueContract += parseAmount(lead.fields?.course_2_fee)
+        }
       }
     }
   })
