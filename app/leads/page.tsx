@@ -180,7 +180,7 @@ export default function LeadsOverviewPage() {
     }
   }, [from, to, selectedCourse])
 
-  const fetchBatchRevenue = useCallback(async (isRefresh = false, yearVal = selectedYear) => {
+  const fetchBatchRevenue = useCallback(async (isRefresh = false, yearVal = selectedYear, courseVal = selectedCourse) => {
     setBatchRevenueLoading(true)
     try {
       const headers: Record<string, string> = {}
@@ -191,7 +191,7 @@ export default function LeadsOverviewPage() {
         if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
       }
       const refreshParam = isRefresh ? '&refresh=true' : ''
-      const res = await fetch(`/api/leads/batch-revenue?year=${yearVal}${refreshParam}`, { headers })
+      const res = await fetch(`/api/leads/batch-revenue?year=${yearVal}&course=${encodeURIComponent(courseVal)}${refreshParam}`, { headers })
       if (!res.ok) {
         throw new Error('Failed to fetch batch revenue')
       }
@@ -202,13 +202,13 @@ export default function LeadsOverviewPage() {
     } finally {
       setBatchRevenueLoading(false)
     }
-  }, [selectedYear])
+  }, [selectedYear, selectedCourse])
 
   useEffect(() => {
     if (activeTab === 'batch') {
-      fetchBatchRevenue(false, selectedYear)
+      fetchBatchRevenue(false, selectedYear, selectedCourse)
     }
-  }, [activeTab, selectedYear, fetchBatchRevenue])
+  }, [activeTab, selectedYear, selectedCourse, fetchBatchRevenue])
 
   const getMonthsList = useCallback(() => {
     if (!from || !to) return []
@@ -378,6 +378,7 @@ export default function LeadsOverviewPage() {
                   <option value="2024">2024</option>
                 </select>
               </div>
+              <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
               <RefreshBar
                 loading={batchRevenueLoading}
                 refreshing={batchRevenueLoading}

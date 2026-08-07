@@ -45,11 +45,15 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const bypassCache = searchParams.get('refresh') === 'true'
     const selectedYearStr = searchParams.get('year') || 'all'
+    const selectedCourseStr = searchParams.get('course') || 'all'
     const customToken = request.headers.get('x-telecrm-api-token') || searchParams.get('telecrmApiToken') || undefined
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
 
     const leads = await getAllLeads(
-      { status: 'Enrolled' },
+      { 
+        status: 'Enrolled',
+        course: selectedCourseStr !== 'all' ? selectedCourseStr : undefined
+      },
       customToken,
       customEnterpriseId,
       bypassCache
