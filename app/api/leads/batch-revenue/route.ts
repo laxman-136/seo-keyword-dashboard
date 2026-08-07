@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const customEnterpriseId = request.headers.get('x-telecrm-enterprise-id') || searchParams.get('telecrmEnterpriseId') || undefined
 
     const leads = await getAllLeads(
-      undefined,
+      { status: 'Enrolled' },
       customToken,
       customEnterpriseId,
       bypassCache
