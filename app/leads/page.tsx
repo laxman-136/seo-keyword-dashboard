@@ -1,7 +1,7 @@
 // app/leads/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Header from '@/components/layout/Header'
 import SkeletonLoader from '@/components/ui/SkeletonLoader'
 import LeadsKPICard from '@/components/leads/LeadsKPICard'
@@ -144,6 +144,16 @@ export default function LeadsOverviewPage() {
   const [batchRevenue, setBatchRevenue] = useState<any[]>([])
   const [batchRevenueLoading, setBatchRevenueLoading] = useState(false)
   const [selectedYear, setSelectedYear] = useState<string>('all')
+  const [batchSearch, setBatchSearch] = useState('')
+
+  const filteredBatches = useMemo(() => {
+    if (!batchSearch.trim()) return batchRevenue
+    const lower = batchSearch.toLowerCase()
+    return batchRevenue.filter(b => 
+      b.courseName.toLowerCase().includes(lower) || 
+      b.batchNo.toLowerCase().includes(lower)
+    )
+  }, [batchRevenue, batchSearch])
 
   const fetchFinancials = useCallback(async (isRefresh = false) => {
     setFinancialsLoading(true)
@@ -821,54 +831,110 @@ export default function LeadsOverviewPage() {
             </div>
           </div>
 
-          {/* Detailed Batch-wise Revenue Table */}
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* Detailed Course Batch Cards */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-700">Detailed Batch Performance Breakdown</h3>
                 <p className="text-xs text-slate-400 mt-0.5">Aggregated student conversions, average fee ticket size, and revenue yield per course batch</p>
               </div>
+              <div className="relative min-w-[240px]">
+                <input
+                  type="text"
+                  placeholder="Search course or batch..."
+                  value={batchSearch}
+                  onChange={(e) => setBatchSearch(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
+                />
+                <span className="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Course Name</th>
-                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Batch Name</th>
-                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Student Conversions</th>
-                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Total Revenue</th>
-                    <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Avg Fee per Student</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {batchRevenueLoading ? (
-                    <tr>
-                      <td colSpan={5} className="text-center py-10">
-                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                        <p className="text-slate-400 text-xs mt-2 font-medium">Aggregating batch revenue...</p>
-                      </td>
-                    </tr>
-                  ) : batchRevenue.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-center py-10 text-slate-400 text-xs font-medium">
-                        No batch revenue data found in TeleCRM.
-                      </td>
-                    </tr>
-                  ) : (
-                    batchRevenue.map((b) => (
-                      <tr key={`${b.courseName}-${b.batchNo}`} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 text-xs font-bold text-indigo-600">{b.courseName}</td>
-                        <td className="px-6 py-4 text-xs text-slate-700 font-semibold">{b.batchNo}</td>
-                        <td className="px-6 py-4 text-xs text-slate-700 font-semibold text-right">{b.conversions}</td>
-                        <td className="px-6 py-4 text-xs text-slate-900 font-extrabold text-right">₹{b.revenue.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-xs text-slate-700 font-semibold text-right">₹{b.avgFee.toLocaleString()}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {batchRevenueLoading ? (
+              <div className="bg-white p-12 rounded-2xl border border-slate-200 shadow-sm text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <p className="text-slate-400 text-xs mt-2 font-medium">Aggregating batch revenue...</p>
+              </div>
+            ) : filteredBatches.length === 0 ? (
+              <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm text-center">
+                <p className="text-slate-400 text-xs font-medium">
+                  {batchSearch ? 'No matching batch or course found.' : 'No batch revenue data found in TeleCRM.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {filteredBatches.map((b) => {
+                  const isSCM = b.courseName.includes('SCM') || b.courseName.includes('TMS');
+                  const isHCM = b.courseName.includes('HCM');
+                  const isFinancial = b.courseName.includes('Financials') || b.courseName.includes('PPM') || b.courseName.includes('EBS');
+                  const isTechnical = b.courseName.includes('Technical') || b.courseName.includes('Apex') || b.courseName.includes('Integration');
+                  
+                  let cardAccentStyle = 'border-slate-200 focus-within:ring-slate-500';
+                  let badgeStyle = 'bg-slate-100 text-slate-700 border-slate-200';
+                  let textAccentStyle = 'text-slate-700';
+                  let iconEmoji = '📦';
+
+                  if (isSCM) {
+                    cardAccentStyle = 'border-indigo-100 hover:border-indigo-200 hover:shadow-indigo-50/50';
+                    badgeStyle = 'bg-indigo-50 text-indigo-700 border-indigo-100';
+                    textAccentStyle = 'text-indigo-600';
+                    iconEmoji = '🚛';
+                  } else if (isHCM) {
+                    cardAccentStyle = 'border-emerald-100 hover:border-emerald-200 hover:shadow-emerald-50/50';
+                    badgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                    textAccentStyle = 'text-emerald-600';
+                    iconEmoji = '👥';
+                  } else if (isFinancial) {
+                    cardAccentStyle = 'border-amber-100 hover:border-amber-200 hover:shadow-amber-50/50';
+                    badgeStyle = 'bg-amber-50 text-amber-700 border-amber-100';
+                    textAccentStyle = 'text-amber-600';
+                    iconEmoji = '💰';
+                  } else if (isTechnical) {
+                    cardAccentStyle = 'border-blue-100 hover:border-blue-200 hover:shadow-blue-50/50';
+                    badgeStyle = 'bg-blue-50 text-blue-700 border-blue-100';
+                    textAccentStyle = 'text-blue-600';
+                    iconEmoji = '💻';
+                  }
+
+                  return (
+                    <div 
+                      key={`${b.courseName}-${b.batchNo}`} 
+                      className={`bg-white border p-5 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between min-h-[200px] ${cardAccentStyle}`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className={`text-[9px] font-extrabold tracking-wide uppercase px-2.5 py-1 rounded-full border ${badgeStyle}`}>
+                            {b.courseName.replace('Oracle Fusion ', '')}
+                          </span>
+                          <span className="text-sm">{iconEmoji}</span>
+                        </div>
+                        <h4 className="text-base font-extrabold text-slate-800 tracking-tight mt-4">
+                          {b.batchNo}
+                        </h4>
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Enrollments</p>
+                          <p className="text-sm font-extrabold text-slate-700 mt-0.5">{b.conversions} Students</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Avg Fee</p>
+                          <p className="text-sm font-extrabold text-slate-700 mt-0.5">₹{b.avgFee.toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Revenue</span>
+                        <span className={`text-base font-black ${textAccentStyle}`}>
+                          ₹{b.revenue.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
