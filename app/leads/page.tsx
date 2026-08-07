@@ -236,7 +236,7 @@ export default function LeadsOverviewPage() {
     }
   }, [from, to, selectedCourse])
 
-  const fetchBatchRevenue = useCallback(async (isRefresh = false, yearVal = selectedYear, courseVal = selectedCourse) => {
+  const fetchBatchRevenue = useCallback(async (isRefresh = false, courseVal = selectedCourse) => {
     setBatchRevenueLoading(true)
     try {
       const headers: Record<string, string> = {}
@@ -247,7 +247,7 @@ export default function LeadsOverviewPage() {
         if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
       }
       const refreshParam = isRefresh ? '&refresh=true' : ''
-      const res = await fetch(`/api/leads/batch-revenue?year=${yearVal}&course=${encodeURIComponent(courseVal)}${refreshParam}`, { headers })
+      const res = await fetch(`/api/leads/batch-revenue?course=${encodeURIComponent(courseVal)}${refreshParam}`, { headers })
       if (!res.ok) {
         throw new Error('Failed to fetch batch revenue')
       }
@@ -258,13 +258,13 @@ export default function LeadsOverviewPage() {
     } finally {
       setBatchRevenueLoading(false)
     }
-  }, [selectedYear, selectedCourse])
+  }, [selectedCourse])
 
   useEffect(() => {
     if (activeTab === 'batch') {
-      fetchBatchRevenue(false, selectedYear, selectedCourse)
+      fetchBatchRevenue(false, selectedCourse)
     }
-  }, [activeTab, selectedYear, selectedCourse, fetchBatchRevenue])
+  }, [activeTab, selectedCourse, fetchBatchRevenue])
 
   const getMonthsList = useCallback(() => {
     if (!from || !to) return []
@@ -421,19 +421,6 @@ export default function LeadsOverviewPage() {
         <div className="flex flex-wrap items-center gap-3">
           {activeTab === 'batch' ? (
             <>
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-slate-500">Year:</label>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-semibold outline-none"
-                >
-                  <option value="all">All Years</option>
-                  <option value="2026">2026</option>
-                  <option value="2025">2025</option>
-                  <option value="2024">2024</option>
-                </select>
-              </div>
               <CourseSelector selectedCourse={selectedCourse} onChange={setSelectedCourse} />
               <RefreshBar
                 loading={batchRevenueLoading}
