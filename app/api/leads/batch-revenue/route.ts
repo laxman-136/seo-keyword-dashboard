@@ -90,8 +90,11 @@ export async function GET(request: Request) {
           }
         }
 
-        const batchName = getBatchName(batchNum1)
         const courseName = getCourseGroup(lead.fields?.course || '')
+        if (selectedCourseStr !== 'all' && courseName !== selectedCourseStr) {
+          return
+        }
+        const batchName = getBatchName(batchNum1)
         const mapKey = `${courseName}|${batchName}`
         
         if (!batchMap[mapKey]) {
@@ -143,8 +146,11 @@ export async function GET(request: Request) {
           }
         }
 
-        const formattedBatchName = getBatchName(batchName2)
         const courseName2 = getCourseGroup(lead.fields?.course_name_2 || lead.fields?.course_2_name || lead.fields?.course2_name || '')
+        if (selectedCourseStr !== 'all' && courseName2 !== selectedCourseStr) {
+          return
+        }
+        const formattedBatchName = getBatchName(batchName2)
         const mapKey2 = `${courseName2}|${formattedBatchName}`
         
         if (!batchMap[mapKey2]) {
@@ -170,11 +176,11 @@ export async function GET(request: Request) {
       avgFee: b.conversions > 0 ? Math.round(b.revenue / b.conversions) : 0
     }))
 
-    // Sort by Course Name first, then by Batch number
+    // Sort by Course Name first, then by Batch number descending (recent batch first)
     aggregated.sort((a, b) => {
       const courseComp = a.courseName.localeCompare(b.courseName)
       if (courseComp !== 0) return courseComp
-      return a.batchNo.localeCompare(b.batchNo, undefined, { numeric: true, sensitivity: 'base' })
+      return b.batchNo.localeCompare(a.batchNo, undefined, { numeric: true, sensitivity: 'base' })
     })
 
     return NextResponse.json({
