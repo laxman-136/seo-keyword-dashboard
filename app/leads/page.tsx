@@ -970,11 +970,19 @@ export default function LeadsOverviewPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Revenue</span>
-                        <span className={`text-base font-black ${textAccentStyle}`}>
-                          ₹{b.revenue.toLocaleString()}
-                        </span>
+                      <div className="mt-4 bg-slate-50 rounded-xl p-3.5 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Collected Rev</span>
+                          <span className={`text-sm font-black ${textAccentStyle}`}>
+                            ₹{b.revenue.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Receivable Rev</span>
+                          <span className="text-sm font-black text-slate-700">
+                            ₹{(b.receivable || 0).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )

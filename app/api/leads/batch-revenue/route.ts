@@ -63,6 +63,7 @@ export async function GET(request: Request) {
       batchNo: string
       conversions: number
       revenue: number
+      receivable: number
     }> = {}
 
     leads.forEach(lead => {
@@ -84,13 +85,16 @@ export async function GET(request: Request) {
             courseName,
             batchNo: batchName,
             conversions: 0,
-            revenue: 0
+            revenue: 0,
+            receivable: 0
           }
         }
         
         batchMap[mapKey].conversions += 1
         const cash = parseAmount(lead.fields?.amount_paid) + parseAmount(lead.fields?.amount_paid_emi_2)
         batchMap[mapKey].revenue += cash
+        const courseFee = parseAmount(lead.fields?.course_fee)
+        batchMap[mapKey].receivable += courseFee
       }
 
       // --- Course 2 ---
@@ -108,13 +112,16 @@ export async function GET(request: Request) {
             courseName: courseName2,
             batchNo: formattedBatchName,
             conversions: 0,
-            revenue: 0
+            revenue: 0,
+            receivable: 0
           }
         }
         
         batchMap[mapKey2].conversions += 1
         const cash2 = parseAmount(lead.fields?.amount_paid_emi_1_course_2) + parseAmount(lead.fields?.amount_paid_emi_2_course_2)
         batchMap[mapKey2].revenue += cash2
+        const courseFee2 = parseAmount(lead.fields?.course_2_fee)
+        batchMap[mapKey2].receivable += courseFee2
       }
     })
 
@@ -123,6 +130,7 @@ export async function GET(request: Request) {
       batchNo: b.batchNo,
       conversions: b.conversions,
       revenue: b.revenue,
+      receivable: b.receivable,
       avgFee: b.conversions > 0 ? Math.round(b.revenue / b.conversions) : 0
     }))
 
