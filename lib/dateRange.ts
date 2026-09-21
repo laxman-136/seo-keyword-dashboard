@@ -162,3 +162,77 @@ export function formatForGoogleAPI(range: DateRange): { startDate: string; endDa
     endDate: range.to.replace(/-/g, '')
   }
 }
+
+/**
+ * Calculates the previous comparison period for a given date range.
+ * 
+ * Rules:
+ * 1. Calendar MoM / MTD: If the range starts on day 1 of a month (e.g. 2026-09-01 to 2026-09-17),
+ *    compare against the exact same calendar days of the previous month (2026-08-01 to 2026-08-17).
+ *    If it is a full month (2026-08-01 to 2026-08-31), compare against the full prior month (2026-07-01 to 2026-07-31).
+ * 2. Multi-month ranges starting on day 1 (e.g. 2026-07-01 to 2026-08-31): shift back by the number of months.
+ * 3. Rolling / arbitrary ranges (e.g. Last 7 Days, Last 14 Days, 2026-09-10 to 2026-09-16):
+ *    shift back by the exact duration in days.
+ */
+export function getPreviousComparisonPeriod(
+  fromDate: Date,
+  toDate: Date,
+  fromStr?: string | null,
+  toStr?: string | null
+): { prevFromDate: Date; prevToDate: Date; prevFromStr: string; prevToStr: string } {
+  // Use YYYY-MM-DD strings if provided, else format in IST
+  const fStr = (fromStr && /^\d{4}-\d{2}-\d{2}$/.test(fromStr)) ? fromStr : getISTDateString(fromDate)
+  const tStr = (toStr && /^\d{4}-\d{2}-\d{2}$/.test(toStr)) ? toStr : getISTDateString(toDate)
+
+  const [fromY, fromM, fromD] = fStr.split('-').map(Number)
+  const [toY, toM, toD] = tStr.split('-').map(Number)
+
+  // Calendar Month-to-Date or Full Month check: starts on day 1 within same month
+  if (fromD === 1 && fromY === toY && fromM === toM) {
+    let prevY = fromY
+    let prevM = fromM - 1
+    if (prevM === 0) {
+      prevM = 12
+      prevY -= 1
+    }
+    const maxDaysPrev = new Date(prevY, prevM, 0).getDate()
+    const lastDayCurrent = new Date(fromY, fromM, 0).getDate()
+
+    let targetToD = toD
+    // If current selection is the full month, previous is also full month
+    if (toD === lastDayCurrent) {
+      targetToD = maxDaysPrev
+    } else {
+      targetToD = Math.min(toD, maxDaysPrev)
+    }
+
+    const prevFromStr = `${prevY}-${String(prevM).padStart(2, '0')}-01`
+    const prevToStr = `${prevY}-${String(prevM).padStart(2, '0')}-${String(targetToD).padStart(2, '0')}`
+
+    return {
+      prevFromDate: new Date(`${prevFromStr}T00:00:00.000+05:30`),
+      prevToDate: new Date(`${prevToStr}T23:59:59.999+05:30`),
+      prevFromStr,
+      prevToStr
+    }
+  }
+
+  // Fallback: Rolling period with exact duration in days
+  const startMs = new Date(`${fStr}T00:00:00.000+05:30`).getTime()
+  const endMs = new Date(`${tStr}T23:59:59.999+05:30`).getTime()
+  const durationMs = endMs - startMs + 1
+
+  const prevStartMs = startMs - durationMs
+  const prevEndMs = endMs - durationMs
+
+  const prevFromDate = new Date(prevStartMs)
+  const prevToDate = new Date(prevEndMs)
+
+  return {
+    prevFromDate,
+    prevToDate,
+    prevFromStr: getISTDateString(prevFromDate),
+    prevToStr: getISTDateString(prevToDate)
+  }
+}
+

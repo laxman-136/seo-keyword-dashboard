@@ -12,6 +12,7 @@ import StageDrillDown from '@/components/leads/StageDrillDown'
 import DateRangePicker from '@/components/ads/DateRangePicker'
 import CourseSelector from '@/components/leads/CourseSelector'
 import { useDateRange } from '@/hooks/useDateRange'
+import { getPreviousComparisonPeriod } from '@/lib/dateRange'
 import { Info, TrendingUp, TrendingDown, Minus, Target, Activity, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -37,9 +38,7 @@ export default function LeadsFunnelPage() {
         if (clientEnterpriseId) headers['x-telecrm-enterprise-id'] = clientEnterpriseId
       }
 
-      const durationMs = new Date(to).getTime() - new Date(from).getTime() + 1
-      const prevFrom = new Date(new Date(from).getTime() - durationMs).toISOString().split('T')[0]
-      const prevTo = new Date(new Date(to).getTime() - durationMs).toISOString().split('T')[0]
+      const { prevFromStr: prevFrom, prevToStr: prevTo } = getPreviousComparisonPeriod(new Date(from), new Date(to), from, to)
 
       const courseParam = selectedCourse !== 'all' ? `&course=${encodeURIComponent(selectedCourse)}` : ''
       const urlCurrent = `/api/leads/funnel?from=${from}&to=${to}${courseParam}`

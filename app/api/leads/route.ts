@@ -4,6 +4,7 @@ import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
 import { getFunnelData, getChannelBreakdown, TeleCRMApiError } from '@/lib/telecrm-api'
 import { fetchLeadsMonthly, fetchLeadsDetail } from '@/lib/sheets'
+import { getPreviousComparisonPeriod } from '@/lib/dateRange'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,9 +76,7 @@ export async function GET(request: Request) {
       toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
     }
 
-    const durationMs = toDate.getTime() - fromDate.getTime() + 1
-    const prevFromDate = new Date(fromDate.getTime() - durationMs)
-    const prevToDate = new Date(toDate.getTime() - durationMs)
+    const { prevFromDate, prevToDate, prevFromStr, prevToStr } = getPreviousComparisonPeriod(fromDate, toDate, fromStr, toStr)
 
     const [currentFunnel, currentChannels, prevFunnel, prevChannels] = await Promise.all([
       getFunnelData({ from: fromDate, to: toDate }, customToken, customEnterpriseId, bypassCache, selectedCourse),
@@ -125,6 +124,10 @@ export async function GET(request: Request) {
         prevEnrolled: prevFunnel.enrolled,
         prevHighPotential: prevFunnel.highPotential,
         prevConvRate: prevFunnel.convRate
+      },
+      comparisonPeriod: {
+        from: prevFromStr,
+        to: prevToStr
       },
       funnel: currentFunnel,
       channels: currentChannels,
