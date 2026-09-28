@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, COURSE_TO_GROUP } from '@/lib/telecrm-api'
+import { getAllLeads, COURSE_TO_GROUP, getCourseGroup } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     leads.forEach(lead => {
       const status = lead.status
       const rawCourse = lead.fields?.course || ''
-      const courseGroup = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
+      const courseGroup = getCourseGroup(rawCourse) || 'Unknown Course'
 
       if (!courseStats[courseGroup]) {
         courseStats[courseGroup] = { total: 0, interested: 0, attended: 0, enrolled: 0 }

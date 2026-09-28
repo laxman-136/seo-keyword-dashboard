@@ -20,6 +20,7 @@ export default function CourseSelector({ selectedCourse, onChange, dark = false 
     { value: 'Oracle Fusion HCM', label: 'Oracle Fusion HCM' },
     { value: 'Oracle Fusion Financials', label: 'Oracle Fusion Financials' },
     { value: 'Oracle Fusion Technical', label: 'Oracle Fusion Technical' },
+    { value: 'Oracle Fusion Manufacturing', label: 'Oracle Fusion Manufacturing' },
     { value: 'Oracle Fusion PPM', label: 'Oracle Fusion PPM' },
     { value: 'Oracle Fusion WMS', label: 'Oracle Fusion WMS' },
     { value: 'Oracle Integration', label: 'Oracle Integration' },

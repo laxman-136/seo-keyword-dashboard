@@ -1073,6 +1073,7 @@ export async function GET(
             courseName === 'Oracle Fusion SCM' || 
             courseName === 'Oracle Fusion PPM' || 
             courseName === 'Oracle Fusion WMS' || 
+            courseName === 'Oracle Fusion Manufacturing' || 
             courseName === 'Oracle TMS'
           ) {
             return 'Oracle Fusion SCM'

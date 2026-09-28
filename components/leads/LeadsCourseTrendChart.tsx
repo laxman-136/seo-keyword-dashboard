@@ -22,7 +22,9 @@ const COURSE_COLORS: Record<string, string> = {
   'Oracle Fusion SCM':        '#1e40af', // dark blue
   'Oracle Fusion HCM':        '#7c3aed', // purple
   'Oracle Fusion Financials':  '#065f46', // dark green
+  'Oracle Fusion Technical':   '#c2410c', // orange
   'Oracle Fusion Tech + OIC':  '#c2410c', // orange
+  'Oracle Fusion Manufacturing': '#e11d48', // rose
   'Oracle Fusion PPM':         '#0e7490', // cyan
   'SAP / EBS / Others':        '#6b7280'  // gray
 }

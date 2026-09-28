@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, STATUS_TO_CATEGORY, getLeadAgeInDays, COURSE_TO_GROUP, COURSE_AVG_FEES } from '@/lib/telecrm-api'
+import { getAllLeads, STATUS_TO_CATEGORY, getLeadAgeInDays, COURSE_TO_GROUP, COURSE_AVG_FEES, getCourseGroup } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
 
@@ -246,7 +246,7 @@ export async function GET(request: Request) {
         return {
           time: timeStr,
           name: obfuscatedName,
-          course: lead.fields?.course ? (COURSE_TO_GROUP[lead.fields.course] || lead.fields.course) : 'Unknown Course',
+          course: lead.fields?.course ? (getCourseGroup(lead.fields.course) || lead.fields.course) : 'Unknown Course',
           source: lead.fields?.lead_source_1 || 'Organic',
           status: lead.status || 'Fresh',
           agent: lead.employeeid ? lead.employeeid.split('@')[0] : 'Unassigned ⚠️'

@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, getLeadAgeInDays, STATUS_TO_CATEGORY, COURSE_TO_GROUP } from '@/lib/telecrm-api'
+import { getAllLeads, getLeadAgeInDays, STATUS_TO_CATEGORY, COURSE_TO_GROUP, getCourseGroup } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
 
@@ -131,7 +131,7 @@ export async function GET(request: Request) {
     const courseStats: Record<string, { totalPending: number; totalAge: number; hotCount: number; warmCount: number; coolingOrOlderCount: number }> = {}
     pendingLeads.forEach(lead => {
       const rawCourse = lead.fields?.course || ''
-      const groupName = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
+      const groupName = getCourseGroup(rawCourse) || 'Unknown Course'
       const age = getLeadAgeInDays(lead)
 
       if (!courseStats[groupName]) {

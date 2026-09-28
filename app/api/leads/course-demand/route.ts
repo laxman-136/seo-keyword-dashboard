@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, COURSE_TO_GROUP, STATUS_TO_CATEGORY } from '@/lib/telecrm-api'
+import { getAllLeads, COURSE_TO_GROUP, STATUS_TO_CATEGORY, getCourseGroup } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +11,7 @@ const COURSE_DETAILS: Record<string, { batch: string; faculty: string }> = {
   'Oracle Fusion HCM':        { batch: '69th', faculty: 'Sumesh Raj' },
   'Oracle Fusion Financials':  { batch: '79th', faculty: 'Venkatesh' },
   'Oracle Fusion Technical':   { batch: '54th', faculty: 'Ravi Kumar' },
+  'Oracle Fusion Manufacturing': { batch: '1st', faculty: 'Krishna' },
   'Oracle Fusion PPM':         { batch: '12th', faculty: 'Srinivas' },
   'Oracle Fusion WMS':         { batch: '8th',  faculty: 'Krishna' },
   'Oracle Integration':        { batch: '24th', faculty: 'Siva' },
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
 
     leads.forEach(lead => {
       const rawCourse = lead.fields?.course || ''
-      const courseGroup = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
+      const courseGroup = getCourseGroup(rawCourse) || 'Unknown Course'
       const cat = STATUS_TO_CATEGORY[lead.status] || 'Fresh/Unqualified'
 
       if (!demandStats[courseGroup]) {

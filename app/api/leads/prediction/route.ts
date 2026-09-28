@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, scoreLead, getLeadAgeInDays, detectLeadChannel, COURSE_TO_GROUP } from '@/lib/telecrm-api'
+import { getAllLeads, scoreLead, getLeadAgeInDays, detectLeadChannel, COURSE_TO_GROUP, getCourseGroup } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
       const scoreObj = scoreLead(lead)
       const ageDays = getLeadAgeInDays(lead)
       const channel = detectLeadChannel(lead)
-      const course = lead.fields?.course ? (COURSE_TO_GROUP[lead.fields.course] || lead.fields.course) : 'Unknown Course'
+      const course = lead.fields?.course ? (getCourseGroup(lead.fields.course) || lead.fields.course) : 'Unknown Course'
       
       // Mask last name for data privacy
       const nameParts = (lead.fields?.name || 'Inquiry').split(' ')

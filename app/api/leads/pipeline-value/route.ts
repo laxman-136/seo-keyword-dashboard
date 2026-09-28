@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser, isSectionAllowed } from '@/lib/auth'
 import { getValidAccessGrantsForRecipient } from '@/lib/access-store'
-import { getAllLeads, STATUS_TO_CATEGORY, COURSE_TO_GROUP, COURSE_AVG_FEES, CATEGORY_CONV_RATES } from '@/lib/telecrm-api'
+import { getAllLeads, STATUS_TO_CATEGORY, COURSE_TO_GROUP, COURSE_AVG_FEES, CATEGORY_CONV_RATES, getCourseGroup } from '@/lib/telecrm-api'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     activePipelineLeads.forEach(lead => {
       const cat = STATUS_TO_CATEGORY[lead.status] || 'Fresh/Unqualified'
       const rawCourse = lead.fields?.course || ''
-      const courseGroup = COURSE_TO_GROUP[rawCourse] || 'Unknown Course'
+      const courseGroup = getCourseGroup(rawCourse) || 'Unknown Course'
       const fee = COURSE_AVG_FEES[courseGroup] || COURSE_AVG_FEES['default']
       const convRate = CATEGORY_CONV_RATES[cat] || 0.012
 

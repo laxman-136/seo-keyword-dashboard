@@ -74,11 +74,21 @@ export const COURSE_TO_GROUP: Record<string, string> = {
   'Oracle Integration Cloud Online Training Course':  'Oracle Integration',
   'Oracle Apex Online Training':                      'Oracle Apex',
   'Oracle APEX Online Training Course':               'Oracle Apex',
+  'Master Oracle Fusion Manufacturing, Planning & Quality': 'Oracle Fusion Manufacturing',
+  'Master Oracle fusion Manufacturing & Planning':          'Oracle Fusion Manufacturing',
+  'Oracle Fusion Manufacturing & Planning Course':          'Oracle Fusion Manufacturing',
+  'Oracle Fusion Manufacturing training':                   'Oracle Fusion Manufacturing',
+  'Oracle Fusion Manufacturing, Planning & Quality Training': 'Oracle Fusion Manufacturing',
+  'Oracle Manufacturing Training Course':                   'Oracle Fusion Manufacturing',
+  'Oracle Fusion Manufacturing':                            'Oracle Fusion Manufacturing',
+  'Oracle Manufacturing':                                   'Oracle Fusion Manufacturing',
+  'Oracle MFG':                                             'Oracle Fusion Manufacturing',
 }
 
 export function getCourseGroup(courseName: string): string {
   if (!courseName) return '';
   const lower = courseName.toLowerCase();
+  if (lower.includes('manufactu') || lower.includes('mfg')) return 'Oracle Fusion Manufacturing';
   if (lower.includes('apex')) return 'Oracle Apex';
   if (lower.includes('scm') || lower === '77') return 'Oracle Fusion SCM';
   if (lower.includes('financial')) return 'Oracle Fusion Financials';
@@ -100,6 +110,7 @@ export const COURSE_AVG_FEES: Record<string, number> = {
   'Oracle Fusion Technical':   22350,
   'Oracle Fusion PPM':         27857,
   'Oracle Fusion WMS':         25000,
+  'Oracle Fusion Manufacturing': 25000,
   'Oracle Integration':        22000,
   'SAP':                       18000,
   'default':                   23290,
@@ -1744,7 +1755,7 @@ export function scoreLead(lead: TeleCRMLead): LeadScore {
   if (['Oracle Fusion Technical', 'Oracle Fusion Financials'].includes(courseGroup)) {
     score += 15
     factors.push({ factor: 'Course Demand', impact: 15, reason: `Enrolled in high-demand course: ${courseGroup}` })
-  } else if (['Oracle Fusion SCM', 'Oracle Fusion HCM'].includes(courseGroup)) {
+  } else if (['Oracle Fusion SCM', 'Oracle Fusion HCM', 'Oracle Fusion Manufacturing'].includes(courseGroup)) {
     score += 10
     factors.push({ factor: 'Course Demand', impact: 10, reason: `Enrolled in popular course: ${courseGroup}` })
   }

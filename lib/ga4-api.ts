@@ -282,6 +282,7 @@ export async function fetchGA4LandingPages(dateRange: DateRange, bypassCache = f
           else if (pagePath.includes('financial') || pagePath.includes('fin')) courseGroup = 'Oracle Fusion Financials'
           else if (pagePath.includes('tech') || pagePath.includes('oic')) courseGroup = 'Oracle Fusion Technical'
           else if (pagePath.includes('ppm')) courseGroup = 'Oracle Fusion PPM'
+          else if (pagePath.includes('manufactu') || pagePath.includes('mfg')) courseGroup = 'Oracle Fusion Manufacturing'
 
           return {
             pagePath,
