@@ -168,6 +168,33 @@ export function parseAmount(val: any): number {
   return num > 0 && num < 150 ? num * 1000 : num
 }
 
+/**
+ * Resolves the effective inquiry timestamp for a lead.
+ * TeleCRM uses lead_date as the primary inquiry timestamp.
+ * If lead_date is missing, only falls back to created_on if the record has
+ * marketing indicators (course, lead_source_1, or email).
+ * Raw telecaller phone uploads have no lead_date, no course, no source, no email,
+ * and will return null so they are not falsely counted as inbound marketing leads.
+ */
+export function getLeadEffectiveDate(lead: TeleCRMLead): number | null {
+  const f = lead.fields || {}
+  if (f.lead_date) {
+    return f.lead_date
+  }
+  const hasMarketingInfo = !!(
+    f.course || 
+    f.course_name_2 || 
+    f.course_2_name || 
+    f.course2_name || 
+    f.lead_source_1 || 
+    f.email
+  )
+  if (hasMarketingInfo && f.created_on) {
+    return f.created_on
+  }
+  return null
+}
+
 export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
   const fields = lead.fields || {}
   
@@ -214,6 +241,9 @@ export function detectLeadChannel(lead: TeleCRMLead): LeadChannel {
     }
     if (lower.includes('chatgpt') || lower.includes('chat gpt') || lower.includes('gpt') || lower.includes('perplexity') || lower.includes('openai') || lower.includes('claude') || lower.includes('llm')) {
       return 'LLM'
+    }
+    if (lower.includes('organic')) {
+      return 'Organic'
     }
     if (lower === 'website') {
       const hasMarketingParams = !!(
@@ -482,7 +512,7 @@ export async function getCountByStatus(
   })
   
   leads.forEach(lead => {
-    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+    const leadDateVal = getLeadEffectiveDate(lead)
     const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
     
     const isEnrolled = lead.status === 'Enrolled'
@@ -691,7 +721,7 @@ export async function getMonthlyTrend(
         
         // Filter leads belonging to this month in memory
         const monthLeads = allLeads.filter(lead => {
-          const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+          const leadDateVal = getLeadEffectiveDate(lead)
           const isLeadInMonth = !!(leadDateVal && leadDateVal >= monthStart.getTime() && leadDateVal <= monthEnd.getTime())
           
           const isEnrolled = lead.status === 'Enrolled'
@@ -723,7 +753,7 @@ export async function getMonthlyTrend(
         let perplexityCount = 0
         
         monthLeads.forEach(lead => {
-          const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+          const leadDateVal = getLeadEffectiveDate(lead)
           const isLeadInMonth = !!(leadDateVal && leadDateVal >= monthStart.getTime() && leadDateVal <= monthEnd.getTime())
           
           const isEnrolled = lead.status === 'Enrolled'
@@ -892,7 +922,7 @@ export async function getFunnelData(
 
   let total = 0
   leads.forEach(lead => {
-    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+    const leadDateVal = getLeadEffectiveDate(lead)
     if (leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime) {
       total++
     }
@@ -1003,7 +1033,7 @@ export async function getCourseBreakdown(
       const group = coursesMap[groupName]
       group.rawCourses.add(rawCourse)
       
-      const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+      const leadDateVal = getLeadEffectiveDate(lead)
       const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
       
       const isEnrolled = lead.status === 'Enrolled'
@@ -1151,7 +1181,7 @@ export async function getChannelBreakdown(
     const channel = detectLeadChannel(lead)
     const data = channelsMap[channel]
     
-    const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+    const leadDateVal = getLeadEffectiveDate(lead)
     const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
     
     const isEnrolled = lead.status === 'Enrolled'
@@ -1236,7 +1266,7 @@ export async function getChannelFinancials(
     const isCourse1Match = !course || courseGroup1 === course
     
     if (isCourse1Match) {
-      const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+      const leadDateVal = getLeadEffectiveDate(lead)
       const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
       
       const isEnrolled = lead.status === 'Enrolled'
@@ -1533,12 +1563,12 @@ export async function getAllLeads(
 
   let results = res.data
 
-  // Apply date filtering based on lead_date (falling back to created_on) and course_enrollment_date
+  // Apply date filtering based on lead_date (falling back to created_on only for genuine marketing leads) and course_enrollment_date
   if (filters?.dateRange) {
     const fromTime = getStartOfDay(filters.dateRange.from).getTime()
     const toTime = getEndOfDay(filters.dateRange.to).getTime()
     results = results.filter(lead => {
-      const leadDateVal = lead.fields?.lead_date || lead.fields?.created_on
+      const leadDateVal = getLeadEffectiveDate(lead)
       const isLeadInPeriod = !!(leadDateVal && leadDateVal >= fromTime && leadDateVal <= toTime)
       
       const isEnrolled = lead.status === 'Enrolled'

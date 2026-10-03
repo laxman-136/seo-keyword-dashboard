@@ -95,12 +95,16 @@ export async function GET(request: Request) {
     const currentAds = getAdsCount(currentChannels)
     const currentWebsite = currentChannels.find((c: any) => c.channel === 'Website')?.total || 0
     const currentLLM = currentChannels.find((c: any) => c.channel === 'LLM')?.total || 0
-    const currentOrganic = currentFunnel.total - currentAds - currentWebsite - currentLLM
+    const currentOrganic = currentChannels.find((c: any) => c.channel === 'Organic')?.total || 0
+    const currentReferral = currentChannels.find((c: any) => c.channel === 'Referral')?.total || 0
+    const currentOther = currentChannels.find((c: any) => c.channel === 'Other')?.total || 0
 
     const prevAds = getAdsCount(prevChannels)
     const prevWebsite = prevChannels.find((c: any) => c.channel === 'Website')?.total || 0
     const prevLLM = prevChannels.find((c: any) => c.channel === 'LLM')?.total || 0
-    const prevOrganic = prevFunnel.total - prevAds - prevWebsite - prevLLM
+    const prevOrganic = prevChannels.find((c: any) => c.channel === 'Organic')?.total || 0
+    const prevReferral = prevChannels.find((c: any) => c.channel === 'Referral')?.total || 0
+    const prevOther = prevChannels.find((c: any) => c.channel === 'Other')?.total || 0
 
     return NextResponse.json({
       kpi: {
@@ -109,6 +113,8 @@ export async function GET(request: Request) {
         websiteLeads: currentWebsite,
         organicLeads: currentOrganic,
         llmLeads: currentLLM,
+        referralLeads: currentReferral,
+        otherLeads: currentOther,
         enrolled: currentFunnel.enrolled,
         highPotential: currentFunnel.highPotential,
         mediumPotential: currentFunnel.mediumPotential,
@@ -121,6 +127,8 @@ export async function GET(request: Request) {
         prevWebsiteLeads: prevWebsite,
         prevOrganicLeads: prevOrganic,
         prevLLMLeads: prevLLM,
+        prevReferralLeads: prevReferral,
+        prevOtherLeads: prevOther,
         prevEnrolled: prevFunnel.enrolled,
         prevHighPotential: prevFunnel.highPotential,
         prevConvRate: prevFunnel.convRate
